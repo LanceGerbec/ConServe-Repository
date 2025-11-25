@@ -1,14 +1,17 @@
 // ============================================
-// FILE: client/src/components/dashboard/StudentDashboard.jsx
+// FILE: client/src/components/dashboard/StudentDashboard.jsx - UPDATED
 // ============================================
+import { useState } from 'react'; // ADD THIS
 import { BookOpen, Upload, Heart, Bell, TrendingUp, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import SubmitResearch from '../research/SubmitResearch'; // ADD THIS
 
 const StudentDashboard = () => {
   const { user } = useAuth();
+  const [showSubmitModal, setShowSubmitModal] = useState(false); // ADD THIS
 
   const quickActions = [
-    { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper' },
+    { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper', action: 'submit' }, // MODIFIED
     { icon: BookOpen, label: 'Browse Papers', color: 'bg-blue-500', desc: 'Explore the repository' },
     { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers' },
     { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', desc: 'View updates', badge: '3' }
@@ -19,6 +22,13 @@ const StudentDashboard = () => {
     { action: 'Bookmarked', title: 'Nursing Leadership in Crisis', time: '1 day ago' },
     { action: 'Searched', title: 'Mental Health Nursing', time: '3 days ago' }
   ];
+
+  // ADD THIS FUNCTION
+  const handleQuickAction = (action) => {
+    if (action === 'submit') {
+      setShowSubmitModal(true);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -46,13 +56,14 @@ const StudentDashboard = () => {
         ))}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - MODIFIED */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickActions.map((action, i) => (
             <button 
-              key={i} 
+              key={i}
+              onClick={() => handleQuickAction(action.action)} // ADD THIS
               className="relative bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group"
             >
               {action.badge && (
@@ -79,48 +90,59 @@ const StudentDashboard = () => {
             <button className="text-sm text-navy hover:text-navy-700 font-semibold">View All →</button>
           </div>
           <div className="text-center py-8">
-            <Upload className="mx-auto text-gray-400 mb-3" size={48} />
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No submissions yet</p>
-            <button className="bg-navy text-white px-6 py-2 rounded-lg hover:bg-navy-800 transition">
-              Submit Your First Research
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h2>
-            <TrendingUp className="text-gray-400" size={20} />
-          </div>
-          <div className="space-y-4">
-            {recentActivity.map((activity, i) => (
-              <div key={i} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <div className="w-2 h-2 bg-navy rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {activity.action}: <span className="text-gray-600 dark:text-gray-400">{activity.title}</span>
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+            <Upload className="mx-autotext-gray-400 mb-3" size={48} />
+<p className="text-gray-600 dark:text-gray-400 mb-4">No submissions yet</p>
+<button
+onClick={() => setShowSubmitModal(true)} // ADD THIS
+className="bg-navy text-white px-6 py-2 rounded-lg hover:bg-navy-800 transition"
+>
+Submit Your First Research
+</button>
+</div>
+</div>{/* Recent Activity */}
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h2>
+        <TrendingUp className="text-gray-400" size={20} />
       </div>
-
-      {/* Help Section */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-6 rounded-lg">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-2">Need Help Getting Started?</h3>
-        <p className="text-gray-700 dark:text-gray-300 text-sm mb-4">
-          Check out our comprehensive guide on how to submit your research paper.
-        </p>
-        <button className="text-navy hover:text-navy-700 font-semibold text-sm">
-          View Submission Guide →
-        </button>
+      <div className="space-y-4">
+        {recentActivity.map((activity, i) => (
+          <div key={i} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            <div className="w-2 h-2 bg-navy rounded-full mt-2"></div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {activity.action}: <span className="text-gray-600 dark:text-gray-400">{activity.title}</span>
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{activity.time}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
-  );
-};
+  </div>
 
+  {/* Help Section */}
+  <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-6 rounded-lg">
+    <h3 className="font-bold text-gray-900 dark:text-white mb-2">Need Help Getting Started?</h3>
+    <p className="text-gray-700 dark:text-gray-300 text-sm mb-4">
+      Check out our comprehensive guide on how to submit your research paper.
+    </p>
+    <button className="text-navy hover:text-navy-700 font-semibold text-sm">
+      View Submission Guide →
+    </button>
+  </div>
+
+  {/* ADD THIS MODAL */}
+  {showSubmitModal && (
+    <SubmitResearch 
+      onClose={() => setShowSubmitModal(false)}
+      onSuccess={() => {
+        setShowSubmitModal(false);
+        // Optionally refresh submissions list
+      }}
+    />
+  )}
+</div>
+);
+};
 export default StudentDashboard;

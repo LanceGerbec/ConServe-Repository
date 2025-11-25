@@ -9,6 +9,8 @@ import morgan from 'morgan';
 import compression from 'compression';
 import connectDB from './src/config/db.js';
 import authRoutes from './src/routes/auth.routes.js';
+import researchRoutes from './src/routes/research.routes.js';
+import userRoutes from './src/routes/user.routes.js'; // ADD THIS
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
@@ -48,6 +50,8 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/research', researchRoutes);
+app.use('/api/users', userRoutes); // ADD THIS
 
 // 404 handler
 app.use((req, res) => {
@@ -65,7 +69,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;

@@ -13,6 +13,8 @@ import StudentDashboard from './components/dashboard/StudentDashboard';
 import FacultyDashboard from './components/dashboard/FacultyDashboard';
 import AdminDashboard from './components/dashboard/AdminDashboard';
 import Layout from './components/layout/Layout';
+import Dashboard from './pages/Dashboard';
+import SubmitResearch from './components/research/SubmitResearch';
 
 function App() {
   return (
@@ -45,6 +47,19 @@ function App() {
                 <Layout><AdminDashboard /></Layout>
               </ProtectedRoute>
             } />
+
+            <Route path="/submit-research" element={
+  <ProtectedRoute>
+    <Layout><SubmitResearch /></Layout>
+  </ProtectedRoute>
+} />
+
+            // Inside Routes:
+<Route path="/dashboard" element={
+  <ProtectedRoute>
+    <Layout><Dashboard /></Layout>
+  </ProtectedRoute>
+} />
 
             {/* Redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
