@@ -10,12 +10,12 @@ const StudentDashboard = () => {
   const { user } = useAuth();
   const [showSubmitModal, setShowSubmitModal] = useState(false); // ADD THIS
 
-  const quickActions = [
-    { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper', action: 'submit' }, // MODIFIED
-    { icon: BookOpen, label: 'Browse Papers', color: 'bg-blue-500', desc: 'Explore the repository' },
-    { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers' },
-    { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', desc: 'View updates', badge: '3' }
-  ];
+ const quickActions = [
+  { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper', action: 'submit' },
+  { icon: BookOpen, label: 'Browse Papers', color: 'bg-blue-500', desc: 'Explore the repository', action: 'browse' }, // MODIFIED
+  { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers' },
+  { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', desc: 'View updates', badge: '3' }
+];
 
   const recentActivity = [
     { action: 'Viewed', title: 'Impact of Telehealth on Patient Care', time: '2 hours ago' },
@@ -23,12 +23,14 @@ const StudentDashboard = () => {
     { action: 'Searched', title: 'Mental Health Nursing', time: '3 days ago' }
   ];
 
-  // ADD THIS FUNCTION
-  const handleQuickAction = (action) => {
-    if (action === 'submit') {
-      setShowSubmitModal(true);
-    }
-  };
+  // Update handleQuickAction function:
+const handleQuickAction = (action) => {
+  if (action === 'submit') {
+    setShowSubmitModal(true);
+  } else if (action === 'browse') {
+    window.location.href = '/browse'; // ADD THIS
+  }
+};
 
   return (
     <div className="space-y-6 animate-fade-in">
