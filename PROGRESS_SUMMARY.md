@@ -25,13 +25,15 @@
 
 ## 🔄 IN PROGRESS (Phase 3 - 20%)
 
+## 🔄 IN PROGRESS (Phase 3 - 25%)
+
 ### Current Sprint - Research Browsing:
-- [x] **STEP 1: ResearchList component with search & filters** ← YOU ARE HERE
-- [x] **STEP 2: Browse page created**
-- [x] **STEP 3: Route added to App.jsx**
-- [x] **STEP 4: Navigation updated**
-- [x] **STEP 5: Dashboard quick actions linked**
-- [ ] STEP 6: Research detail viewer (watermark)
+- [x] STEP 1: ResearchList component with search & filters
+- [x] STEP 2: Browse page created
+- [x] STEP 3: Route added to App.jsx
+- [x] STEP 4: Navigation updated
+- [x] STEP 5: Dashboard quick actions linked
+- [x] STEP 6: Research detail viewer (watermark)
 - [ ] STEP 7: Bookmark system
 - [ ] STEP 8: Citation generator
 

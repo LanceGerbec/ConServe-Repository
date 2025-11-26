@@ -16,6 +16,8 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import SubmitResearch from './components/research/SubmitResearch';
 import Browse from './pages/Browse';
+import ResearchDetail from './pages/ResearchDetail';
+
 
 function App() {
   return (
@@ -65,6 +67,12 @@ function App() {
 <Route path="/browse" element={
   <ProtectedRoute>
     <Layout><Browse /></Layout>
+  </ProtectedRoute>
+} />
+
+<Route path="/research/:id" element={
+  <ProtectedRoute>
+    <Layout><ResearchDetail /></Layout>
   </ProtectedRoute>
 } />
 
