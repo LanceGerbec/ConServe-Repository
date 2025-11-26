@@ -40,10 +40,10 @@
 ## 📋 NEXT STEPS
 
 ### Phase 3 Remaining (Week 1-2):
-1. [ ] Research detail page with PDF viewer
-2. [ ] Dynamic watermarking system
-3. [ ] Bookmark/favorites functionality
-4. [ ] Citation generator (APA, MLA, Chicago, Harvard)
+1. [x] Research detail page with PDF viewer
+2. [x] Dynamic watermarking system
+3. [x] Bookmark/favorites functionality
+4. [x] Citation generator (APA, MLA, Chicago, Harvard)
 5. [ ] View tracking & analytics
 6. [ ] Recently viewed history
 

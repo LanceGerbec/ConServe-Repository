@@ -12,6 +12,7 @@ import authRoutes from './src/routes/auth.routes.js';
 import researchRoutes from './src/routes/research.routes.js';
 import userRoutes from './src/routes/user.routes.js'; // ADD THIS
 import { apiLimiter } from './src/middleware/rateLimiter.js';
+import bookmarkRoutes from './src/routes/bookmark.routes.js';
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/users', userRoutes); // ADD THIS
+app.use('/api/bookmarks', bookmarkRoutes);
 
 // 404 handler
 app.use((req, res) => {

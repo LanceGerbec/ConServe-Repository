@@ -21,6 +21,7 @@ router.get('/', auth, getAllResearch);
 router.get('/stats', auth, authorize('admin'), getResearchStats);
 router.get('/my-submissions', auth, getMySubmissions);
 router.get('/:id', auth, getResearchById);
+router.get('/:id/citation', auth, getCitation);
 
 // Submit with file upload
 router.post('/', auth, upload.single('file'), submitResearch);

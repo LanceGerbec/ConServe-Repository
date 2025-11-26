@@ -5,6 +5,8 @@ import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
 import cloudinary from '../config/cloudinary.js';
 import { Readable } from 'stream';
+import { generateCitation } from '../utils/citationGenerator.js';
+
 
 // Helper: Upload to Cloudinary
 const uploadToCloudinary = (buffer, filename) => {
@@ -266,5 +268,20 @@ export const getResearchStats = async (req, res) => {
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+};
+
+export const getCitation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { style } = req.query;
+    
+    const paper = await Research.findById(id).populate('submittedBy', 'firstName lastName');
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
+
+    const citation = generateCitation(paper, style || 'APA');
+    res.json({ citation, style: style || 'APA' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate citation' });
   }
 };
