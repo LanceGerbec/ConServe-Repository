@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 
 const CitationModal = ({ paper, onClose }) => {
@@ -22,6 +22,10 @@ const CitationModal = ({ paper, onClose }) => {
   useState(() => {
     generateCitation();
   }, [style]);
+
+  useEffect(() => {
+  generateCitation();
+}, [style]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(citation);

@@ -9,7 +9,8 @@ import {
   updateResearchStatus,
   deleteResearch,
   getMySubmissions,
-  getResearchStats
+  getResearchStats,
+  getCitation
 } from '../controllers/researchController.js';
 import { auth, authorize } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
