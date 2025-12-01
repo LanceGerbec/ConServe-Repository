@@ -1,5 +1,5 @@
 // ============================================
-// FILE: client/src/components/dashboard/AdminDashboard.jsx - COMPLETE
+// FILE: client/src/components/dashboard/AdminDashboard.jsx - FIXED
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -127,7 +127,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-8 shadow-lg">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-blue-100">Welcome, {user?.firstName} - System Administrator</p>
@@ -137,14 +136,11 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Tab Navigation */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2">
         <button
           onClick={() => setActiveTab('overview')}
           className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === 'overview'
-              ? 'bg-navy text-white shadow-md'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            activeTab === 'overview' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
           Overview
@@ -152,9 +148,7 @@ const AdminDashboard = () => {
         <button
           onClick={() => setActiveTab('analytics')}
           className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === 'analytics'
-              ? 'bg-navy text-white shadow-md'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            activeTab === 'analytics' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
           Analytics
@@ -162,33 +156,23 @@ const AdminDashboard = () => {
         <button
           onClick={() => setActiveTab('logs')}
           className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === 'logs'
-              ? 'bg-navy text-white shadow-md'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            activeTab === 'logs' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
           Activity Logs
         </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+            activeTab === 'settings' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Settings
+        </button>
       </div>
 
-<button
-  onClick={() => setActiveTab('settings')}
-  className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-    activeTab === 'settings'
-      ? 'bg-navy text-white shadow-md'
-      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-  }`}
->
-  Settings
-</button>
-
-{/* Settings Tab */}
-{activeTab === 'settings' && <SettingsManagement />}
-
-      {/* Overview Tab */}
       {activeTab === 'overview' && (
         <>
-          {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {adminStats.map((stat, i) => (
               <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
@@ -203,9 +187,7 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {/* Pending Approvals Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Pending Users */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pending User Approvals</h2>
@@ -257,7 +239,6 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            {/* Pending Research */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pending Research Approvals</h2>
@@ -312,11 +293,9 @@ const AdminDashboard = () => {
         </>
       )}
 
-      {/* Analytics Tab */}
       {activeTab === 'analytics' && <AnalyticsDashboard />}
-
-      {/* Activity Logs Tab */}
       {activeTab === 'logs' && <ActivityLogs />}
+      {activeTab === 'settings' && <SettingsManagement />}
     </div>
   );
 };
