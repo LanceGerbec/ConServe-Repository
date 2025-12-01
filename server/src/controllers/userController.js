@@ -3,6 +3,7 @@
 // ============================================
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
+import { sendApprovalEmail } from '../utils/emailService.js';
 
 // Get all users (Admin only)
 export const getAllUsers = async (req, res) => {
@@ -59,7 +60,6 @@ export const approveUser = async (req, res) => {
     user.updatedAt = new Date();
     await user.save();
 
-    // Log action
     await AuditLog.create({
       user: req.user._id,
       action: 'USER_APPROVED',
@@ -69,6 +69,13 @@ export const approveUser = async (req, res) => {
       userAgent: req.get('user-agent'),
       details: { email: user.email }
     });
+
+    // Send approval email
+    try {
+      await sendApprovalEmail(user);
+    } catch (emailError) {
+      console.error('Email send failed:', emailError);
+    }
 
     res.json({ 
       message: 'User approved successfully', 

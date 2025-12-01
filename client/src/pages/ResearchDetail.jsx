@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
+import ReviewHistory from '../components/research/ReviewHistory';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -119,6 +120,11 @@ const ResearchDetail = () => {
             <Eye size={16} className="mr-2" />
             <span>{paper.views} views</span>
           </div>
+          {/* NEW: Citation count */}
+          <div className="flex items-center">
+            <Quote size={16} className="mr-2" />
+            <span>{paper.citationClicks || 0} citations</span>
+          </div>
           <div className="flex items-center">
             <Tag size={16} className="mr-2" />
             <span>{paper.category}</span>
@@ -199,6 +205,13 @@ const ResearchDetail = () => {
       <style>{`
         * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
       `}</style>
+{/* Review History Section */}
+      {(user?.role === 'admin' || user?.role === 'faculty' || paper.submittedBy?._id === user?.id) && (
+        <div className="mt-6">
+          <ReviewHistory researchId={id} />
+        </div>
+      )}
+
     </div>
   );
 };

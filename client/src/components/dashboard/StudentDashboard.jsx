@@ -5,6 +5,7 @@ import { useState } from 'react'; // ADD THIS
 import { BookOpen, Upload, Heart, Bell, TrendingUp, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch'; // ADD THIS
+import RecentlyViewed from '../research/RecentlyViewed';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -144,6 +145,31 @@ Submit Your First Research
       }}
     />
   )}
+
+{/* Recently Viewed Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RecentlyViewed />
+        
+        {/* Quick Stats Card */}
+        <div className="bg-gradient-to-br from-navy to-accent text-white rounded-2xl p-6 shadow-lg">
+          <h3 className="text-xl font-bold mb-4">Your Activity</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>Papers Read This Month</span>
+              <span className="text-3xl font-bold">0</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Favorites Added</span>
+              <span className="text-3xl font-bold">0</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Searches Made</span>
+              <span className="text-3xl font-bold">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
 </div>
 );
 };

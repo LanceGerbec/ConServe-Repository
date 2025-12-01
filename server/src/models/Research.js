@@ -46,9 +46,29 @@ const researchSchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now },
     lastModified: Date
   },
+
+  // ADD these new fields to the schema:
+  citationClicks: { type: Number, default: 0 }, // NEW: Track citation button clicks
+  analytics: {
+    viewsByDate: [{ date: Date, count: Number }],
+    citationsByStyle: {
+      APA: { type: Number, default: 0 },
+      MLA: { type: Number, default: 0 },
+      Chicago: { type: Number, default: 0 },
+      Harvard: { type: Number, default: 0 }
+    }
+  },
+  
+recentViews: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    viewedAt: { type: Date, default: Date.now }
+  }],
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
+
+
 
 // Indexes for search
 researchSchema.index({ title: 'text', abstract: 'text', keywords: 'text' });

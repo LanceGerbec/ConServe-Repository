@@ -1,15 +1,19 @@
 // ============================================
-// FILE: client/src/components/dashboard/AdminDashboard.jsx - UPDATED
+// FILE: client/src/components/dashboard/AdminDashboard.jsx - COMPLETE
 // ============================================
+
 import { useState, useEffect } from 'react';
 import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
+import ActivityLogs from '../analytics/ActivityLogs';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 },
-    research: { total: 0, pending: 0, approved: 0, rejected: 0 }
+    research: { total: 0, pending: 0, approved: 0, rejected: 0, totalCitations: 0 }
   });
   const [pendingUsers, setPendingUsers] = useState([]);
   const [pendingResearch, setPendingResearch] = useState([]);
@@ -22,23 +26,14 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const headers = { 'Authorization': `Bearer ${token}` };
+      const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch user stats
-      const userStatsRes = await fetch(`${import.meta.env.VITE_API_URL}/users/stats`, { headers });
-      const userStats = await userStatsRes.json();
-
-      // Fetch research stats
-      const researchStatsRes = await fetch(`${import.meta.env.VITE_API_URL}/research/stats`, { headers });
-      const researchStats = await researchStatsRes.json();
-
-      // Fetch pending users
-      const pendingUsersRes = await fetch(`${import.meta.env.VITE_API_URL}/users?status=pending`, { headers });
-      const pendingUsersData = await pendingUsersRes.json();
-
-      // Fetch pending research
-      const pendingResearchRes = await fetch(`${import.meta.env.VITE_API_URL}/research?status=pending`, { headers });
-      const pendingResearchData = await pendingResearchRes.json();
+      const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/users/stats`, { headers }).then(r => r.json()),
+        fetch(`${import.meta.env.VITE_API_URL}/research/stats`, { headers }).then(r => r.json()),
+        fetch(`${import.meta.env.VITE_API_URL}/users?status=pending`, { headers }).then(r => r.json()),
+        fetch(`${import.meta.env.VITE_API_URL}/research?status=pending`, { headers }).then(r => r.json())
+      ]);
 
       setStats({ users: userStats, research: researchStats });
       setPendingUsers(pendingUsersData.users || []);
@@ -55,32 +50,25 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       const res = await fetch(`${import.meta.env.VITE_API_URL}/users/${userId}/approve`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (res.ok) {
-        fetchData(); // Refresh data
-      }
+      if (res.ok) fetchData();
     } catch (error) {
-      console.error('Approve error:', error);
+      console.error('Approve user error:', error);
     }
   };
 
   const handleRejectUser = async (userId) => {
     if (!confirm('Are you sure you want to reject this user?')) return;
-    
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${import.meta.env.VITE_API_URL}/users/${userId}/reject`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (res.ok) {
-        fetchData(); // Refresh data
-      }
+      if (res.ok) fetchData();
     } catch (error) {
-      console.error('Reject error:', error);
+      console.error('Reject user error:', error);
     }
   };
 
@@ -90,17 +78,14 @@ const AdminDashboard = () => {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${researchId}/status`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: 'approved' })
       });
-
-      if (res.ok) {
-        fetchData(); // Refresh data
-      }
+      if (res.ok) fetchData();
     } catch (error) {
-      console.error('Approve error:', error);
+      console.error('Approve research error:', error);
     }
   };
 
@@ -113,17 +98,14 @@ const AdminDashboard = () => {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${researchId}/status`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: 'rejected', revisionNotes: notes })
       });
-
-      if (res.ok) {
-        fetchData(); // Refresh data
-      }
+      if (res.ok) fetchData();
     } catch (error) {
-      console.error('Reject error:', error);
+      console.error('Reject research error:', error);
     }
   };
 
@@ -136,10 +118,10 @@ const AdminDashboard = () => {
   }
 
   const adminStats = [
-    { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-blue-500', change: `+${stats.users.pendingApproval}` },
-    { icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-green-500', change: `+${stats.research.pending}` },
-    { icon: Shield, label: 'Pending Approvals', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-yellow-500', change: '0' },
-    { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-purple-500', change: '0' }
+    { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-blue-500' },
+    { icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-green-500' },
+    { icon: Shield, label: 'Pending', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-yellow-500' },
+    { icon: Activity, label: 'Total Views', value: stats.research.totalViews || 0, color: 'bg-purple-500' }
   ];
 
   return (
@@ -154,132 +136,172 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {adminStats.map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center shadow-md`}>
-                <stat.icon className="text-white" size={24} />
+      {/* Tab Navigation */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+            activeTab === 'overview'
+              ? 'bg-navy text-white shadow-md'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+            activeTab === 'analytics'
+              ? 'bg-navy text-white shadow-md'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('logs')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+            activeTab === 'logs'
+              ? 'bg-navy text-white shadow-md'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Activity Logs
+        </button>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {adminStats.map((stat, i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center shadow-md`}>
+                    <stat.icon className="text-white" size={24} />
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-navy dark:text-accent mb-2">{stat.value}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
               </div>
-              <span className={`text-sm font-semibold ${stat.change.startsWith('+') ? 'text-green-600' : 'text-gray-600'}`}>
-                {stat.change}
-              </span>
-            </div>
-            <div className="text-3xl font-bold text-navy dark:text-accent mb-2">{stat.value}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Pending Approvals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pending Users */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pending User Approvals</h2>
-            <UserCheck className="text-gray-400" size={24} />
-          </div>
-          
-          {pendingUsers.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <UserCheck size={48} className="mx-auto mb-3 text-gray-400" />
-              <p>No pending user approvals</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {pendingUsers.map((u) => (
-                <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
-                        {u.firstName} {u.lastName}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Role: <span className="font-semibold">{u.role}</span> | ID: {u.studentId}
-                      </p>
-                    </div>
-                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-                      Pending
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApproveUser(u._id)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm"
-                    >
-                      <CheckCircle size={16} />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleRejectUser(u._id)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm"
-                    >
-                      <XCircle size={16} />
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          {/* Pending Approvals Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Pending Users */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pending User Approvals</h2>
+                <UserCheck className="text-gray-400" size={24} />
+              </div>
 
-        {/* Pending Research */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pending Research Approvals</h2>
-            <FileText className="text-gray-400" size={24} />
-          </div>
-          
-          {pendingResearch.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText size={48} className="mx-auto mb-3 text-gray-400" />
-              <p>No pending research approvals</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {pendingResearch.map((paper) => (
-                <div key={paper._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">
-                        {paper.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Category: {paper.category}
-                      </p>
-                    </div>
-                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-                      Pending
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApproveResearch(paper._id)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm"
-                    >
-                      <CheckCircle size={16} />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleRejectResearch(paper._id)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm"
-                    >
-                      <XCircle size={16} />
-                      Reject
-                    </button>
-                  </div>
+              {pendingUsers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <UserCheck size={48} className="mx-auto mb-3 text-gray-400" />
+                  <p>No pending user approvals</p>
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pendingUsers.map((u) => (
+                    <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                            {u.firstName} {u.lastName}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Role: <span className="font-semibold">{u.role}</span> | ID: {u.studentId}
+                          </p>
+                        </div>
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                          Pending
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveUser(u._id)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm"
+                        >
+                          <CheckCircle size={16} />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectUser(u._id)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm"
+                        >
+                          <XCircle size={16} />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+
+            {/* Pending Research */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pending Research Approvals</h2>
+                <FileText className="text-gray-400" size={24} />
+              </div>
+
+              {pendingResearch.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText size={48} className="mx-auto mb-3 text-gray-400" />
+                  <p>No pending research approvals</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pendingResearch.map((paper) => (
+                    <div key={paper._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">
+                            {paper.title}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Category: {paper.category}</p>
+                        </div>
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                          Pending
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveResearch(paper._id)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm"
+                        >
+                          <CheckCircle size={16} />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectResearch(paper._id)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm"
+                        >
+                          <XCircle size={16} />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && <AnalyticsDashboard />}
+
+      {/* Activity Logs Tab */}
+      {activeTab === 'logs' && <ActivityLogs />}
     </div>
   );
 };

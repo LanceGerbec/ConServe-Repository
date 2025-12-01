@@ -62,7 +62,6 @@ export const getAllResearch = async (req, res) => {
   }
 };
 
-// Get single research paper
 export const getResearchById = async (req, res) => {
   try {
     const paper = await Research.findById(req.params.id)
@@ -73,18 +72,22 @@ export const getResearchById = async (req, res) => {
       return res.status(404).json({ error: 'Research paper not found' });
     }
 
-    // Check access
     if (paper.status !== 'approved' && req.user.role === 'student') {
       if (paper.submittedBy._id.toString() !== req.user._id.toString()) {
         return res.status(403).json({ error: 'Access denied' });
       }
     }
 
-    // Increment view count
+    // Increment views & track user view
     paper.views += 1;
+    paper.recentViews = paper.recentViews || [];
+    paper.recentViews = paper.recentViews.filter(
+      v => v.user.toString() !== req.user._id.toString()
+    );
+    paper.recentViews.unshift({ user: req.user._id, viewedAt: new Date() });
+    paper.recentViews = paper.recentViews.slice(0, 100); // Keep last 100 views
     await paper.save();
 
-    // Log view
     await AuditLog.create({
       user: req.user._id,
       action: 'RESEARCH_VIEWED',
@@ -240,7 +243,6 @@ export const getMySubmissions = async (req, res) => {
   }
 };
 
-// Get stats
 export const getResearchStats = async (req, res) => {
   try {
     const total = await Research.countDocuments();
@@ -252,10 +254,29 @@ export const getResearchStats = async (req, res) => {
       { $group: { _id: null, total: { $sum: '$views' } } }
     ]);
 
+    const totalCitations = await Research.aggregate([
+      { $group: { _id: null, total: { $sum: '$citationClicks' } } }
+    ]);
+
+    const citationsByStyle = await Research.aggregate([
+      { $group: {
+        _id: null,
+        APA: { $sum: '$analytics.citationsByStyle.APA' },
+        MLA: { $sum: '$analytics.citationsByStyle.MLA' },
+        Chicago: { $sum: '$analytics.citationsByStyle.Chicago' },
+        Harvard: { $sum: '$analytics.citationsByStyle.Harvard' }
+      }}
+    ]);
+
     const recentSubmissions = await Research.find()
       .sort({ createdAt: -1 })
       .limit(5)
       .populate('submittedBy', 'firstName lastName');
+
+    const mostCited = await Research.find({ status: 'approved' })
+      .sort({ citationClicks: -1 })
+      .limit(5)
+      .select('title authors citationClicks views');
 
     res.json({
       total,
@@ -263,7 +284,10 @@ export const getResearchStats = async (req, res) => {
       approved,
       rejected,
       totalViews: totalViews[0]?.total || 0,
-      recentSubmissions
+      totalCitations: totalCitations[0]?.total || 0,
+      citationsByStyle: citationsByStyle[0] || { APA: 0, MLA: 0, Chicago: 0, Harvard: 0 },
+      recentSubmissions,
+      mostCited
     });
   } catch (error) {
     console.error('Get stats error:', error);
@@ -279,9 +303,60 @@ export const getCitation = async (req, res) => {
     const paper = await Research.findById(id).populate('submittedBy', 'firstName lastName');
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
+    // Track citation click
+    paper.citationClicks += 1;
+    if (paper.analytics && paper.analytics.citationsByStyle) {
+      paper.analytics.citationsByStyle[style || 'APA'] += 1;
+    }
+    await paper.save();
+
+    // Log citation access
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'CITATION_GENERATED',
+      resource: 'Research',
+      resourceId: paper._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { citationStyle: style || 'APA' }
+    });
+
     const citation = generateCitation(paper, style || 'APA');
     res.json({ citation, style: style || 'APA' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to generate citation' });
+  }
+};
+
+// Get recently viewed papers
+export const getRecentlyViewed = async (req, res) => {
+  try {
+    const papers = await Research.find({
+      'recentViews.user': req.user._id,
+      status: 'approved'
+    })
+    .sort({ 'recentViews.viewedAt': -1 })
+    .limit(10)
+    .populate('submittedBy', 'firstName lastName')
+    .select('title authors abstract category createdAt views');
+
+    res.json({ papers, count: papers.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch recently viewed' });
+  }
+};
+
+// Get trending papers
+export const getTrendingPapers = async (req, res) => {
+  try {
+    const papers = await Research.find({ status: 'approved' })
+      .sort({ views: -1 })
+      .limit(10)
+      .populate('submittedBy', 'firstName lastName')
+      .select('title authors abstract views bookmarks category');
+
+    res.json({ papers, count: papers.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch trending papers' });
   }
 };
