@@ -1,5 +1,5 @@
 // ============================================
-// FILE: client/src/components/dashboard/AdminDashboard.jsx - FIXED
+// FILE: client/src/components/dashboard/AdminDashboard.jsx - COMPLETE
 // ============================================
 
 import { useState, useEffect } from 'react';
