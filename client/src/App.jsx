@@ -2,22 +2,20 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Login from './components/auth/Login';
+import RoleSelect from './pages/RoleSelect';
+import StudentLogin from './components/auth/StudentLogin';
+import FacultyLogin from './components/auth/FacultyLogin';
+import AdminLogin from './components/auth/AdminLogin';
 import Register from './components/auth/Register';
 import Home from './pages/Home';
 import About from './pages/About';
 import Help from './pages/Help';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
-import StudentDashboard from './components/dashboard/StudentDashboard';
-import FacultyDashboard from './components/dashboard/FacultyDashboard';
-import AdminDashboard from './components/dashboard/AdminDashboard';
-import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
-import SubmitResearch from './components/research/SubmitResearch';
 import Browse from './pages/Browse';
 import ResearchDetail from './pages/ResearchDetail';
-
+import Layout from './components/layout/Layout';
 
 function App() {
   return (
@@ -31,50 +29,30 @@ function App() {
             <Route path="/help" element={<Layout><Help /></Layout>} />
             <Route path="/terms" element={<Layout><Terms /></Layout>} />
             <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
-            <Route path="/login" element={<Login />} />
+            
+            {/* Login Routes */}
+            <Route path="/login" element={<RoleSelect />} />
+            <Route path="/login/student" element={<StudentLogin />} />
+            <Route path="/login/faculty" element={<FacultyLogin />} />
+            <Route path="/login/admin" element={<AdminLogin />} />
             <Route path="/register" element={<Register />} />
 
             {/* Protected Routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <Layout><StudentDashboard /></Layout>
+                <Layout><Dashboard /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/faculty/dashboard" element={
-              <ProtectedRoute allowedRoles={['faculty', 'admin']}>
-                <Layout><FacultyDashboard /></Layout>
+            <Route path="/browse" element={
+              <ProtectedRoute>
+                <Layout><Browse /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/admin/dashboard" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout><AdminDashboard /></Layout>
+            <Route path="/research/:id" element={
+              <ProtectedRoute>
+                <Layout><ResearchDetail /></Layout>
               </ProtectedRoute>
             } />
-
-            <Route path="/submit-research" element={
-  <ProtectedRoute>
-    <Layout><SubmitResearch /></Layout>
-  </ProtectedRoute>
-} />
-
-            // Inside Routes:
-<Route path="/dashboard" element={
-  <ProtectedRoute>
-    <Layout><Dashboard /></Layout>
-  </ProtectedRoute>
-} />
-
-<Route path="/browse" element={
-  <ProtectedRoute>
-    <Layout><Browse /></Layout>
-  </ProtectedRoute>
-} />
-
-<Route path="/research/:id" element={
-  <ProtectedRoute>
-    <Layout><ResearchDetail /></Layout>
-  </ProtectedRoute>
-} />
 
             {/* Redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
