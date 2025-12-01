@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote 
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ReviewHistory from '../components/research/ReviewHistory';
+import PDFViewer from '../components/research/PDFViewer';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -13,6 +14,7 @@ const ResearchDetail = () => {
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
   const [showCitation, setShowCitation] = useState(false);
+  const [showPDF, setShowPDF] = useState(false);
 
   useEffect(() => {
     fetchPaper();
@@ -184,21 +186,30 @@ const ResearchDetail = () => {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
-        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-12 text-center">
-          <FileText className="mx-auto text-gray-400 mb-4" size={64} />
-          <p className="text-gray-600 dark:text-gray-400 mb-4">PDF viewer will be implemented in Phase 4</p>
-          
-            href={paper.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-navy text-white px-6 py-3 rounded-lg hover:bg-navy-800 transition"
-          <a>
-            View on Cloudinary (Temporary)
-          </a>
-        </div>
-      </div>
+     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
+  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
+  <div className="bg-gradient-to-br from-navy/5 to-accent/5 rounded-lg p-8 text-center border-2 border-dashed border-navy/20">
+    <FileText className="mx-auto text-navy mb-4" size={64} />
+    <p className="text-gray-700 dark:text-gray-300 mb-2 font-semibold">
+      Protected Research Document
+    </p>
+    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+      This document is watermarked for security
+    </p>
+    
+    <button
+      onClick={() => setShowPDF(true)}
+      className="inline-flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-md hover:shadow-lg"
+    >
+      <FileText size={20} />
+      View Full Paper
+    </button>
+    
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+      🔒 Viewing will be logged for security purposes
+    </p>
+  </div>
+</div>
 
       {showCitation && <CitationModal paper={paper} onClose={() => setShowCitation(false)} />}
 
@@ -211,6 +222,15 @@ const ResearchDetail = () => {
           <ReviewHistory researchId={id} />
         </div>
       )}
+
+{/* Add PDF Viewer Modal at the end, before the closing div */}
+{showPDF && (
+  <PDFViewer 
+    pdfUrl={paper.fileUrl} 
+    paperTitle={paper.title}
+    onClose={() => setShowPDF(false)}
+  />
+)}
 
     </div>
   );

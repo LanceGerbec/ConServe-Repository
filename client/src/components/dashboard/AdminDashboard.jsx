@@ -7,6 +7,7 @@ import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle } fr
 import { useAuth } from '../../context/AuthContext';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
+import SettingsManagement from '../admin/SettingsManagement';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -169,6 +170,20 @@ const AdminDashboard = () => {
           Activity Logs
         </button>
       </div>
+
+<button
+  onClick={() => setActiveTab('settings')}
+  className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+    activeTab === 'settings'
+      ? 'bg-navy text-white shadow-md'
+      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+  }`}
+>
+  Settings
+</button>
+
+{/* Settings Tab */}
+{activeTab === 'settings' && <SettingsManagement />}
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (

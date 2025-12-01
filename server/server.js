@@ -15,6 +15,7 @@ import { apiLimiter } from './src/middleware/rateLimiter.js';
 import bookmarkRoutes from './src/routes/bookmark.routes.js';
 import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
+import settingsRoutes from './src/routes/settings.routes.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate limiting
 app.use('/api', apiLimiter);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Routes
 app.get('/', (req, res) => {

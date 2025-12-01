@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { sendReviewNotification } from '../utils/emailService.js';
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
