@@ -1,6 +1,3 @@
-// ============================================
-// FILE: server/server.js - UPDATED with 2FA
-// ============================================
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -15,7 +12,7 @@ import bookmarkRoutes from './src/routes/bookmark.routes.js';
 import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
-import twoFactorRoutes from './src/routes/twoFactor.routes.js'; // NEW
+import twoFactorRoutes from './src/routes/twoFactor.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
@@ -24,34 +21,46 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(helmet());
+// CORS Configuration - CRITICAL FIX
+const allowedOrigins = [
+  'https://con-serve-repository.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
+
 app.use(cors({
-  origin: 'https://con-serve-repository.vercel.app/',
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
+
+app.options('*', cors());
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiting
 app.use('/api', apiLimiter);
 
-// Routes
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'ConServe API Server',
-    status: 'running',
-    version: '1.0.0'
-  });
+  res.json({ message: 'ConServe API', status: 'running' });
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/users', userRoutes);
@@ -59,25 +68,20 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/2fa', twoFactorRoutes); // NEW
+app.use('/api/2fa', twoFactorRoutes);
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'Not found' });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  res.status(500).json({ error: 'Server error', message: err.message });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server: http://localhost:${PORT}`);
+  console.log(`CORS: ${allowedOrigins.join(', ')}`);
 });
 
 export default app;
