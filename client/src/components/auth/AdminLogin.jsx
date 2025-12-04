@@ -1,110 +1,118 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Shield, Loader2, Mail, Lock, X, Home, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Shield, Mail, Lock, Eye, EyeOff, AlertTriangle, Home, ArrowLeft } from 'lucide-react';
 
 const AdminLogin = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const result = await login(formData.email, formData.password);
-    
-    if (result.success) {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user.role !== 'admin') {
-        setError('This login is for administrators only. Please use the correct login page for your role.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setLoading(false);
-        return;
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        const user = JSON.parse(localStorage.getItem('user'));
+        
+        if (user.role !== 'admin') {
+          setError('Access denied. Admin only.');
+          localStorage.clear();
+          setLoading(false);
+          return;
+        }
+        
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Invalid credentials');
       }
-      navigate('/dashboard');
-    } else {
-      setError(result.error || 'Login failed');
+    } catch (err) {
+      setError('Connection error. Backend may be offline.');
+      console.error('Login failed:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-navy-950 via-gray-900 to-black">
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-md p-10 border border-gray-200 dark:border-gray-800 animate-scale-in relative">
-        <div className="absolute top-4 right-4 flex space-x-2">
-          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition" title="Back to Home">
-            <Home size={20} className="text-gray-600 dark:text-gray-400" />
-          </Link>
-          <Link to="/login" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition" title="Close">
-            <X size={20} className="text-gray-600 dark:text-gray-400" />
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 flex items-center justify-center p-4">
+      <div className="absolute top-4 left-4">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-white hover:text-blue-200 transition-colors"
+        >
+          <Home size={20} />
+          <span className="hidden sm:inline">Home</span>
+        </button>
+      </div>
 
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-navy to-navy-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg hover:scale-110 transition-transform duration-300">
-            <Shield className="text-white" size={32} />
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="flex flex-col items-center mb-6">
+          <div className="bg-blue-600 p-4 rounded-full mb-4">
+            <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Admin Login</h1>
-          <p className="text-gray-600 dark:text-gray-400">System Administration Access</p>
+          <h2 className="text-2xl font-bold text-gray-800">Admin Login</h2>
+          <p className="text-gray-500 text-sm mt-1">System Administration Access</p>
         </div>
 
-        <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg mb-6 flex items-start">
-          <AlertTriangle className="text-orange-500 mr-3 flex-shrink-0 mt-0.5" size={20} />
-          <p className="text-sm text-orange-700 dark:text-orange-400">
+        <div className="bg-orange-50 border-l-4 border-orange-400 p-3 mb-4 flex items-start gap-2">
+          <AlertTriangle className="text-orange-500 flex-shrink-0 mt-0.5" size={18} />
+          <p className="text-sm text-orange-700">
             Restricted access. Unauthorized login attempts are logged and monitored.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6 animate-slide-up">
-            {error}
+          <div className="bg-red-50 border-l-4 border-red-400 p-3 mb-4">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Admin Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="email"
-                required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-all duration-300"
-                placeholder="admin@neust.edu.ph"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="admin@example.com"
+                required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-12 pr-12 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-all duration-300"
-                placeholder="Enter admin password"
+                className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter password"
+                required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-navy transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
@@ -112,31 +120,28 @@ const AdminLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-navy to-navy-800 hover:from-navy-800 hover:to-navy-900 text-white font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:scale-105"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={20} />
-                <span>Authenticating...</span>
-              </>
+              <span>Authenticating...</span>
             ) : (
               <>
-                <Shield size={20} />
-                <span>Access Admin Panel</span>
+                <Shield size={18} />
+                Access Admin Panel
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <Link to="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-navy transition-colors">
-            ← Back to role selection
-          </Link>
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => navigate('/login')}
+            className="text-blue-600 hover:text-blue-700 text-sm flex items-center justify-center gap-1 mx-auto"
+          >
+            <ArrowLeft size={16} />
+            Back to role selection
+          </button>
         </div>
-
-        <p className="mt-6 text-center text-xs text-gray-500">
-          Security Notice: All admin activities are logged
-        </p>
       </div>
     </div>
   );
