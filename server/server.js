@@ -12,7 +12,6 @@ import bookmarkRoutes from './src/routes/bookmark.routes.js';
 import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
-import twoFactorRoutes from './src/routes/twoFactor.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
@@ -21,12 +20,10 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS Configuration - CRITICAL FIX
 const allowedOrigins = [
   'https://con-serve-repository.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:5000'
+  'http://localhost:3000'
 ];
 
 app.use(cors({
@@ -39,28 +36,19 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-app.options('*', cors());
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+app.get('/', (req, res) => res.json({ status: 'ok', message: 'ConServe API' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api', apiLimiter);
-
-app.get('/', (req, res) => {
-  res.json({ message: 'ConServe API', status: 'running' });
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
-});
-
 app.use('/api/auth', authRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/users', userRoutes);
@@ -68,20 +56,27 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/2fa', twoFactorRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
-
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Server error', message: err.message });
+  res.status(500).json({ error: 'Server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server: http://localhost:${PORT}`);
-  console.log(`CORS: ${allowedOrigins.join(', ')}`);
-});
+// Auto-find free port if 5000 is busy
+const startServer = (port) => {
+  const server = app.listen(port, () => {
+    console.log(`✅ Server running: http://localhost:${port}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Port ${port} busy, trying ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error('❌ Server error:', err);
+    }
+  });
+};
+
+startServer(PORT);
 
 export default app;
