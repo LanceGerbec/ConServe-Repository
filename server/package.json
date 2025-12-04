@@ -9,12 +9,7 @@
     "dev": "nodemon server.js",
     "create-admin": "node src/scripts/createAdmin.js"
   },
-  "keywords": [
-    "research",
-    "repository",
-    "neust",
-    "nursing"
-  ],
+  "keywords": ["research", "repository", "neust", "nursing"],
   "author": "NEUST College of Nursing",
   "license": "MIT",
   "dependencies": {
