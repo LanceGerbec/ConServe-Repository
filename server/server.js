@@ -1,5 +1,5 @@
 // ============================================
-// FILE: server/server.js - UPDATED
+// FILE: server/server.js - UPDATED with 2FA
 // ============================================
 import dotenv from 'dotenv';
 import express from 'express';
@@ -10,16 +10,15 @@ import compression from 'compression';
 import connectDB from './src/config/db.js';
 import authRoutes from './src/routes/auth.routes.js';
 import researchRoutes from './src/routes/research.routes.js';
-import userRoutes from './src/routes/user.routes.js'; // ADD THIS
-import { apiLimiter } from './src/middleware/rateLimiter.js';
+import userRoutes from './src/routes/user.routes.js';
 import bookmarkRoutes from './src/routes/bookmark.routes.js';
 import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
+import twoFactorRoutes from './src/routes/twoFactor.routes.js'; // NEW
+import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
-
-// Connect to database
 connectDB();
 
 const app = express();
@@ -38,8 +37,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
 app.use('/api', apiLimiter);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/settings', settingsRoutes);
 
 // Routes
 app.get('/', (req, res) => {
@@ -57,9 +54,12 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/research', researchRoutes);
-app.use('/api/users', userRoutes); // ADD THIS
+app.use('/api/users', userRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/2fa', twoFactorRoutes); // NEW
 
 // 404 handler
 app.use((req, res) => {

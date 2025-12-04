@@ -1,7 +1,22 @@
+# ============================================
+# Client .gitignore (client/.gitignore)
+# ============================================
+
 # Dependencies
 node_modules
 /.pnp
 .pnp.js
+
+# Environment Variables (NEVER COMMIT!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# BUT KEEP .env.example (this is safe to commit)
+!.env.example
 
 # Testing
 /coverage
@@ -10,13 +25,7 @@ node_modules
 /build
 /dist
 
-# Misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -25,3 +34,17 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.swp
+*.swo
+*~
+
+# Package Manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
