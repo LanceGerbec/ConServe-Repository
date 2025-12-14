@@ -1,8 +1,13 @@
+// ============================================
+// FILE: client/src/context/AuthContext.jsx - FIXED API URL
+// ============================================
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
 
+// Use your actual backend URL from Render
 const API_URL = import.meta.env.VITE_API_URL || 'https://conserve-repository.onrender.com/api';
 
 const api = axios.create({
@@ -13,13 +18,29 @@ const api = axios.create({
   withCredentials: true
 });
 
+// Add request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-}, (error) => Promise.reject(error));
+}, (error) => {
+  return Promise.reject(error);
+});
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -45,7 +66,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Login error:', err);
       return { 
         success: false, 
-        error: err.response?.data?.message || 'Connection error. Check backend.'
+        error: err.response?.data?.error || 'Connection error. Check backend.'
       };
     }
   };
@@ -65,14 +86,11 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const { data } = await api.post('/auth/register', userData);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
-      return { success: true };
+      return { success: true, message: data.message };
     } catch (err) {
       return { 
         success: false, 
-        error: err.response?.data?.message || 'Registration failed'
+        error: err.response?.data?.error || 'Registration failed'
       };
     }
   };
