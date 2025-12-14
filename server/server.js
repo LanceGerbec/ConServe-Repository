@@ -1,7 +1,3 @@
-// ============================================
-// FILE: server/server.js - CORS FIX
-// ============================================
-
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -16,79 +12,86 @@ import bookmarkRoutes from './src/routes/bookmark.routes.js';
 import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
-import twoFactorRoutes from './src/routes/twoFactor.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
-connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ============================================
-// FIXED CORS - ALLOW ALL VERCEL PREVIEW URLS
-// ============================================
+// Connect to MongoDB
+connectDB();
+
+// CORS - Allow Vercel domains
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow no origin (mobile apps, Postman, curl)
+  origin: function(origin, callback) {
+    const allowed = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      /\.vercel\.app$/,
+      /con-serve-repository.*\.vercel\.app$/
+    ];
+    
     if (!origin) return callback(null, true);
     
-    // Allow all Vercel preview URLs and main domain
-    if (
-      origin.includes('.vercel.app') ||
-      origin === 'http://localhost:5173' ||
-      origin === 'http://localhost:3000'
-    ) {
+    const isAllowed = allowed.some(pattern => {
+      if (typeof pattern === 'string') return origin === pattern;
+      return pattern.test(origin);
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('❌ CORS blocked origin:', origin);
+      console.log('❌ CORS blocked:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Handle preflight requests
 app.options('*', cors());
 
-// Security headers
+// Security & Compression
 app.use(helmet({ 
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "unsafe-none" }
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-
 app.use(compression());
 app.use(morgan('dev'));
+
+// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Apply rate limiting
+// Rate limiting
 app.use('/api', apiLimiter);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'ConServe API Server',
+    message: 'ConServe API',
     status: 'running',
     version: '1.0.0',
-    timestamp: new Date().toISOString()
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      research: '/api/research',
+      users: '/api/users'
+    }
   });
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
+    status: 'ok',
     mongodb: 'connected',
-    cors: 'enabled for all Vercel URLs'
+    timestamp: new Date().toISOString()
   });
 });
 
-// Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/users', userRoutes);
@@ -96,26 +99,29 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/2fa', twoFactorRoutes);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  console.log('❌ 404:', req.method, req.originalUrl);
+  res.status(404).json({ 
+    error: 'Route not found',
+    path: req.originalUrl,
+    method: req.method
+  });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
-    error: 'Server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  console.error('❌ Error:', err);
+  res.status(err.status || 500).json({ 
+    error: process.env.NODE_ENV === 'production' ? 'Server error' : err.message
   });
 });
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`✅ Server: http://localhost:${PORT}`);
-  console.log(`✅ Environment: ${process.env.NODE_ENV}`);
-  console.log(`✅ CORS: Enabled for all Vercel URLs (*.vercel.app)`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ MongoDB: Connecting...`);
 });
 

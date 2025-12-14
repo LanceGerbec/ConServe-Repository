@@ -12,7 +12,6 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
-    // Check if user exists
     const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
     if (existingUser) {
       return res.status(400).json({ 
@@ -20,7 +19,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // Create user
     const user = await User.create({
       firstName,
       lastName,
@@ -31,7 +29,6 @@ export const register = async (req, res) => {
       isApproved: false
     });
 
-    // Log action
     await AuditLog.create({
       user: user._id,
       action: 'USER_REGISTERED',
@@ -58,6 +55,10 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
