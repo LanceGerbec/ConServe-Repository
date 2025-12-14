@@ -1,41 +1,35 @@
-// ============================================
-// FILE: client/src/context/AuthContext.jsx - FIXED API URL
-// ============================================
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
 
-// Use your actual backend URL from Render
 const API_URL = import.meta.env.VITE_API_URL || 'https://conserve-repository.onrender.com/api';
+
+console.log('🔗 API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+  timeout: 30000
 });
 
-// Add request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  console.log('📤 Request:', config.method.toUpperCase(), config.url);
   return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+}, (error) => Promise.reject(error));
 
-// Add response interceptor for better error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ Response:', response.config.url, response.status);
+    return response;
+  },
   (error) => {
+    console.error('❌ Error:', error.response?.status, error.message);
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.clear();
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -57,17 +51,16 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('🔐 Attempting login to:', `${API_URL}/auth/login`);
       const { data } = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
       return { success: true };
     } catch (err) {
-      console.error('Login error:', err);
-      return { 
-        success: false, 
-        error: err.response?.data?.error || 'Connection error. Check backend.'
-      };
+      const errorMsg = err.response?.data?.error || err.message || 'Connection failed';
+      console.error('Login failed:', errorMsg);
+      return { success: false, error: errorMsg };
     }
   };
 
@@ -77,8 +70,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.clear();
       setUser(null);
     }
   };
