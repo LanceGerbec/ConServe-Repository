@@ -6,7 +6,13 @@ dotenv.config();
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
+
+console.log('✅ Cloudinary configured:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  configured: !!cloudinary.config().cloud_name
 });
 
 export default cloudinary;
