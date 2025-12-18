@@ -4,11 +4,8 @@ import AuditLog from '../models/AuditLog.js';
 export const addStudentId = async (req, res) => {
   try {
     const { studentId, fullName, course, yearLevel, email } = req.body;
-
     const existing = await ValidStudentId.findOne({ studentId: studentId.toUpperCase() });
-    if (existing) {
-      return res.status(400).json({ error: 'Student ID already exists' });
-    }
+    if (existing) return res.status(400).json({ error: 'Student ID already exists' });
 
     const validId = await ValidStudentId.create({
       studentId: studentId.toUpperCase(),
@@ -39,19 +36,12 @@ export const addStudentId = async (req, res) => {
 export const bulkUploadStudentIds = async (req, res) => {
   try {
     const { studentIds } = req.body;
-
     const results = { added: 0, skipped: 0, errors: [] };
 
     for (const item of studentIds) {
       try {
-        const existing = await ValidStudentId.findOne({ 
-          studentId: item.studentId.toUpperCase() 
-        });
-
-        if (existing) {
-          results.skipped++;
-          continue;
-        }
+        const existing = await ValidStudentId.findOne({ studentId: item.studentId.toUpperCase() });
+        if (existing) { results.skipped++; continue; }
 
         await ValidStudentId.create({
           studentId: item.studentId.toUpperCase(),
@@ -61,7 +51,6 @@ export const bulkUploadStudentIds = async (req, res) => {
           email: item.email || '',
           addedBy: req.user._id
         });
-
         results.added++;
       } catch (err) {
         results.errors.push({ studentId: item.studentId, error: err.message });
@@ -88,7 +77,6 @@ export const getAllValidStudentIds = async (req, res) => {
   try {
     const { status, search } = req.query;
     let query = {};
-
     if (status) query.status = status;
     if (search) {
       query.$or = [
@@ -112,14 +100,8 @@ export const getAllValidStudentIds = async (req, res) => {
 export const deleteStudentId = async (req, res) => {
   try {
     const validId = await ValidStudentId.findById(req.params.id);
-    
-    if (!validId) {
-      return res.status(404).json({ error: 'Student ID not found' });
-    }
-
-    if (validId.isUsed) {
-      return res.status(400).json({ error: 'Cannot delete: Student ID already used for registration' });
-    }
+    if (!validId) return res.status(404).json({ error: 'Student ID not found' });
+    if (validId.isUsed) return res.status(400).json({ error: 'Cannot delete: Already used' });
 
     await validId.deleteOne();
 
@@ -144,10 +126,7 @@ export const updateStudentIdStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const validId = await ValidStudentId.findById(req.params.id);
-
-    if (!validId) {
-      return res.status(404).json({ error: 'Student ID not found' });
-    }
+    if (!validId) return res.status(404).json({ error: 'Student ID not found' });
 
     validId.status = status;
     await validId.save();
@@ -172,19 +151,13 @@ export const updateStudentIdStatus = async (req, res) => {
 export const checkStudentId = async (req, res) => {
   try {
     const { studentId } = req.params;
-    
     const validId = await ValidStudentId.findOne({ 
-      studentId: studentId.toUpperCase(),
-      status: 'active'
+      studentId: studentId.toUpperCase(), 
+      status: 'active' 
     });
 
-    if (!validId) {
-      return res.status(404).json({ valid: false, message: 'Invalid or inactive student ID' });
-    }
-
-    if (validId.isUsed) {
-      return res.status(400).json({ valid: false, message: 'Student ID already registered' });
-    }
+    if (!validId) return res.status(404).json({ valid: false, message: 'Invalid student ID' });
+    if (validId.isUsed) return res.status(400).json({ valid: false, message: 'Already registered' });
 
     res.json({ 
       valid: true, 
