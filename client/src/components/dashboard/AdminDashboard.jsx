@@ -1,7 +1,3 @@
-// ============================================
-// FILE: client/src/components/dashboard/AdminDashboard.jsx - COMPLETE
-// ============================================
-
 import { useState, useEffect } from 'react';
 import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -137,18 +133,26 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
             activeTab === 'overview' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
           Overview
         </button>
         <button
+          onClick={() => setActiveTab('student-ids')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
+            activeTab === 'student-ids' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Student IDs
+        </button>
+        <button
           onClick={() => setActiveTab('analytics')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
             activeTab === 'analytics' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
@@ -156,25 +160,15 @@ const AdminDashboard = () => {
         </button>
         <button
           onClick={() => setActiveTab('logs')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
             activeTab === 'logs' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-
-<button
-  onClick={() => setActiveTab('student-ids')}
-  className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-    activeTab === 'student-ids' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-  }`}
->
-  Student IDs
-</button>
-
           Activity Logs
         </button>
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
             activeTab === 'settings' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
@@ -304,10 +298,10 @@ const AdminDashboard = () => {
         </>
       )}
 
+      {activeTab === 'student-ids' && <ValidStudentIdsManagement />}
       {activeTab === 'analytics' && <AnalyticsDashboard />}
       {activeTab === 'logs' && <ActivityLogs />}
       {activeTab === 'settings' && <SettingsManagement />}
-      {activeTab === 'student-ids' && <ValidStudentIdsManagement />}
     </div>
   );
 };

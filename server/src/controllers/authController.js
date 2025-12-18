@@ -13,7 +13,7 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
-    // Check if student ID is valid (NEW)
+    // Validate student ID first
     const validStudentId = await ValidStudentId.findOne({
       studentId: studentId.toUpperCase(),
       status: 'active'
@@ -31,7 +31,7 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check existing user
+    // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
     if (existingUser) {
       return res.status(400).json({ 
@@ -50,16 +50,18 @@ export const register = async (req, res) => {
       isApproved: false
     });
 
-    // Mark student ID as used (NEW)
+    // Mark student ID as used
     validStudentId.isUsed = true;
     validStudentId.registeredUser = user._id;
     await validStudentId.save();
 
+    // Log registration
     await AuditLog.create({
       user: user._id,
       action: 'USER_REGISTERED',
       ipAddress: req.ip,
-      userAgent: req.get('user-agent')
+      userAgent: req.get('user-agent'),
+      details: { email, studentId }
     });
 
     res.status(201).json({
@@ -99,12 +101,17 @@ export const login = async (req, res) => {
       return res.status(403).json({ error: 'Account pending admin approval' });
     }
 
+    if (!user.isActive) {
+      return res.status(403).json({ error: 'Account is inactive. Contact administrator.' });
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       await user.incLoginAttempts();
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Reset login attempts and update last login
     await User.findByIdAndUpdate(user._id, {
       $set: { loginAttempts: 0, lastLogin: new Date() },
       $unset: { lockoutUntil: 1 }

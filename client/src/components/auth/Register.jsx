@@ -12,12 +12,11 @@ const Register = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [studentIdValid, setStudentIdValid] = useState(null);
+  const [studentInfo, setStudentInfo] = useState(null);
+  const [checkingId, setCheckingId] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [studentIdValid, setStudentIdValid] = useState(null);
-const [studentInfo, setStudentInfo] = useState(null);
-const [checkingId, setCheckingId] = useState(false);
-
 
   const getPasswordStrength = (password) => {
     let strength = 0;
@@ -32,45 +31,47 @@ const [checkingId, setCheckingId] = useState(false);
   const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
-const checkStudentId = async (id) => {
-  if (!id || id.length < 4) {
-    setStudentIdValid(null);
-    setStudentInfo(null);
-    return;
-  }
+  const checkStudentId = async (id) => {
+    if (!id || id.length < 4) {
+      setStudentIdValid(null);
+      setStudentInfo(null);
+      return;
+    }
 
-  setCheckingId(true);
-  try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids/check/${id}`);
-    const data = await res.json();
-    
-    if (data.valid) {
-      setStudentIdValid(true);
-      setStudentInfo(data.studentInfo);
-    } else {
+    setCheckingId(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids/check/${id}`);
+      const data = await res.json();
+      
+      if (data.valid) {
+        setStudentIdValid(true);
+        setStudentInfo(data.studentInfo);
+        setError('');
+      } else {
+        setStudentIdValid(false);
+        setStudentInfo(null);
+        setError(data.message || 'Invalid student ID');
+      }
+    } catch (err) {
       setStudentIdValid(false);
       setStudentInfo(null);
-      setError(data.message);
+      setError('Failed to verify student ID');
+    } finally {
+      setCheckingId(false);
     }
-  } catch (err) {
-    setStudentIdValid(false);
-    setStudentInfo(null);
-  } finally {
-    setCheckingId(false);
-  }
-};
+  };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-
-  if (studentIdValid !== true) {
-    setError('Please enter a valid student ID number');
-    return;
-  }
+    e.preventDefault();
+    setError('');
 
     if (!agreedToTerms) {
       setError('You must agree to the Terms & Conditions and Privacy Policy to register');
+      return;
+    }
+
+    if (studentIdValid !== true) {
+      setError('Please enter a valid student ID number');
       return;
     }
 
@@ -98,20 +99,11 @@ const checkStudentId = async (id) => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl p-10 border border-gray-200 dark:border-gray-800 my-8 animate-scale-in relative">
-        {/* Close/Home Button */}
         <div className="absolute top-4 right-4 flex space-x-2">
-          <Link
-            to="/"
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group"
-            title="Back to Home"
-          >
+          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group" title="Back to Home">
             <Home size={20} className="text-gray-600 dark:text-gray-400 group-hover:text-navy" />
           </Link>
-          <Link
-            to="/"
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group"
-            title="Close"
-          >
+          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group" title="Close">
             <X size={20} className="text-gray-600 dark:text-gray-400 group-hover:text-red-500" />
           </Link>
         </div>
@@ -124,7 +116,6 @@ const checkStudentId = async (id) => {
           <p className="text-gray-600 dark:text-gray-400">Join ConServe Research Hub</p>
         </div>
 
-        {/* Info Banner */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-4 rounded-lg mb-6 flex items-start space-x-3">
           <Info size={20} className="text-navy flex-shrink-0 mt-0.5" />
           <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -182,48 +173,50 @@ const checkStudentId = async (id) => {
             />
             <p className="mt-1 text-xs text-gray-500">Use your official NEUST email address</p>
           </div>
-<div>
-  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-    Student/Faculty ID <span className="text-red-500">*</span>
-  </label>
-  <div className="relative">
-    <input
-      type="text"
-      required
-      value={formData.studentId}
-      onChange={(e) => {
-        setFormData({ ...formData, studentId: e.target.value });
-        checkStudentId(e.target.value);
-      }}
-      className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:outline-none ${
-        studentIdValid === true ? 'border-green-500' :
-        studentIdValid === false ? 'border-red-500' :
-        'border-gray-300 dark:border-gray-700'
-      } focus:border-navy bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
-      placeholder="2021-12345"
-    />
-    {checkingId && (
-      <div className="absolute right-4 top-1/2 -translate-y-1/2">
-        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
-      </div>
-    )}
-    {studentIdValid === true && (
-      <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" size={20} />
-    )}
-    {studentIdValid === false && (
-      <X className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
-    )}
-  </div>
-  {studentInfo && (
-    <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-      <p className="text-sm text-green-700 dark:text-green-400">
-        ✓ Valid ID: <strong>{studentInfo.fullName}</strong>
-        {studentInfo.course && ` - ${studentInfo.course}`}
-        {studentInfo.yearLevel && ` (${studentInfo.yearLevel})`}
-      </p>
-    </div>
-  )}
-</div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Student/Faculty ID <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={formData.studentId}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  setFormData({ ...formData, studentId: value });
+                  checkStudentId(value);
+                }}
+                className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:outline-none ${
+                  studentIdValid === true ? 'border-green-500' :
+                  studentIdValid === false ? 'border-red-500' :
+                  'border-gray-300 dark:border-gray-700'
+                } focus:border-navy bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
+                placeholder="2021-12345"
+              />
+              {checkingId && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
+                </div>
+              )}
+              {!checkingId && studentIdValid === true && (
+                <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" size={20} />
+              )}
+              {!checkingId && studentIdValid === false && (
+                <X className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
+              )}
+            </div>
+            {studentInfo && (
+              <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-sm text-green-700 dark:text-green-400">
+                  ✓ Valid ID: <strong>{studentInfo.fullName}</strong>
+                  {studentInfo.course && ` - ${studentInfo.course}`}
+                  {studentInfo.yearLevel && ` (${studentInfo.yearLevel})`}
+                </p>
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -303,7 +296,6 @@ const checkStudentId = async (id) => {
             </div>
           </div>
 
-          {/* Terms and Privacy Checkbox */}
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700">
             <label className="flex items-start space-x-3 cursor-pointer">
               <input
@@ -329,7 +321,7 @@ const checkStudentId = async (id) => {
 
           <button
             type="submit"
-            disabled={loading || !agreedToTerms}
+            disabled={loading || !agreedToTerms || studentIdValid !== true}
             className="w-full bg-navy hover:bg-navy-800 text-white font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
