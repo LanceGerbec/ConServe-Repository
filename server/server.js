@@ -13,6 +13,7 @@ import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
+import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
 
 dotenv.config();
 
@@ -99,6 +100,7 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/valid-student-ids', validStudentIdRoutes);
 
 // 404 handler
 app.use((req, res) => {

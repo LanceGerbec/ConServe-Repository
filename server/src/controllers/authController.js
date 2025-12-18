@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import AuditLog from '../models/AuditLog.js';
+import ValidStudentId from '../models/ValidStudentId.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -12,6 +13,25 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
+    // Check if student ID is valid (NEW)
+    const validStudentId = await ValidStudentId.findOne({
+      studentId: studentId.toUpperCase(),
+      status: 'active'
+    });
+
+    if (!validStudentId) {
+      return res.status(400).json({ 
+        error: 'Invalid student ID. Please contact the administrator.' 
+      });
+    }
+
+    if (validStudentId.isUsed) {
+      return res.status(400).json({ 
+        error: 'This student ID has already been registered.' 
+      });
+    }
+
+    // Check existing user
     const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
     if (existingUser) {
       return res.status(400).json({ 
@@ -19,6 +39,7 @@ export const register = async (req, res) => {
       });
     }
 
+    // Create user
     const user = await User.create({
       firstName,
       lastName,
@@ -28,6 +49,11 @@ export const register = async (req, res) => {
       role: role || 'student',
       isApproved: false
     });
+
+    // Mark student ID as used (NEW)
+    validStudentId.isUsed = true;
+    validStudentId.registeredUser = user._id;
+    await validStudentId.save();
 
     await AuditLog.create({
       user: user._id,

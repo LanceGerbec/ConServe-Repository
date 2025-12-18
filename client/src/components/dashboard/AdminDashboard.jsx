@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
+import ValidStudentIdsManagement from '../admin/ValidStudentIdsManagement';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -159,6 +160,16 @@ const AdminDashboard = () => {
             activeTab === 'logs' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
+
+<button
+  onClick={() => setActiveTab('student-ids')}
+  className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+    activeTab === 'student-ids' ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+  }`}
+>
+  Student IDs
+</button>
+
           Activity Logs
         </button>
         <button
@@ -296,6 +307,7 @@ const AdminDashboard = () => {
       {activeTab === 'analytics' && <AnalyticsDashboard />}
       {activeTab === 'logs' && <ActivityLogs />}
       {activeTab === 'settings' && <SettingsManagement />}
+      {activeTab === 'student-ids' && <ValidStudentIdsManagement />}
     </div>
   );
 };

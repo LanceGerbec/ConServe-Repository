@@ -14,6 +14,10 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [studentIdValid, setStudentIdValid] = useState(null);
+const [studentInfo, setStudentInfo] = useState(null);
+const [checkingId, setCheckingId] = useState(false);
+
 
   const getPasswordStrength = (password) => {
     let strength = 0;
@@ -28,9 +32,42 @@ const Register = () => {
   const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
+const checkStudentId = async (id) => {
+  if (!id || id.length < 4) {
+    setStudentIdValid(null);
+    setStudentInfo(null);
+    return;
+  }
+
+  setCheckingId(true);
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids/check/${id}`);
+    const data = await res.json();
+    
+    if (data.valid) {
+      setStudentIdValid(true);
+      setStudentInfo(data.studentInfo);
+    } else {
+      setStudentIdValid(false);
+      setStudentInfo(null);
+      setError(data.message);
+    }
+  } catch (err) {
+    setStudentIdValid(false);
+    setStudentInfo(null);
+  } finally {
+    setCheckingId(false);
+  }
+};
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  setError('');
+
+  if (studentIdValid !== true) {
+    setError('Please enter a valid student ID number');
+    return;
+  }
 
     if (!agreedToTerms) {
       setError('You must agree to the Terms & Conditions and Privacy Policy to register');
@@ -145,20 +182,48 @@ const Register = () => {
             />
             <p className="mt-1 text-xs text-gray-500">Use your official NEUST email address</p>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Student/Faculty ID <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.studentId}
-              onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              placeholder="2021-12345"
-            />
-          </div>
+<div>
+  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+    Student/Faculty ID <span className="text-red-500">*</span>
+  </label>
+  <div className="relative">
+    <input
+      type="text"
+      required
+      value={formData.studentId}
+      onChange={(e) => {
+        setFormData({ ...formData, studentId: e.target.value });
+        checkStudentId(e.target.value);
+      }}
+      className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:outline-none ${
+        studentIdValid === true ? 'border-green-500' :
+        studentIdValid === false ? 'border-red-500' :
+        'border-gray-300 dark:border-gray-700'
+      } focus:border-navy bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
+      placeholder="2021-12345"
+    />
+    {checkingId && (
+      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
+      </div>
+    )}
+    {studentIdValid === true && (
+      <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" size={20} />
+    )}
+    {studentIdValid === false && (
+      <X className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
+    )}
+  </div>
+  {studentInfo && (
+    <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+      <p className="text-sm text-green-700 dark:text-green-400">
+        ✓ Valid ID: <strong>{studentInfo.fullName}</strong>
+        {studentInfo.course && ` - ${studentInfo.course}`}
+        {studentInfo.yearLevel && ` (${studentInfo.yearLevel})`}
+      </p>
+    </div>
+  )}
+</div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
