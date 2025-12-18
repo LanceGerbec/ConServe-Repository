@@ -1,7 +1,6 @@
 import ValidStudentId from '../models/ValidStudentId.js';
 import AuditLog from '../models/AuditLog.js';
 
-// Add single student ID
 export const addStudentId = async (req, res) => {
   try {
     const { studentId, fullName, course, yearLevel, email } = req.body;
@@ -14,9 +13,9 @@ export const addStudentId = async (req, res) => {
     const validId = await ValidStudentId.create({
       studentId: studentId.toUpperCase(),
       fullName,
-      course,
-      yearLevel,
-      email,
+      course: course || '',
+      yearLevel: yearLevel || '',
+      email: email || '',
       addedBy: req.user._id
     });
 
@@ -32,14 +31,14 @@ export const addStudentId = async (req, res) => {
 
     res.status(201).json({ message: 'Student ID added', validId });
   } catch (error) {
+    console.error('Add student ID error:', error);
     res.status(500).json({ error: 'Failed to add student ID' });
   }
 };
 
-// Bulk upload student IDs
 export const bulkUploadStudentIds = async (req, res) => {
   try {
-    const { studentIds } = req.body; // Array of {studentId, fullName, course, yearLevel}
+    const { studentIds } = req.body;
 
     const results = { added: 0, skipped: 0, errors: [] };
 
@@ -80,11 +79,11 @@ export const bulkUploadStudentIds = async (req, res) => {
 
     res.json({ message: 'Bulk upload completed', results });
   } catch (error) {
+    console.error('Bulk upload error:', error);
     res.status(500).json({ error: 'Bulk upload failed' });
   }
 };
 
-// Get all valid student IDs
 export const getAllValidStudentIds = async (req, res) => {
   try {
     const { status, search } = req.query;
@@ -105,11 +104,11 @@ export const getAllValidStudentIds = async (req, res) => {
 
     res.json({ validIds, count: validIds.length });
   } catch (error) {
+    console.error('Fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch student IDs' });
   }
 };
 
-// Delete student ID
 export const deleteStudentId = async (req, res) => {
   try {
     const validId = await ValidStudentId.findById(req.params.id);
@@ -136,11 +135,11 @@ export const deleteStudentId = async (req, res) => {
 
     res.json({ message: 'Student ID deleted' });
   } catch (error) {
+    console.error('Delete error:', error);
     res.status(500).json({ error: 'Failed to delete student ID' });
   }
 };
 
-// Update student ID status
 export const updateStudentIdStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -165,11 +164,11 @@ export const updateStudentIdStatus = async (req, res) => {
 
     res.json({ message: 'Status updated', validId });
   } catch (error) {
+    console.error('Update error:', error);
     res.status(500).json({ error: 'Failed to update status' });
   }
 };
 
-// Check if student ID is valid (public endpoint for registration)
 export const checkStudentId = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -196,6 +195,7 @@ export const checkStudentId = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Check error:', error);
     res.status(500).json({ error: 'Failed to check student ID' });
   }
 };

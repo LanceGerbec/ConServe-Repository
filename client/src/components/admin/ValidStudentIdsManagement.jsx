@@ -6,17 +6,9 @@ const ValidStudentIdsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showBulkModal, setShowBulkModal] = useState(false);
-
   const [formData, setFormData] = useState({
-    studentId: '',
-    fullName: '',
-    course: '',
-    yearLevel: '',
-    email: ''
+    studentId: '', fullName: '', course: '', yearLevel: '', email: ''
   });
-
-  const [bulkData, setBulkData] = useState('');
 
   useEffect(() => {
     fetchStudentIds();
@@ -55,38 +47,13 @@ const ValidStudentIdsManagement = () => {
         setShowAddModal(false);
         setFormData({ studentId: '', fullName: '', course: '', yearLevel: '', email: '' });
         fetchStudentIds();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to add student ID');
       }
     } catch (error) {
       console.error('Add error:', error);
-    }
-  };
-
-  const handleBulkUpload = async (e) => {
-    e.preventDefault();
-    try {
-      const lines = bulkData.split('\n').filter(line => line.trim());
-      const studentIds = lines.map(line => {
-        const [studentId, fullName, course, yearLevel, email] = line.split(',').map(s => s.trim());
-        return { studentId, fullName, course: course || '', yearLevel: yearLevel || '', email: email || '' };
-      });
-
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids/bulk`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ studentIds })
-      });
-
-      if (res.ok) {
-        setShowBulkModal(false);
-        setBulkData('');
-        fetchStudentIds();
-      }
-    } catch (error) {
-      console.error('Bulk upload error:', error);
+      alert('Failed to add student ID');
     }
   };
 
@@ -113,25 +80,15 @@ const ValidStudentIdsManagement = () => {
           <UserCheck size={28} />
           Valid Student IDs ({studentIds.length})
         </h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowBulkModal(true)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition"
-          >
-            <Upload size={18} />
-            Bulk Upload
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-xl hover:bg-navy-800 transition"
-          >
-            <Plus size={18} />
-            Add Student ID
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-xl hover:bg-navy-800 transition"
+        >
+          <Plus size={18} />
+          Add Student ID
+        </button>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <input
@@ -143,7 +100,6 @@ const ValidStudentIdsManagement = () => {
         />
       </div>
 
-      {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -197,7 +153,6 @@ const ValidStudentIdsManagement = () => {
         </div>
       </div>
 
-      {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
@@ -252,46 +207,6 @@ const ValidStudentIdsManagement = () => {
                 className="w-full bg-navy text-white px-6 py-3 rounded-xl hover:bg-navy-800 transition"
               >
                 Add Student ID
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Upload Modal */}
-      {showBulkModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Bulk Upload Student IDs</h3>
-              <button onClick={() => setShowBulkModal(false)}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded text-sm">
-              <p className="font-semibold mb-2">Format: One per line, comma-separated</p>
-              <p className="text-gray-700 dark:text-gray-300 font-mono text-xs">
-                StudentID, Full Name, Course, Year Level, Email<br/>
-                2021-00001, Juan Dela Cruz, BS Nursing, 4th Year, juan@neust.edu.ph<br/>
-                2021-00002, Maria Santos, BS Nursing, 3rd Year, maria@neust.edu.ph
-              </p>
-            </div>
-
-            <form onSubmit={handleBulkUpload}>
-              <textarea
-                rows={10}
-                value={bulkData}
-                onChange={(e) => setBulkData(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none font-mono text-sm"
-                placeholder="Paste CSV data here..."
-              />
-
-              <button
-                type="submit"
-                className="w-full mt-4 bg-navy text-white px-6 py-3 rounded-xl hover:bg-navy-800 transition"
-              >
-                Upload {bulkData.split('\n').filter(l => l.trim()).length} Student IDs
               </button>
             </form>
           </div>
