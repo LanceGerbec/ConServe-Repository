@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserCheck, Plus, Search, Trash2, X, CheckCircle } from 'lucide-react';
+import { UserCheck, Plus, Search, Trash2, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ValidStudentIdsManagement = () => {
   const [studentIds, setStudentIds] = useState([]);
@@ -7,6 +7,7 @@ const ValidStudentIdsManagement = () => {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
     studentId: '', fullName: '', course: '', yearLevel: '', email: ''
   });
@@ -19,14 +20,28 @@ const ValidStudentIdsManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const params = search ? `?search=${search}` : '';
+      
+      console.log('📡 Fetching student IDs from:', `${import.meta.env.VITE_API_URL}/valid-student-ids${params}`);
+      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      console.log('Response status:', res.status);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error('Error response:', errorData);
+        throw new Error(errorData.error || 'Failed to load');
+      }
+
       const data = await res.json();
+      console.log('✅ Fetched student IDs:', data.count);
       setStudentIds(data.validIds || []);
+      setError('');
     } catch (error) {
-      console.error('Fetch error:', error);
-      setError('Failed to load student IDs');
+      console.error('❌ Fetch error:', error);
+      setError('Failed to load student IDs: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -35,6 +50,7 @@ const ValidStudentIdsManagement = () => {
   const handleAdd = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     
     if (!formData.studentId.trim() || !formData.fullName.trim()) {
       setError('Student ID and Full Name are required');
@@ -43,6 +59,8 @@ const ValidStudentIdsManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
+      console.log('➕ Adding student ID:', formData.studentId);
+      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids`, {
         method: 'POST',
         headers: {
@@ -53,40 +71,47 @@ const ValidStudentIdsManagement = () => {
       });
 
       const data = await res.json();
+      console.log('Response:', res.status, data);
 
       if (res.ok) {
+        setSuccess('✓ Student ID added successfully!');
         setShowAddModal(false);
         setFormData({ studentId: '', fullName: '', course: '', yearLevel: '', email: '' });
-        setError('');
         fetchStudentIds();
+        setTimeout(() => setSuccess(''), 3000);
       } else {
         setError(data.error || 'Failed to add student ID');
       }
     } catch (error) {
-      console.error('Add error:', error);
-      setError('Connection error. Please try again.');
+      console.error('❌ Add error:', error);
+      setError('Connection error: ' + error.message);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this student ID?')) return;
+  const handleDelete = async (id, studentId) => {
+    if (!confirm(`Delete student ID "${studentId}"?`)) return;
     
     try {
       const token = localStorage.getItem('token');
+      console.log('🗑️ Deleting student ID:', id);
+      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      const data = await res.json();
+
       if (res.ok) {
+        setSuccess('✓ Student ID deleted successfully!');
         fetchStudentIds();
+        setTimeout(() => setSuccess(''), 3000);
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to delete');
+        setError(data.error || 'Failed to delete');
       }
     } catch (error) {
-      console.error('Delete error:', error);
-      alert('Failed to delete student ID');
+      console.error('❌ Delete error:', error);
+      setError('Failed to delete student ID');
     }
   };
 
@@ -100,6 +125,21 @@ const ValidStudentIdsManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Success/Error Messages */}
+      {success && (
+        <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-4 rounded flex items-center gap-2">
+          <CheckCircle className="text-green-500" size={20} />
+          <p className="text-green-700 dark:text-green-400">{success}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded flex items-center gap-2">
+          <AlertCircle className="text-red-500" size={20} />
+          <p className="text-red-700 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <UserCheck size={28} />
@@ -170,7 +210,7 @@ const ValidStudentIdsManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => handleDelete(item._id)}
+                        onClick={() => handleDelete(item._id, item.studentId)}
                         disabled={item.isUsed}
                         className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         title={item.isUsed ? 'Cannot delete: Already used' : 'Delete'}
@@ -188,8 +228,8 @@ const ValidStudentIdsManagement = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add Student ID</h3>
               <button 

@@ -20,9 +20,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Connect to MongoDB
 connectDB();
 
-// FIX: Allow ALL origins during development
+// CORS - Allow all origins for development
 app.use(cors({
   origin: '*',
   credentials: false,
@@ -31,6 +32,8 @@ app.use(cors({
 }));
 
 app.options('*', cors());
+
+// Security & Middleware
 app.use(helmet({ 
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "unsafe-none" }
@@ -40,10 +43,10 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Apply rate limiting
+// Rate limiting
 app.use('/api', apiLimiter);
 
-// Health check
+// Health check endpoints
 app.get('/', (req, res) => {
   res.json({ 
     message: 'ConServe API', 
@@ -61,17 +64,26 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Register routes
+// API Routes - CRITICAL: Make sure all routes are registered
+console.log('📝 Registering API routes...');
 app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes registered');
 app.use('/api/research', researchRoutes);
+console.log('✅ Research routes registered');
 app.use('/api/users', userRoutes);
+console.log('✅ User routes registered');
 app.use('/api/bookmarks', bookmarkRoutes);
+console.log('✅ Bookmark routes registered');
 app.use('/api/reviews', reviewRoutes);
+console.log('✅ Review routes registered');
 app.use('/api/analytics', analyticsRoutes);
+console.log('✅ Analytics routes registered');
 app.use('/api/settings', settingsRoutes);
+console.log('✅ Settings routes registered');
 app.use('/api/valid-student-ids', validStudentIdRoutes);
+console.log('✅ Valid Student IDs routes registered');
 
-// Debug middleware to log all requests
+// Debug middleware - Log all requests
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.originalUrl}`);
   next();
@@ -85,11 +97,15 @@ app.use((req, res) => {
     path: req.originalUrl, 
     method: req.method,
     availableRoutes: [
-      '/api/health',
-      '/api/auth/*',
-      '/api/research/*',
-      '/api/users/*',
-      '/api/valid-student-ids/*'
+      'GET /api/health',
+      'POST /api/auth/login',
+      'POST /api/auth/register',
+      'GET /api/research',
+      'GET /api/users',
+      'GET /api/valid-student-ids',
+      'POST /api/valid-student-ids',
+      'GET /api/valid-student-ids/check/:studentId',
+      'DELETE /api/valid-student-ids/:id'
     ]
   });
 });
@@ -102,10 +118,16 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Start server
 app.listen(PORT, () => {
+  console.log(`\n🚀 Server started successfully!`);
   console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ CORS: Enabled for all origins`);
+  console.log(`✅ MongoDB: Connected`);
+  console.log(`\n📍 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`📍 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`📍 Valid Student IDs: http://localhost:${PORT}/api/valid-student-ids\n`);
 });
 
 export default app;
