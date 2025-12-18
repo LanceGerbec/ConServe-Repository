@@ -1,9 +1,6 @@
-// ============================================
-// Header.jsx - FIXED with Role-Based Login
-// ============================================
 import { Link, useLocation } from 'react-router-dom';
 import { Moon, Sun, Menu, X, LogOut, User } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,7 +8,24 @@ const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [logos, setLogos] = useState({ school: null, college: null, conserve: null });
   const location = useLocation();
+
+  useEffect(() => {
+    fetchLogos();
+  }, []);
+
+  const fetchLogos = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`);
+      const data = await res.json();
+      if (data.settings?.logos) {
+        setLogos(data.settings.logos);
+      }
+    } catch (error) {
+      console.error('Failed to fetch logos:', error);
+    }
+  };
 
   const isActive = (path) => location.pathname === path;
 
@@ -28,20 +42,44 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Left: School & College Logos */}
           <div className="flex items-center space-x-4">
-            {/* School Logo (Admin Replaceable) */}
-            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300">
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">NEUST</span>
+            {/* School Logo */}
+            <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300 overflow-hidden bg-white">
+              {logos.school?.url ? (
+                <img 
+                  src={logos.school.url} 
+                  alt="School Logo" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">NEUST</span>
+              )}
             </div>
             
-            {/* College Logo (Admin Replaceable) */}
-            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300">
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">CON</span>
+            {/* College Logo */}
+            <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300 overflow-hidden bg-white">
+              {logos.college?.url ? (
+                <img 
+                  src={logos.college.url} 
+                  alt="College Logo" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">CON</span>
+              )}
             </div>
             
             {/* ConServe Brand */}
             <Link to="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-navy rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
-                <span className="text-white font-bold text-xl">C</span>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 overflow-hidden bg-navy">
+                {logos.conserve?.url ? (
+                  <img 
+                    src={logos.conserve.url} 
+                    alt="ConServe Logo" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-bold text-xl">C</span>
+                )}
               </div>
               <div className="hidden md:block">
                 <span className="text-xl font-bold text-gray-900 dark:text-white block">ConServe</span>
@@ -152,49 +190,44 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-          // Around line 40-60, replace the login link section with:
-{user ? (
-  <>
-    <Link
-      to="/dashboard"
-      className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-        isActive('/dashboard')
-          ? 'bg-navy text-white shadow-md'
-          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-      }`}
-    >
-      Dashboard
-    </Link>
-    {/* ... rest of user menu ... */}
-  </>
-) : (
-  <>
-    <Link
-      to="/login"
-      className="px-4 py-2 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-    >
-      Login
-    </Link>
-    <Link
-      to="/register"
-      className="px-6 py-2 rounded-lg font-medium bg-navy text-white hover:bg-navy-800 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"
-    >
-      Register
-    </Link>
-  </>
-)}
+
+            {user ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2 rounded-lg font-medium bg-navy text-white"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => { logout(); setIsMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2 rounded-lg font-medium bg-navy text-white"
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         )}
       </nav>
-
-      {/* Admin Note Banner */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800">
-        <div className="container mx-auto px-6 py-2 max-w-7xl text-center">
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            <strong>Admin Note:</strong> School and College logos can be updated from the admin dashboard
-          </p>
-        </div>
-      </div>
     </header>
   );
 };
