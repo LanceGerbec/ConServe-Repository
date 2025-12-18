@@ -6,6 +6,8 @@ import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
 import ValidStudentIdsManagement from '../admin/ValidStudentIdsManagement';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
@@ -16,6 +18,7 @@ const AdminDashboard = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [pendingResearch, setPendingResearch] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -26,18 +29,34 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
+      console.log('📡 Fetching admin dashboard data from:', API_URL);
+
       const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/users/stats`, { headers }).then(r => r.json()),
-        fetch(`${import.meta.env.VITE_API_URL}/research/stats`, { headers }).then(r => r.json()),
-        fetch(`${import.meta.env.VITE_API_URL}/users?status=pending`, { headers }).then(r => r.json()),
-        fetch(`${import.meta.env.VITE_API_URL}/research?status=pending`, { headers }).then(r => r.json())
+        fetch(`${API_URL}/users/stats`, { headers }).then(r => {
+          if (!r.ok) throw new Error('Failed to fetch user stats');
+          return r.json();
+        }),
+        fetch(`${API_URL}/research/stats`, { headers }).then(r => {
+          if (!r.ok) throw new Error('Failed to fetch research stats');
+          return r.json();
+        }),
+        fetch(`${API_URL}/users?status=pending`, { headers }).then(r => {
+          if (!r.ok) throw new Error('Failed to fetch pending users');
+          return r.json();
+        }),
+        fetch(`${API_URL}/research?status=pending`, { headers }).then(r => {
+          if (!r.ok) throw new Error('Failed to fetch pending research');
+          return r.json();
+        })
       ]);
 
       setStats({ users: userStats, research: researchStats });
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
+      setError('');
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('❌ Fetch error:', error);
+      setError('Failed to load dashboard data: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -46,44 +65,88 @@ const AdminDashboard = () => {
   const handleApproveUser = async (userId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/${userId}/approve`, {
+      console.log('✅ Approving user:', userId, 'URL:', `${API_URL}/users/${userId}/approve`);
+      
+      const res = await fetch(`${API_URL}/users/${userId}/approve`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-      if (res.ok) fetchData();
+
+      const data = await res.json();
+      console.log('Response:', res.status, data);
+
+      if (res.ok) {
+        console.log('✅ User approved successfully');
+        await fetchData();
+      } else {
+        console.error('❌ Approve failed:', data);
+        alert(data.error || 'Failed to approve user');
+      }
     } catch (error) {
-      console.error('Approve user error:', error);
+      console.error('❌ Approve user error:', error);
+      alert('Connection error: ' + error.message);
     }
   };
 
   const handleRejectUser = async (userId) => {
     if (!confirm('Are you sure you want to reject this user?')) return;
+    
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/${userId}/reject`, {
+      console.log('❌ Rejecting user:', userId);
+      
+      const res = await fetch(`${API_URL}/users/${userId}/reject`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-      if (res.ok) fetchData();
+
+      const data = await res.json();
+
+      if (res.ok) {
+        console.log('✅ User rejected successfully');
+        await fetchData();
+      } else {
+        console.error('❌ Reject failed:', data);
+        alert(data.error || 'Failed to reject user');
+      }
     } catch (error) {
-      console.error('Reject user error:', error);
+      console.error('❌ Reject user error:', error);
+      alert('Connection error: ' + error.message);
     }
   };
 
   const handleApproveResearch = async (researchId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${researchId}/status`, {
+      console.log('✅ Approving research:', researchId);
+      
+      const res = await fetch(`${API_URL}/research/${researchId}/status`, {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: 'approved' })
       });
-      if (res.ok) fetchData();
+
+      const data = await res.json();
+
+      if (res.ok) {
+        console.log('✅ Research approved successfully');
+        await fetchData();
+      } else {
+        console.error('❌ Approve research failed:', data);
+        alert(data.error || 'Failed to approve research');
+      }
     } catch (error) {
-      console.error('Approve research error:', error);
+      console.error('❌ Approve research error:', error);
+      alert('Connection error: ' + error.message);
     }
   };
 
@@ -93,17 +156,29 @@ const AdminDashboard = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${researchId}/status`, {
+      console.log('❌ Rejecting research:', researchId);
+      
+      const res = await fetch(`${API_URL}/research/${researchId}/status`, {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: 'rejected', revisionNotes: notes })
       });
-      if (res.ok) fetchData();
+
+      const data = await res.json();
+
+      if (res.ok) {
+        console.log('✅ Research rejected successfully');
+        await fetchData();
+      } else {
+        console.error('❌ Reject research failed:', data);
+        alert(data.error || 'Failed to reject research');
+      }
     } catch (error) {
-      console.error('Reject research error:', error);
+      console.error('❌ Reject research error:', error);
+      alert('Connection error: ' + error.message);
     }
   };
 
@@ -124,6 +199,12 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
+          <p className="text-red-700 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
       <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-8 shadow-lg">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-blue-100">Welcome, {user?.firstName} - System Administrator</p>
