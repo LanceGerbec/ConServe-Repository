@@ -152,46 +152,37 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-            {user ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  Dashboard
-                </Link>
-                <div className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
-                  Logged in as: <span className="font-semibold">{user.firstName}</span> ({user.role})
-                </div>
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 rounded-lg bg-navy text-white text-center font-medium"
-                >
-                  Register
-                </Link>
-              </>
-            )}
+          // Around line 40-60, replace the login link section with:
+{user ? (
+  <>
+    <Link
+      to="/dashboard"
+      className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+        isActive('/dashboard')
+          ? 'bg-navy text-white shadow-md'
+          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+      }`}
+    >
+      Dashboard
+    </Link>
+    {/* ... rest of user menu ... */}
+  </>
+) : (
+  <>
+    <Link
+      to="/login"
+      className="px-4 py-2 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+    >
+      Login
+    </Link>
+    <Link
+      to="/register"
+      className="px-6 py-2 rounded-lg font-medium bg-navy text-white hover:bg-navy-800 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"
+    >
+      Register
+    </Link>
+  </>
+)}
           </div>
         )}
       </nav>

@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
-import ErrorBoundary from './components/ErrorBoundary'; // NEW
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleSelect from './pages/RoleSelect';
 import StudentLogin from './components/auth/StudentLogin';
@@ -20,49 +19,47 @@ import Layout from './components/layout/Layout';
 
 function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <Router>
-          <AuthProvider>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Layout><Home /></Layout>} />
-              <Route path="/about" element={<Layout><About /></Layout>} />
-              <Route path="/help" element={<Layout><Help /></Layout>} />
-              <Route path="/terms" element={<Layout><Terms /></Layout>} />
-              <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
-              
-              {/* Login Routes */}
-              <Route path="/login" element={<RoleSelect />} />
-              <Route path="/login/student" element={<StudentLogin />} />
-              <Route path="/login/faculty" element={<FacultyLogin />} />
-              <Route path="/login/admin" element={<AdminLogin />} />
-              <Route path="/register" element={<Register />} />
+    <ThemeProvider>
+      <Router>
+        <AuthProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Layout><Home /></Layout>} />
+            <Route path="/about" element={<Layout><About /></Layout>} />
+            <Route path="/help" element={<Layout><Help /></Layout>} />
+            <Route path="/terms" element={<Layout><Terms /></Layout>} />
+            <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
+            
+            {/* Login Routes - NO LAYOUT */}
+            <Route path="/login" element={<RoleSelect />} />
+            <Route path="/login/student" element={<StudentLogin />} />
+            <Route path="/login/faculty" element={<FacultyLogin />} />
+            <Route path="/login/admin" element={<AdminLogin />} />
+            <Route path="/register" element={<Register />} />
 
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Layout><Dashboard /></Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/browse" element={
-                <ProtectedRoute>
-                  <Layout><Browse /></Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/research/:id" element={
-                <ProtectedRoute>
-                  <Layout><ResearchDetail /></Layout>
-                </ProtectedRoute>
-              } />
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Layout><Dashboard /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/browse" element={
+              <ProtectedRoute>
+                <Layout><Browse /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/research/:id" element={
+              <ProtectedRoute>
+                <Layout><ResearchDetail /></Layout>
+              </ProtectedRoute>
+            } />
 
-              {/* Redirect */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AuthProvider>
-        </Router>
-      </ThemeProvider>
-    </ErrorBoundary>
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 
