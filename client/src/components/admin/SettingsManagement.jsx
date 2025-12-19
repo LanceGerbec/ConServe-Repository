@@ -56,7 +56,8 @@ const SettingsManagement = () => {
       if (res.ok) {
         setMessage(`✓ ${type.charAt(0).toUpperCase() + type.slice(1)} logo uploaded successfully!`);
         await fetchSettings();
-        
+
+  
         // Force header to reload logos
         window.dispatchEvent(new Event('logosUpdated'));
         
