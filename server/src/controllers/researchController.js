@@ -3,6 +3,7 @@ import AuditLog from '../models/AuditLog.js';
 import { getGridFSBucket } from '../config/gridfs.js';
 import { Readable } from 'stream';
 import { generateCitation } from '../utils/citationGenerator.js';
+import { generateSignedPdfUrl, verifySignedUrl } from '../utils/signedUrl.js';
 import mongoose from 'mongoose';
 
 export const submitResearch = async (req, res) => {
@@ -59,15 +60,36 @@ export const submitResearch = async (req, res) => {
   }
 };
 
-export const streamPDF = async (req, res) => {
+// NEW: Stream PDF with signed token (NO AUTH REQUIRED)
+export const streamPDFWithToken = async (req, res) => {
   try {
-    console.log('📄 Streaming PDF:', req.params.fileId);
-    
+    const { fileId } = req.params;
+    const { token } = req.query;
+
+    console.log('📄 Streaming PDF with token:', fileId);
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token required' });
+    }
+
+    // Verify signed URL token
+    let decoded;
+    try {
+      decoded = verifySignedUrl(token);
+      console.log('✅ Token verified:', decoded.userId);
+    } catch (error) {
+      console.error('❌ Token verification failed:', error.message);
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    if (decoded.fileId !== fileId) {
+      return res.status(403).json({ error: 'Token does not match file' });
+    }
+
     const bucket = getGridFSBucket();
-    const fileId = new mongoose.Types.ObjectId(req.params.fileId);
-    
-    // Find file info first
-    const files = await bucket.find({ _id: fileId }).toArray();
+    const objectId = new mongoose.Types.ObjectId(fileId);
+
+    const files = await bucket.find({ _id: objectId }).toArray();
     if (!files || files.length === 0) {
       console.error('❌ File not found:', fileId);
       return res.status(404).json({ error: 'File not found' });
@@ -76,20 +98,17 @@ export const streamPDF = async (req, res) => {
     const file = files[0];
     console.log('✅ File found:', file.filename, file.length, 'bytes');
 
-    // CRITICAL: Set headers BEFORE streaming
+    // Set headers for PDF streaming
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Length': file.length,
       'Content-Disposition': 'inline',
-      'Cache-Control': 'public, max-age=31536000',
+      'Cache-Control': 'private, max-age=3600',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': '*',
-      'X-Content-Type-Options': 'nosniff',
-      // CRITICAL: Remove X-Frame-Options to allow iframe
+      'X-Content-Type-Options': 'nosniff'
     });
 
-    const downloadStream = bucket.openDownloadStream(fileId);
+    const downloadStream = bucket.openDownloadStream(objectId);
 
     downloadStream.on('error', (error) => {
       console.error('❌ Stream error:', error);
@@ -104,9 +123,9 @@ export const streamPDF = async (req, res) => {
 
     downloadStream.pipe(res);
   } catch (error) {
-    console.error('❌ Stream PDF error:', error);
+    console.error('❌ Stream error:', error);
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Stream failed: ' + error.message });
+      res.status(500).json({ error: error.message });
     }
   }
 };
@@ -144,10 +163,17 @@ export const getResearchById = async (req, res) => {
 
     if (!paper) return res.status(404).json({ error: 'Not found' });
 
+    // Generate signed URL for PDF access
+    const signedPdfUrl = generateSignedPdfUrl(paper.gridfsId.toString(), req.user._id.toString());
+    
+    // Add to paper object
+    const paperObj = paper.toObject();
+    paperObj.signedPdfUrl = signedPdfUrl;
+
     paper.views += 1;
     await paper.save();
 
-    res.json({ paper });
+    res.json({ paper: paperObj });
   } catch (error) {
     res.status(500).json({ error: 'Fetch failed' });
   }

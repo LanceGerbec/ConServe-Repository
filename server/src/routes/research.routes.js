@@ -10,17 +10,17 @@ import {
   getMySubmissions,
   getResearchStats,
   getCitation,
-  streamPDF,
+  streamPDFWithToken,
   getRecentlyViewed,
   getTrendingPapers
 } from '../controllers/researchController.js';
 
 const router = express.Router();
 
-// PDF streaming - MUST be before /:id route
-router.get('/file/:fileId', auth, streamPDF);
+// PDF streaming with signed token (NO AUTH)
+router.get('/view/:fileId', streamPDFWithToken);
 
-// Other routes
+// Protected routes
 router.get('/', auth, getAllResearch);
 router.get('/stats', auth, authorize('admin'), getResearchStats);
 router.get('/my-submissions', auth, getMySubmissions);

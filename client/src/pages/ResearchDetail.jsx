@@ -224,13 +224,13 @@ const ResearchDetail = () => {
         </div>
       )}
 
-      {showPDF && (
-        <PDFViewer 
-          pdfUrl={paper.fileUrl} 
-          paperTitle={paper.title}
-          onClose={() => setShowPDF(false)}
-        />
-      )}
+     {showPDF && (
+  <PDFViewer 
+    signedPdfUrl={paper.signedPdfUrl}  // Changed from pdfUrl
+    paperTitle={paper.title}
+    onClose={() => setShowPDF(false)}
+  />
+)}
     </div>
   );
 };
