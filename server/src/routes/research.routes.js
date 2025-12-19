@@ -17,7 +17,7 @@ import {
 
 const router = express.Router();
 
-// PDF streaming with signed token (NO AUTH)
+// CRITICAL: PDF streaming with signed token MUST be FIRST (NO AUTH)
 router.get('/view/:fileId', streamPDFWithToken);
 
 // Protected routes
@@ -31,5 +31,7 @@ router.get('/:id', auth, getResearchById);
 router.post('/', auth, upload.single('file'), submitResearch);
 router.patch('/:id/status', auth, authorize('admin', 'faculty'), updateResearchStatus);
 router.delete('/:id', auth, authorize('admin'), deleteResearch);
+
+console.log('✅ Research routes registered, including /view/:fileId');
 
 export default router;

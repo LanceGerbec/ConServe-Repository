@@ -33,22 +33,20 @@ app.use(cors({
   exposedHeaders: '*'
 }));
 
-// CRITICAL: Disable all restrictive headers for iframe/PDF
+// CRITICAL: Disable restrictive headers for PDF/iframe
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: false,
   crossOriginEmbedderPolicy: false,
-  frameguard: false // CRITICAL: Allow iframe embedding
+  frameguard: false
 }));
 
-// Add custom headers for PDF streaming
+// Custom headers for PDF streaming
 app.use((req, res, next) => {
   res.removeHeader('X-Frame-Options');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', '*');
-  res.setHeader('Access-Control-Allow-Headers', '*');
   next();
 });
 
@@ -60,17 +58,13 @@ app.use('/api', apiLimiter);
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ message: 'ConServe API', status: 'running', version: '1.0.0' });
+  res.json({ message: 'ConServe API', status: 'running' });
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
-});
-
-// API Routes
-console.log('📝 Registering routes...');
+// API Routes - EXACT ORDER MATTERS
+console.log('📝 Registering API routes...');
 app.use('/api/auth', authRoutes);
-app.use('/api/research', researchRoutes);
+app.use('/api/research', researchRoutes); // This includes /view/:fileId
 app.use('/api/users', userRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
@@ -87,13 +81,14 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
+  console.error('❌ Server Error:', err);
   res.status(500).json({ error: err.message });
 });
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Server: http://localhost:${PORT}`);
-  console.log(`📍 API: http://localhost:${PORT}/api\n`);
+  console.log(`📍 API: http://localhost:${PORT}/api`);
+  console.log(`📄 PDF Stream: http://localhost:${PORT}/api/research/view/:fileId\n`);
 });
 
 export default app;

@@ -6,13 +6,19 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const { user } = useAuth();
   const [error, setError] = useState('');
   
+  // CRITICAL: Build full URL correctly
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const fullPdfUrl = `${API_BASE}${signedPdfUrl}`;
   
-  console.log('🔗 Signed PDF URL:', fullPdfUrl);
+  console.log('🔗 PDF Viewer URLs:', {
+    signedPdfUrl,
+    API_BASE,
+    fullPdfUrl
+  });
 
   return (
     <div className="fixed inset-0 bg-black/95 z-50 flex flex-col">
+      {/* Watermark overlay */}
       <div className="absolute inset-0 pointer-events-none z-50 select-none">
         {[...Array(5)].map((_, i) => (
           <div 
@@ -29,6 +35,7 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         ))}
       </div>
 
+      {/* Header */}
       <div className="bg-gray-900 px-6 py-4 flex items-center justify-between z-40">
         <div className="flex items-center gap-3">
           <FileText className="text-white" size={24} />
@@ -53,6 +60,7 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         </div>
       </div>
 
+      {/* PDF Viewer */}
       <div className="flex-1 relative overflow-hidden bg-gray-800">
         {error && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
@@ -72,10 +80,11 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           src={fullPdfUrl}
           className="w-full h-full border-0"
           title={paperTitle}
-          onError={() => setError('PDF failed to load')}
+          onError={() => setError('PDF failed to load. The link may have expired.')}
         />
       </div>
 
+      {/* Footer */}
       <div className="bg-red-900 px-6 py-3 text-center z-40">
         <p className="text-white text-sm font-semibold">
           ⚠️ Protected Document - Viewing Tracked - Link expires in 1 hour

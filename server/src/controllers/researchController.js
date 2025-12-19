@@ -60,15 +60,19 @@ export const submitResearch = async (req, res) => {
   }
 };
 
-// NEW: Stream PDF with signed token (NO AUTH REQUIRED)
 export const streamPDFWithToken = async (req, res) => {
   try {
     const { fileId } = req.params;
     const { token } = req.query;
 
-    console.log('📄 Streaming PDF with token:', fileId);
+    console.log('📄 PDF Stream Request:', {
+      fileId,
+      hasToken: !!token,
+      url: req.originalUrl
+    });
 
     if (!token) {
+      console.error('❌ No token provided');
       return res.status(401).json({ error: 'Token required' });
     }
 
@@ -76,13 +80,14 @@ export const streamPDFWithToken = async (req, res) => {
     let decoded;
     try {
       decoded = verifySignedUrl(token);
-      console.log('✅ Token verified:', decoded.userId);
+      console.log('✅ Token verified for user:', decoded.userId);
     } catch (error) {
       console.error('❌ Token verification failed:', error.message);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     if (decoded.fileId !== fileId) {
+      console.error('❌ Token fileId mismatch');
       return res.status(403).json({ error: 'Token does not match file' });
     }
 
@@ -91,12 +96,12 @@ export const streamPDFWithToken = async (req, res) => {
 
     const files = await bucket.find({ _id: objectId }).toArray();
     if (!files || files.length === 0) {
-      console.error('❌ File not found:', fileId);
+      console.error('❌ File not found in GridFS:', fileId);
       return res.status(404).json({ error: 'File not found' });
     }
 
     const file = files[0];
-    console.log('✅ File found:', file.filename, file.length, 'bytes');
+    console.log('✅ Streaming file:', file.filename, `(${file.length} bytes)`);
 
     // Set headers for PDF streaming
     res.set({
@@ -123,7 +128,7 @@ export const streamPDFWithToken = async (req, res) => {
 
     downloadStream.pipe(res);
   } catch (error) {
-    console.error('❌ Stream error:', error);
+    console.error('❌ PDF stream error:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: error.message });
     }

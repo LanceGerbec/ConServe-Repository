@@ -9,7 +9,9 @@ export const generateSignedPdfUrl = (fileId, userId) => {
   };
   
   const token = jwt.sign(payload, process.env.JWT_SECRET);
-  return `/api/research/view/${fileId}?token=${token}`;
+  
+  // CRITICAL: Return path without /api prefix
+  return `/research/view/${fileId}?token=${token}`;
 };
 
 export const verifySignedUrl = (token) => {
