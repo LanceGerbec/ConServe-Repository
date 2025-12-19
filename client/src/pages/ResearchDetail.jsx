@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ReviewHistory from '../components/research/ReviewHistory';
@@ -122,7 +122,6 @@ const ResearchDetail = () => {
             <Eye size={16} className="mr-2" />
             <span>{paper.views} views</span>
           </div>
-          {/* NEW: Citation count */}
           <div className="flex items-center">
             <Quote size={16} className="mr-2" />
             <span>{paper.citationClicks || 0} citations</span>
@@ -186,52 +185,62 @@ const ResearchDetail = () => {
         )}
       </div>
 
-     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
-  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
-  <div className="bg-gradient-to-br from-navy/5 to-accent/5 rounded-lg p-8 text-center border-2 border-dashed border-navy/20">
-    <FileText className="mx-auto text-navy mb-4" size={64} />
-    <p className="text-gray-700 dark:text-gray-300 mb-2 font-semibold">
-      Protected Research Document
-    </p>
-    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
-      This document is watermarked for security
-    </p>
-    
-    <button
-      onClick={() => setShowPDF(true)}
-      className="inline-flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-md hover:shadow-lg"
-    >
-      <FileText size={20} />
-      View Full Paper
-    </button>
-    
-    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-      🔒 Viewing will be logged for security purposes
-    </p>
-  </div>
-</div>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
+        <div className="bg-gradient-to-br from-navy/5 to-accent/5 rounded-lg p-8 text-center border-2 border-dashed border-navy/20">
+          <FileText className="mx-auto text-navy mb-4" size={64} />
+          <p className="text-gray-700 dark:text-gray-300 mb-2 font-semibold">
+            Protected Research Document
+          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+            This document is watermarked and protected
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => setShowPDF(true)}
+              className="inline-flex items-center justify-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-md hover:shadow-lg"
+            >
+              <FileText size={20} />
+              View in Browser
+            </button>
+            
+            
+             <a href={paper.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition shadow-md hover:shadow-lg"
+            >
+              <ExternalLink size={20} />
+              Open in New Tab
+            </a>
+          </div>
+          
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+            🔒 All views are logged • Watermarked with your credentials
+          </p>
+        </div>
+      </div>
 
       {showCitation && <CitationModal paper={paper} onClose={() => setShowCitation(false)} />}
 
-      <style>{`
-        * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
-      `}</style>
-{/* Review History Section */}
       {(user?.role === 'admin' || user?.role === 'faculty' || paper.submittedBy?._id === user?.id) && (
         <div className="mt-6">
           <ReviewHistory researchId={id} />
         </div>
       )}
 
-{/* Add PDF Viewer Modal at the end, before the closing div */}
-{showPDF && (
-  <PDFViewer 
-    pdfUrl={paper.fileUrl} 
-    paperTitle={paper.title}
-    onClose={() => setShowPDF(false)}
-  />
-)}
+      {showPDF && (
+        <PDFViewer 
+          pdfUrl={paper.fileUrl} 
+          paperTitle={paper.title}
+          onClose={() => setShowPDF(false)}
+        />
+      )}
 
+      <style>{`
+        * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
+      `}</style>
     </div>
   );
 };

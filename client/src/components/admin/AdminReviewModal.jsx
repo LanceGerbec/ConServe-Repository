@@ -1,4 +1,3 @@
-// client/src/components/admin/AdminReviewModal.jsx
 import { useState } from 'react';
 import { X, CheckCircle, XCircle, FileText, User, Calendar } from 'lucide-react';
 
@@ -93,11 +92,11 @@ const AdminReviewModal = ({ paper, onClose, onSuccess }) => {
           <div>
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">View Full Document</h4>
             
-              href={paper.fileUrl}
+             <a href={paper.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600"
-            <a>
+            >
               <FileText size={18} />
               Open PDF
             </a>
