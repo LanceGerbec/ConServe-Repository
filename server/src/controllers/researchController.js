@@ -65,41 +65,32 @@ export const streamPDFWithToken = async (req, res) => {
     const { fileId } = req.params;
     const { token } = req.query;
 
-    console.log('📄 PDF Stream Request:', { fileId, hasToken: !!token });
-
     if (!token) {
-      console.error('❌ No token provided');
       return res.status(401).json({ error: 'Token required' });
     }
 
-    // Verify signed URL token
     let decoded;
     try {
       decoded = verifySignedUrl(token);
-      console.log('✅ Token verified for user:', decoded.userId);
     } catch (error) {
-      console.error('❌ Token verification failed:', error.message);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     if (decoded.fileId !== fileId) {
-      console.error('❌ Token fileId mismatch');
-      return res.status(403).json({ error: 'Token does not match file' });
+      return res.status(403).json({ error: 'Token mismatch' });
     }
 
     const bucket = getGridFSBucket();
     const objectId = new mongoose.Types.ObjectId(fileId);
-
     const files = await bucket.find({ _id: objectId }).toArray();
+
     if (!files || files.length === 0) {
-      console.error('❌ File not found in GridFS:', fileId);
       return res.status(404).json({ error: 'File not found' });
     }
 
     const file = files[0];
-    console.log('✅ Streaming file:', file.filename, `(${file.length} bytes)`);
 
-    // FIXED HEADERS - Allow iframe embedding
+    // ENHANCED HEADERS - Prevent caching and embedding controls
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Length': file.length,
@@ -108,9 +99,11 @@ export const streamPDFWithToken = async (req, res) => {
       'Cache-Control': 'private, no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
-      'Access-Control-Allow-Origin': '*',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-      'Cross-Origin-Embedder-Policy': 'unsafe-none'
+      'X-Frame-Options': 'SAMEORIGIN', // Prevent embedding in external sites
+      'Content-Security-Policy': "frame-ancestors 'self'", // Extra protection
+      'Access-Control-Allow-Origin': process.env.CLIENT_URL || '*',
+      'Cross-Origin-Resource-Policy': 'same-site',
+      'X-Robots-Tag': 'noindex, nofollow'
     });
 
     const downloadStream = bucket.openDownloadStream(objectId);
@@ -120,10 +113,6 @@ export const streamPDFWithToken = async (req, res) => {
       if (!res.headersSent) {
         res.status(500).json({ error: 'Stream failed' });
       }
-    });
-
-    downloadStream.on('end', () => {
-      console.log('✅ Stream completed:', fileId);
     });
 
     downloadStream.pipe(res);
@@ -264,5 +253,26 @@ export const getTrendingPapers = async (req, res) => {
     res.json({ papers });
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
+  }
+};
+
+export const logViolation = async (req, res) => {
+  try {
+    const { researchId, violationType } = req.body;
+    
+    await AuditLog.create({
+      user: req.user._id,
+      action: `VIOLATION_${violationType.toUpperCase()}`,
+      resource: 'Research',
+      resourceId: researchId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { violationType, timestamp: new Date() }
+    });
+
+    console.warn(`⚠️ Violation logged: ${violationType} by ${req.user.email}`);
+    res.json({ message: 'Logged' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to log' });
   }
 };

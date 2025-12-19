@@ -31,6 +31,7 @@ router.get('/:id', auth, getResearchById);
 router.post('/', auth, upload.single('file'), submitResearch);
 router.patch('/:id/status', auth, authorize('admin', 'faculty'), updateResearchStatus);
 router.delete('/:id', auth, authorize('admin'), deleteResearch);
+router.post('/log-violation', auth, logViolation); // Add this line
 
 console.log('✅ Research routes registered, including /view/:fileId');
 

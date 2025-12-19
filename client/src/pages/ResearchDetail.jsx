@@ -179,27 +179,35 @@ const ResearchDetail = () => {
         )}
       </div>
 
-   <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
+<div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
   <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
-  <div className="bg-gradient-to-br from-navy/5 to-accent/5 rounded-lg p-8 text-center border-2 border-dashed border-navy/20">
-    <FileText className="mx-auto text-navy mb-4" size={64} />
-    <p className="text-gray-700 dark:text-gray-300 mb-2 font-semibold">
-      Protected Research Document
+  <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-8 text-center border-2 border-dashed border-red-300 dark:border-red-700">
+    <FileText className="mx-auto text-red-600 mb-4" size={64} />
+    <p className="text-gray-900 dark:text-white mb-2 font-bold text-lg">
+      🔒 View-Only Protected Document
     </p>
-    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
-      View the full PDF document (Protected & Tracked)
+    <p className="text-gray-700 dark:text-gray-300 mb-4 text-sm">
+      This PDF is strictly for viewing only. All protection measures are active:
     </p>
+    
+    <ul className="text-xs text-gray-600 dark:text-gray-400 mb-6 space-y-1">
+      <li>✓ Right-click disabled</li>
+      <li>✓ Download blocked</li>
+      <li>✓ Print disabled</li>
+      <li>✓ Screenshot detection active</li>
+      <li>✓ All access logged and tracked</li>
+    </ul>
     
     <button
       onClick={() => setShowPDF(true)}
-      className="inline-flex items-center justify-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-md"
+      className="inline-flex items-center justify-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-lg"
     >
       <FileText size={20} />
-      View PDF
+      Open Viewer (View Only)
     </button>
     
-    <p className="text-xs text-red-600 dark:text-red-400 mt-4 font-semibold">
-      🔒 Viewing is tracked • Right-click disabled • Download blocked
+    <p className="text-xs text-red-600 dark:text-red-400 mt-4 font-bold">
+      ⚠️ Violations are logged and may result in access suspension
     </p>
   </div>
 </div>

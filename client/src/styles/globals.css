@@ -10,25 +10,38 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Disable text selection on PDFs */
+/* CRITICAL: Disable all text selection in PDF viewer */
+iframe,
+.select-none,
+.select-none * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Disable pointer events on PDF (still allow scrolling) */
 iframe {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+  pointer-events: auto;
 }
 
-/* Disable right-click on PDF viewer */
-.select-none {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Print media query - hide content */
+/* Hide print dialog content */
 @media print {
   body {
     display: none !important;
   }
+  * {
+    display: none !important;
+  }
+}
+
+/* Prevent dragging */
+img,
+iframe {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
 }
