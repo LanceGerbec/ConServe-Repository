@@ -24,37 +24,43 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 initGridFS();
 
-// CORS - Allow all
+// CRITICAL: Ultra-permissive CORS for PDF streaming
 app.use(cors({
   origin: '*',
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+  allowedHeaders: '*',
+  exposedHeaders: '*'
 }));
 
-// Security with RELAXED CSP for iframes
+// CRITICAL: Disable all restrictive headers for iframe/PDF
 app.use(helmet({
-  contentSecurityPolicy: false, // CRITICAL: Disable CSP to allow iframe
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "unsafe-none" },
-  crossOriginEmbedderPolicy: false
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  frameguard: false // CRITICAL: Allow iframe embedding
 }));
+
+// Add custom headers for PDF streaming
+app.use((req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  next();
+});
 
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Rate limiting
 app.use('/api', apiLimiter);
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'ConServe API', 
-    status: 'running',
-    version: '1.0.0'
-  });
+  res.json({ message: 'ConServe API', status: 'running', version: '1.0.0' });
 });
 
 app.get('/api/health', (req, res) => {
@@ -76,7 +82,7 @@ console.log('✅ All routes registered');
 // 404 handler
 app.use((req, res) => {
   console.log('❌ 404:', req.method, req.originalUrl);
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'Route not found', path: req.originalUrl });
 });
 
 // Error handler
@@ -86,7 +92,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+  console.log(`\n🚀 Server: http://localhost:${PORT}`);
   console.log(`📍 API: http://localhost:${PORT}/api\n`);
 });
 

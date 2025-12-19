@@ -66,24 +66,48 @@ export const streamPDF = async (req, res) => {
     const bucket = getGridFSBucket();
     const fileId = new mongoose.Types.ObjectId(req.params.fileId);
     
+    // Find file info first
+    const files = await bucket.find({ _id: fileId }).toArray();
+    if (!files || files.length === 0) {
+      console.error('❌ File not found:', fileId);
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const file = files[0];
+    console.log('✅ File found:', file.filename, file.length, 'bytes');
+
+    // CRITICAL: Set headers BEFORE streaming
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': file.length,
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'public, max-age=31536000',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+      'X-Content-Type-Options': 'nosniff',
+      // CRITICAL: Remove X-Frame-Options to allow iframe
+    });
+
     const downloadStream = bucket.openDownloadStream(fileId);
 
     downloadStream.on('error', (error) => {
       console.error('❌ Stream error:', error);
-      res.status(404).json({ error: 'File not found' });
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Stream failed' });
+      }
     });
 
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': 'inline',
-      'Cache-Control': 'public, max-age=3600',
-      'Access-Control-Allow-Origin': '*'
+    downloadStream.on('end', () => {
+      console.log('✅ Stream completed:', fileId);
     });
 
     downloadStream.pipe(res);
   } catch (error) {
     console.error('❌ Stream PDF error:', error);
-    res.status(500).json({ error: 'Stream failed' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Stream failed: ' + error.message });
+    }
   }
 };
 
