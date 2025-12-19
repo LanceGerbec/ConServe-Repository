@@ -11,7 +11,7 @@ export const submitResearch = async (req, res) => {
 
     const { title, authors, abstract, keywords, category, subjectArea } = req.body;
     if (!title || !authors || !abstract || !category) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing fields' });
     }
 
     const bucket = getGridFSBucket();
@@ -51,26 +51,38 @@ export const submitResearch = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    console.log('✅ PDF uploaded to GridFS');
-    res.status(201).json({ message: 'Submitted successfully', paper });
+    console.log('✅ Uploaded:', uploadStream.id);
+    res.status(201).json({ message: 'Success', paper });
   } catch (error) {
-    console.error('Submit error:', error);
+    console.error('❌ Submit error:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
 export const streamPDF = async (req, res) => {
   try {
+    console.log('📄 Streaming PDF:', req.params.fileId);
+    
     const bucket = getGridFSBucket();
-    const stream = bucket.openDownloadStream(new mongoose.Types.ObjectId(req.params.fileId));
+    const fileId = new mongoose.Types.ObjectId(req.params.fileId);
+    
+    const downloadStream = bucket.openDownloadStream(fileId);
 
-    stream.on('error', () => res.status(404).json({ error: 'File not found' }));
+    downloadStream.on('error', (error) => {
+      console.error('❌ Stream error:', error);
+      res.status(404).json({ error: 'File not found' });
+    });
 
-    res.set('Content-Type', 'application/pdf');
-    res.set('Content-Disposition', 'inline');
-    stream.pipe(res);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'public, max-age=3600',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    downloadStream.pipe(res);
   } catch (error) {
-    console.error('Stream error:', error);
+    console.error('❌ Stream PDF error:', error);
     res.status(500).json({ error: 'Stream failed' });
   }
 };
@@ -82,6 +94,7 @@ export const getAllResearch = async (req, res) => {
 
     if (req.user.role === 'student') query.status = 'approved';
     else if (status) query.status = status;
+    
     if (category) query.category = category;
     if (search) {
       query.$or = [
@@ -186,7 +199,7 @@ export const getRecentlyViewed = async (req, res) => {
     const papers = await Research.find({ status: 'approved' }).sort({ views: -1 }).limit(10);
     res.json({ papers });
   } catch (error) {
-    res.status(500).json({ error: 'Fetch failed' });
+    res.status(500).json({ error: 'Failed' });
   }
 };
 
@@ -195,6 +208,6 @@ export const getTrendingPapers = async (req, res) => {
     const papers = await Research.find({ status: 'approved' }).sort({ views: -1 }).limit(10);
     res.json({ papers });
   } catch (error) {
-    res.status(500).json({ error: 'Fetch failed' });
+    res.status(500).json({ error: 'Failed' });
   }
 };

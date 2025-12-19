@@ -10,17 +10,24 @@ import {
   getMySubmissions,
   getResearchStats,
   getCitation,
-  streamPDF
+  streamPDF,
+  getRecentlyViewed,
+  getTrendingPapers
 } from '../controllers/researchController.js';
 
 const router = express.Router();
 
-router.get('/', auth, getAllResearch);
+// PDF streaming - MUST be before /:id route
 router.get('/file/:fileId', auth, streamPDF);
+
+// Other routes
+router.get('/', auth, getAllResearch);
 router.get('/stats', auth, authorize('admin'), getResearchStats);
 router.get('/my-submissions', auth, getMySubmissions);
-router.get('/:id', auth, getResearchById);
+router.get('/recently-viewed', auth, getRecentlyViewed);
+router.get('/trending', auth, getTrendingPapers);
 router.get('/:id/citation', auth, getCitation);
+router.get('/:id', auth, getResearchById);
 router.post('/', auth, upload.single('file'), submitResearch);
 router.patch('/:id/status', auth, authorize('admin', 'faculty'), updateResearchStatus);
 router.delete('/:id', auth, authorize('admin'), deleteResearch);
