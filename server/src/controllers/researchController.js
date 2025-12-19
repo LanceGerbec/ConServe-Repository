@@ -4,16 +4,18 @@ import cloudinary from '../config/cloudinary.js';
 import { Readable } from 'stream';
 import { generateCitation } from '../utils/citationGenerator.js';
 
-// Helper: Upload PDF to Cloudinary
+// FIXED: Upload PDF to Cloudinary with proper content-type for viewing
 const uploadToCloudinary = (buffer, filename) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: 'conserve-research',
-        resource_type: 'raw', // IMPORTANT: 'raw' for PDFs
+        resource_type: 'auto', // CHANGED: Let Cloudinary detect the type
         public_id: `research_${Date.now()}_${filename.replace(/\.[^/.]+$/, '')}`,
         access_mode: 'public',
-        type: 'upload'
+        type: 'upload',
+        format: 'pdf', // ADDED: Force PDF format
+        flags: 'attachment:false' // CRITICAL: Don't force download
       },
       (error, result) => {
         if (error) {
@@ -29,7 +31,6 @@ const uploadToCloudinary = (buffer, filename) => {
   });
 };
 
-// Submit new research with file upload
 export const submitResearch = async (req, res) => {
   try {
     if (!req.file) {
@@ -40,21 +41,17 @@ export const submitResearch = async (req, res) => {
 
     const { title, authors, abstract, keywords, category, subjectArea } = req.body;
 
-    // Validate required fields
     if (!title || !authors || !abstract || !category) {
       return res.status(400).json({ error: 'All required fields must be filled' });
     }
 
-    // Upload to Cloudinary
     const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
 
     console.log('✅ File uploaded to Cloudinary:', uploadResult.secure_url);
 
-    // Parse authors and keywords
     const authorsList = typeof authors === 'string' ? JSON.parse(authors) : authors;
     const keywordsList = typeof keywords === 'string' ? JSON.parse(keywords) : keywords;
 
-    // Create research paper
     const paper = await Research.create({
       title,
       authors: authorsList,
@@ -70,7 +67,6 @@ export const submitResearch = async (req, res) => {
       status: 'pending'
     });
 
-    // Log submission
     await AuditLog.create({
       user: req.user._id,
       action: 'RESEARCH_SUBMITTED',
@@ -91,7 +87,6 @@ export const submitResearch = async (req, res) => {
   }
 };
 
-// Get all research papers
 export const getAllResearch = async (req, res) => {
   try {
     const { status, category, search } = req.query;
