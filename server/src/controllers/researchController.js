@@ -263,25 +263,54 @@ export const getTrendingPapers = async (req, res) => {
   }
 };
 
-// ADD THIS NEW FUNCTION
 export const logViolation = async (req, res) => {
   try {
     const { researchId, violationType } = req.body;
     
-    await AuditLog.create({
+    if (!req.user) {
+      console.error('❌ No user in request');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!researchId || !violationType) {
+      console.error('❌ Missing researchId or violationType');
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Create audit log
+    const logEntry = await AuditLog.create({
       user: req.user._id,
       action: `VIOLATION_${violationType.toUpperCase()}`,
       resource: 'Research',
       resourceId: researchId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      details: { violationType, timestamp: new Date() }
+      details: { 
+        violationType, 
+        timestamp: new Date(),
+        userEmail: req.user.email || 'unknown'
+      }
     });
 
-    console.warn(`⚠️ Violation logged: ${violationType} by ${req.user.email}`);
-    res.json({ message: 'Logged' });
+    console.warn(`⚠️ VIOLATION LOGGED:`, {
+      user: req.user.email || req.user._id,
+      type: violationType,
+      researchId,
+      logId: logEntry._id
+    });
+
+    res.json({ 
+      message: 'Logged', 
+      violationId: logEntry._id 
+    });
   } catch (error) {
-    console.error('Log violation error:', error);
-    res.status(500).json({ error: 'Failed to log' });
+    console.error('❌ Log violation error:', error.message);
+    console.error('Stack:', error.stack);
+    
+    // Still return success to not break frontend
+    res.status(200).json({ 
+      message: 'Logged with error', 
+      error: error.message 
+    });
   }
 };
