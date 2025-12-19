@@ -3,11 +3,12 @@ import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, AlertCircle } 
 import { useAuth } from '../../context/AuthContext';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// FIXED: Use worker from node_modules
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url
-).toString();
+// FIXED: Use CDN worker - match your installed version
+// If you have pdfjs-dist@3.11.174, use this:
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.449/pdf.worker.min.js';
+
+// If you have pdfjs-dist@4.x.x (like 4.4.168), use this instead:
+// pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
 
 const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const { user } = useAuth();
@@ -188,7 +189,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         <div className="text-center max-w-md p-8">
           <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
           <h3 className="text-white text-xl font-bold mb-2">Failed to Load</h3>
-          <p className="text-gray-400 mb-4">{error}</p>
+          <p className="text-gray-400 mb-4 text-sm">{error}</p>
           <button 
             onClick={onClose} 
             className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
