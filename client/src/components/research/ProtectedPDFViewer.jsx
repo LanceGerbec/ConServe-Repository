@@ -3,12 +3,8 @@ import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, AlertCircle } 
 import { useAuth } from '../../context/AuthContext';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// FIXED: Use CDN worker - match your installed version
-// If you have pdfjs-dist@3.11.174, use this:
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.449/pdf.worker.min.js';
-
-// If you have pdfjs-dist@4.x.x (like 4.4.168), use this instead:
-// pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+// BEST FIX: Auto-resolve worker version using unpkg
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const { user } = useAuth();
@@ -21,6 +17,9 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const [violations, setViolations] = useState(0);
   const canvasRef = useRef(null);
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  console.log('🔧 PDF.js version:', pdfjsLib.version);
+  console.log('🔧 Worker URL:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
   const logViolation = async (type) => {
     try {
