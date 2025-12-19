@@ -1,10 +1,11 @@
-// ============================================
-// Home.jsx - Real Analytics & No "NEUST Research Hub"
-// ============================================
+// client/src/pages/Home.jsx
 import { Link } from 'react-router-dom';
-import { BookOpen, Shield, TrendingUp, Users, ArrowRight, Eye, Download, Star } from 'lucide-react';
+import { BookOpen, Shield, TrendingUp, Users, ArrowRight, Eye, Upload, Search, Star } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
+  const { user } = useAuth();
+
   const features = [
     { icon: BookOpen, title: 'Research Archive', desc: 'Access published nursing research papers', color: 'text-blue-600' },
     { icon: Shield, title: 'Secure Storage', desc: 'Protected with advanced security', color: 'text-green-600' },
@@ -12,12 +13,11 @@ const Home = () => {
     { icon: Users, title: 'Collaboration', desc: 'Connect with fellow researchers', color: 'text-navy' }
   ];
 
-  // Real-time analytics (these will be dynamic from backend)
   const stats = [
     { icon: BookOpen, value: '0', label: 'Research Papers', color: 'from-blue-500 to-blue-600' },
     { icon: Users, value: '0', label: 'Active Users', color: 'from-purple-500 to-purple-600' },
     { icon: Eye, value: '0', label: 'Total Views', color: 'from-green-500 to-green-600' },
-    { icon: Download, value: '0', label: 'This Month', color: 'from-orange-500 to-orange-600' }
+    { icon: Upload, value: '0', label: 'This Month', color: 'from-orange-500 to-orange-600' }
   ];
 
   return (
@@ -36,21 +36,65 @@ const Home = () => {
           Your gateway to academic excellence and research preservation. Discover, share, and preserve nursing research.
         </p>
         
+        {/* Dynamic buttons based on login status */}
         <div className="flex flex-wrap gap-4 justify-center">
-          <Link
-            to="/register"
-            className="flex items-center space-x-2 bg-navy hover:bg-navy-800 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-          >
-            <span>Get Started</span>
-            <ArrowRight size={20} />
-          </Link>
-          <Link
-            to="/about"
-            className="flex items-center space-x-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-700 px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-300"
-          >
-            <span>Learn More</span>
-          </Link>
+          {user ? (
+            // Logged in users see these buttons
+            <>
+              <Link
+                to="/browse"
+                className="flex items-center space-x-2 bg-navy hover:bg-navy-800 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+              >
+                <Search size={20} />
+                <span>Browse Research</span>
+              </Link>
+              
+              {user.role === 'student' && (
+                <Link
+                  to="/dashboard"
+                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                >
+                  <Upload size={20} />
+                  <span>Submit Research</span>
+                </Link>
+              )}
+              
+              <Link
+                to="/dashboard"
+                className="flex items-center space-x-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-700 px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-300"
+              >
+                <ArrowRight size={20} />
+                <span>Go to Dashboard</span>
+              </Link>
+            </>
+          ) : (
+            // Not logged in users see these buttons
+            <>
+              <Link
+                to="/register"
+                className="flex items-center space-x-2 bg-navy hover:bg-navy-800 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+              >
+                <span>Get Started</span>
+                <ArrowRight size={20} />
+              </Link>
+              <Link
+                to="/about"
+                className="flex items-center space-x-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-700 px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-300"
+              >
+                <span>Learn More</span>
+              </Link>
+            </>
+          )}
         </div>
+
+        {/* Show welcome message for logged in users */}
+        {user && (
+          <div className="mt-6 inline-block bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-6 py-3 rounded-full">
+            <p className="text-navy dark:text-accent font-semibold">
+              👋 Welcome back, {user.firstName}! Ready to explore?
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Features */}
@@ -125,22 +169,69 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-gray-100 dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-200 dark:border-gray-700">
-        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Ready to Start Your Research Journey?
-        </h2>
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-          Join our community of researchers and contribute to the advancement of nursing science.
-        </p>
-        <Link
-          to="/register"
-          className="inline-flex items-center space-x-2 bg-navy text-white px-10 py-4 rounded-xl font-bold hover:bg-navy-800 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-        >
-          <span>Join ConServe Today</span>
-          <ArrowRight size={20} />
-        </Link>
-      </section>
+      {/* CTA Section - Only show for non-logged in users */}
+      {!user && (
+        <section className="bg-gray-100 dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-200 dark:border-gray-700">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Ready to Start Your Research Journey?
+          </h2>
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+            Join our community of researchers and contribute to the advancement of nursing science.
+          </p>
+          <Link
+            to="/register"
+            className="inline-flex items-center space-x-2 bg-navy text-white px-10 py-4 rounded-xl font-bold hover:bg-navy-800 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+          >
+            <span>Join ConServe Today</span>
+            <ArrowRight size={20} />
+          </Link>
+        </section>
+      )}
+
+      {/* Quick Actions for Logged In Users */}
+      {user && (
+        <section className="bg-gradient-to-r from-navy to-accent rounded-3xl p-12 text-center shadow-xl">
+          <h2 className="text-3xl font-bold text-white mb-6">
+            {user.role === 'student' ? 'Ready to Submit Your Research?' : 
+             user.role === 'faculty' ? 'Review Pending Submissions' : 
+             'Manage Your Platform'}
+          </h2>
+          <div className="flex flex-wrap gap-4 justify-center">
+            {user.role === 'student' && (
+              <>
+                <Link to="/dashboard" className="bg-white text-navy px-8 py-3 rounded-xl font-bold hover:bg-gray-100 transition">
+                  <Upload size={18} className="inline mr-2" />
+                  Submit Research
+                </Link>
+                <Link to="/browse" className="bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-xl font-bold hover:bg-white/30 transition">
+                  <Search size={18} className="inline mr-2" />
+                  Browse Papers
+                </Link>
+              </>
+            )}
+            {user.role === 'faculty' && (
+              <>
+                <Link to="/dashboard" className="bg-white text-navy px-8 py-3 rounded-xl font-bold hover:bg-gray-100 transition">
+                  Review Submissions
+                </Link>
+                <Link to="/browse" className="bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-xl font-bold hover:bg-white/30 transition">
+                  Browse Research
+                </Link>
+              </>
+            )}
+            {user.role === 'admin' && (
+              <>
+                <Link to="/dashboard" className="bg-white text-navy px-8 py-3 rounded-xl font-bold hover:bg-gray-100 transition">
+                  Admin Dashboard
+                </Link>
+                <Link to="/browse" className="bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-xl font-bold hover:bg-white/30 transition">
+                  Browse All Research
+                </Link>
+              </>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
