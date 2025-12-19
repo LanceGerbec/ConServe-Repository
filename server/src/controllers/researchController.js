@@ -65,29 +65,18 @@ export const streamPDFWithToken = async (req, res) => {
     const { fileId } = req.params;
     const { token } = req.query;
 
-    console.log('📄 PDF Stream Request:', {
-      fileId,
-      hasToken: !!token,
-      url: req.originalUrl
-    });
-
     if (!token) {
-      console.error('❌ No token provided');
       return res.status(401).json({ error: 'Token required' });
     }
 
-    // Verify signed URL token
     let decoded;
     try {
       decoded = verifySignedUrl(token);
-      console.log('✅ Token verified for user:', decoded.userId);
     } catch (error) {
-      console.error('❌ Token verification failed:', error.message);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     if (decoded.fileId !== fileId) {
-      console.error('❌ Token fileId mismatch');
       return res.status(403).json({ error: 'Token does not match file' });
     }
 
@@ -96,36 +85,25 @@ export const streamPDFWithToken = async (req, res) => {
 
     const files = await bucket.find({ _id: objectId }).toArray();
     if (!files || files.length === 0) {
-      console.error('❌ File not found in GridFS:', fileId);
       return res.status(404).json({ error: 'File not found' });
     }
 
     const file = files[0];
-    console.log('✅ Streaming file:', file.filename, `(${file.length} bytes)`);
 
-    // Set headers for PDF streaming
+    // CRITICAL: Headers to prevent download and enforce inline viewing
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Length': file.length,
-      'Content-Disposition': 'inline',
-      'Cache-Control': 'private, max-age=3600',
-      'Access-Control-Allow-Origin': '*',
-      'X-Content-Type-Options': 'nosniff'
+      'Content-Disposition': 'inline; filename="protected.pdf"',
+      'Content-Security-Policy': "default-src 'none'; script-src 'none'; object-src 'none'",
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     });
 
     const downloadStream = bucket.openDownloadStream(objectId);
-
-    downloadStream.on('error', (error) => {
-      console.error('❌ Stream error:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Stream failed' });
-      }
-    });
-
-    downloadStream.on('end', () => {
-      console.log('✅ Stream completed:', fileId);
-    });
-
     downloadStream.pipe(res);
   } catch (error) {
     console.error('❌ PDF stream error:', error);
