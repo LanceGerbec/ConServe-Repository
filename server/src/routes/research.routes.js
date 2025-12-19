@@ -1,4 +1,6 @@
 import express from 'express';
+import { auth, authorize } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 import {
   getAllResearch,
   getResearchById,
@@ -7,14 +9,14 @@ import {
   deleteResearch,
   getMySubmissions,
   getResearchStats,
-  getCitation
+  getCitation,
+  streamPDF
 } from '../controllers/researchController.js';
-import { auth, authorize } from '../middleware/auth.js';
-import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
 router.get('/', auth, getAllResearch);
+router.get('/file/:fileId', auth, streamPDF);
 router.get('/stats', auth, authorize('admin'), getResearchStats);
 router.get('/my-submissions', auth, getMySubmissions);
 router.get('/:id', auth, getResearchById);

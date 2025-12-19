@@ -17,7 +17,7 @@ const researchSchema = new mongoose.Schema({
   fileUrl: { type: String, required: true },
   fileSize: Number,
   fileName: String,
-  cloudinaryId: String,
+gridfsId: mongoose.Schema.Types.ObjectId,
   status: { 
     type: String, 
     enum: ['pending', 'approved', 'rejected', 'revision'], 

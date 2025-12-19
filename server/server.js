@@ -14,6 +14,8 @@ import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
 import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
+import { initGridFS } from './src/config/gridfs.js';
+
 
 dotenv.config();
 
@@ -22,6 +24,7 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 connectDB();
+initGridFS(); // ADD THIS LINE
 
 // CORS - Allow all origins for development
 app.use(cors({
@@ -42,6 +45,7 @@ app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 
 // Rate limiting
 app.use('/api', apiLimiter);
