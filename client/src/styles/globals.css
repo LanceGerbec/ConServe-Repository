@@ -10,7 +10,7 @@ html {
   scroll-behavior: smooth;
 }
 
-/* CRITICAL: Disable all text selection in PDF viewer */
+/* Disable text selection in PDF viewer */
 iframe,
 .select-none,
 .select-none * {
@@ -21,12 +21,17 @@ iframe,
   -webkit-touch-callout: none !important;
 }
 
-/* Disable pointer events on PDF (still allow scrolling) */
+/* Prevent dragging images and iframes */
+img,
 iframe {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
   pointer-events: auto;
 }
 
-/* Hide print dialog content */
+/* Hide everything when printing */
 @media print {
   body {
     display: none !important;
@@ -34,14 +39,4 @@ iframe {
   * {
     display: none !important;
   }
-}
-
-/* Prevent dragging */
-img,
-iframe {
-  -webkit-user-drag: none;
-  -khtml-user-drag: none;
-  -moz-user-drag: none;
-  -o-user-drag: none;
-  user-drag: none;
 }

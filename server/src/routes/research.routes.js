@@ -12,12 +12,13 @@ import {
   getCitation,
   streamPDFWithToken,
   getRecentlyViewed,
-  getTrendingPapers
+  getTrendingPapers,
+  logViolation // ADD THIS IMPORT
 } from '../controllers/researchController.js';
 
 const router = express.Router();
 
-// CRITICAL: PDF streaming with signed token MUST be FIRST (NO AUTH)
+// Public route for PDF streaming
 router.get('/view/:fileId', streamPDFWithToken);
 
 // Protected routes
@@ -31,8 +32,8 @@ router.get('/:id', auth, getResearchById);
 router.post('/', auth, upload.single('file'), submitResearch);
 router.patch('/:id/status', auth, authorize('admin', 'faculty'), updateResearchStatus);
 router.delete('/:id', auth, authorize('admin'), deleteResearch);
-router.post('/log-violation', auth, logViolation); // Add this line
+router.post('/log-violation', auth, logViolation); // ADD THIS ROUTE
 
-console.log('✅ Research routes registered, including /view/:fileId');
+console.log('✅ Research routes registered');
 
 export default router;

@@ -10,18 +10,34 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const fullPdfUrl = `${API_BASE}${signedPdfUrl}`;
 
+  const logViolation = async (type) => {
+    try {
+      const token = localStorage.getItem('token');
+      const researchId = signedPdfUrl.split('/')[3];
+      
+      await fetch(`${API_BASE}/research/log-violation`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ researchId, violationType: type })
+      });
+    } catch (err) {
+      console.error('Failed to log violation:', err);
+    }
+  };
+
   useEffect(() => {
-    // Disable right-click
     const preventContext = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      logViolation('right_click');
       alert('⚠️ Right-click is disabled. This document is protected.');
       return false;
     };
 
-    // Disable keyboard shortcuts for save, print, screenshot
     const preventKeys = (e) => {
-      // Ctrl+S, Ctrl+P, PrintScreen, F12, Ctrl+Shift+I, Ctrl+U
       if (
         (e.ctrlKey && ['s', 'p', 'S', 'P', 'u', 'U'].includes(e.key)) ||
         e.key === 'PrintScreen' ||
@@ -30,18 +46,17 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       ) {
         e.preventDefault();
         setScreenshotAttempt(prev => prev + 1);
+        logViolation('keyboard_shortcut');
         alert('🚫 This action is disabled. All attempts are logged.');
         return false;
       }
     };
 
-    // Detect screenshot attempts (blur/focus)
     const detectScreenshot = () => {
       setScreenshotAttempt(prev => prev + 1);
-      console.warn('⚠️ Potential screenshot attempt detected');
+      logViolation('screenshot_attempt');
     };
 
-    // Disable text selection
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
 
@@ -63,7 +78,7 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
-      {/* Subtle Watermark Overlay */}
+      {/* Subtle Watermark */}
       <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden opacity-20">
         {[...Array(15)].map((_, i) => (
           <div
@@ -92,7 +107,6 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         <button 
           onClick={onClose} 
           className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition flex-shrink-0 ml-4"
-          title="Close Viewer"
         >
           <X size={18} />
         </button>
@@ -128,7 +142,7 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         />
       </div>
 
-      {/* Footer Warning */}
+      {/* Footer */}
       <div className="bg-red-600 px-6 py-2 text-center z-50 border-t border-red-700">
         <p className="text-white text-xs font-semibold">
           🔒 PROTECTED • Download/Print Disabled • Screenshot Detection Active • Link Expires in 1 Hour
@@ -137,45 +151,6 @@ const PDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       </div>
     </div>
   );
-};
-const logViolation = async (type) => {
-  try {
-    const token = localStorage.getItem('token');
-    await fetch(`${API_BASE}/research/log-violation`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        researchId: signedPdfUrl.split('/')[3], // Extract ID from URL
-        violationType: type
-      })
-    });
-  } catch (error) {
-    console.error('Failed to log violation:', error);
-  }
-};
-
-// Update the preventKeys function:
-const preventKeys = (e) => {
-  if (
-    (e.ctrlKey && ['s', 'p', 'S', 'P', 'u', 'U'].includes(e.key)) ||
-    e.key === 'PrintScreen' ||
-    e.key === 'F12' ||
-    (e.ctrlKey && e.shiftKey && ['i', 'I', 'j', 'J', 'c', 'C'].includes(e.key))
-  ) {
-    e.preventDefault();
-    setScreenshotAttempt(prev => prev + 1);
-    logViolation('keyboard_shortcut'); // LOG IT
-    alert('🚫 This action is disabled. All attempts are logged.');
-    return false;
-  }
-};
-
-const detectScreenshot = () => {
-  setScreenshotAttempt(prev => prev + 1);
-  logViolation('screenshot_attempt'); // LOG IT
 };
 
 export default PDFViewer;
