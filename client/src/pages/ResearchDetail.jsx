@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
-import PDFViewer from '../components/research/PDFViewer';
+import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -207,12 +207,12 @@ const ResearchDetail = () => {
 </div>
 </div>
 {showPDF && (
-    <PDFViewer 
-      signedPdfUrl={paper.signedPdfUrl}
-      paperTitle={paper.title}
-      onClose={() => setShowPDF(false)}
-    />
-  )}
+  <ProtectedPDFViewer 
+    signedPdfUrl={paper.signedPdfUrl}
+    paperTitle={paper.title}
+    onClose={() => setShowPDF(false)}
+  />
+)}
 
   {showCitation && (
     <CitationModal
