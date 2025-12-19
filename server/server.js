@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 initGridFS();
 
-// CRITICAL: Ultra-permissive CORS for PDF streaming
+// CRITICAL: Ultra-permissive CORS
 app.use(cors({
   origin: '*',
   credentials: false,
@@ -33,7 +33,7 @@ app.use(cors({
   exposedHeaders: '*'
 }));
 
-// CRITICAL: Disable restrictive headers for PDF/iframe
+// FIXED: Allow iframe embedding but keep other security
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: false,
@@ -42,7 +42,7 @@ app.use(helmet({
   frameguard: false
 }));
 
-// Custom headers for PDF streaming
+// Custom headers
 app.use((req, res, next) => {
   res.removeHeader('X-Frame-Options');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -61,10 +61,10 @@ app.get('/', (req, res) => {
   res.json({ message: 'ConServe API', status: 'running' });
 });
 
-// API Routes - EXACT ORDER MATTERS
+// API Routes
 console.log('📝 Registering API routes...');
 app.use('/api/auth', authRoutes);
-app.use('/api/research', researchRoutes); // This includes /view/:fileId
+app.use('/api/research', researchRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
