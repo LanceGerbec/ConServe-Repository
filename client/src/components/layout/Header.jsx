@@ -1,4 +1,3 @@
-// client/src/components/layout/Header.jsx
 import { Link, useLocation } from 'react-router-dom';
 import { Moon, Sun, Menu, X, LogOut, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -14,7 +13,6 @@ const Header = () => {
 
   useEffect(() => {
     fetchLogos();
-    // Listen for logo updates
     const handleLogosUpdated = () => fetchLogos();
     window.addEventListener('logosUpdated', handleLogosUpdated);
     return () => window.removeEventListener('logosUpdated', handleLogosUpdated);
@@ -46,20 +44,37 @@ const Header = () => {
       <nav className="container mx-auto px-6 py-4 max-w-7xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300 overflow-hidden bg-white">
+            {/* School Logo - Clickable */}
+            <a 
+              href="https://neust.edu.ph/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300 overflow-hidden bg-white cursor-pointer"
+              title="Visit NEUST Website"
+            >
               {logos.school?.url ? (
-                <img src={logos.school.url} alt="School" className="w-full h-full object-cover" />
+                <img src={logos.school.url} alt="NEUST" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xs text-gray-500 font-bold">NEUST</span>
               )}
-            </div>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300 overflow-hidden bg-white">
+            </a>
+
+            {/* College Logo - Clickable */}
+            <a 
+              href="https://www.facebook.com/NEUSTCON" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform duration-300 overflow-hidden bg-white cursor-pointer"
+              title="Visit College of Nursing Facebook"
+            >
               {logos.college?.url ? (
-                <img src={logos.college.url} alt="College" className="w-full h-full object-cover" />
+                <img src={logos.college.url} alt="College of Nursing" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xs text-gray-500 font-bold">CON</span>
               )}
-            </div>
+            </a>
+
+            {/* ConServe Logo - Non-clickable, links to home */}
             <Link to="/" className="flex items-center space-x-3 group">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 overflow-hidden bg-navy">
                 {logos.conserve?.url ? (

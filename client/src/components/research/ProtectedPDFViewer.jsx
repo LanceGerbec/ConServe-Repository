@@ -179,23 +179,48 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           viewport: viewport
         }).promise;
 
-        // Watermark
-        context.save();
-        context.globalAlpha = 0.15;
-        context.font = 'bold 14px monospace';
-        context.fillStyle = '#ff0000';
-        context.rotate(-30 * Math.PI / 180);
-        
-        const watermarkText = `${user?.email || 'PROTECTED'} • ${new Date().toLocaleString()}`;
-        const cols = Math.ceil(canvas.width / 250) + 2;
-        const rows = Math.ceil(canvas.height / 120) + 2;
-        
-        for (let row = 0; row < rows; row++) {
-          for (let col = 0; col < cols; col++) {
-            context.fillText(watermarkText, col * 280 - 250, row * 150 + 30);
-          }
-        }
-        context.restore();
+// Add watermark - IMPROVED VERSION with clearer text
+context.save();
+context.globalAlpha = 0.2; // Increased opacity for better visibility
+context.font = 'bold 16px Arial, sans-serif'; // Better font
+context.fillStyle = '#ff0000';
+context.rotate(-35 * Math.PI / 180); // Slightly steeper angle
+
+// Format: "email@domain.com | ID: 2021-12345 | Dec 20, 2025 3:45 PM"
+const now = new Date();
+const dateStr = now.toLocaleDateString('en-US', { 
+  month: 'short', 
+  day: '2-digit', 
+  year: 'numeric' 
+});
+const timeStr = now.toLocaleTimeString('en-US', { 
+  hour: '2-digit', 
+  minute: '2-digit',
+  hour12: true 
+});
+
+const watermarkText = `${user?.email || 'PROTECTED'} | ID: ${user?.studentId || 'N/A'} | ${dateStr} ${timeStr}`;
+
+// Tighter grid for more coverage
+const cols = Math.ceil(canvas.width / 400) + 3;
+const rows = Math.ceil(canvas.height / 180) + 3;
+
+for (let row = 0; row < rows; row++) {
+  for (let col = 0; col < cols; col++) {
+    // Add shadow for better readability
+    context.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    context.shadowBlur = 2;
+    context.shadowOffsetX = 1;
+    context.shadowOffsetY = 1;
+    
+    context.fillText(
+      watermarkText,
+      col * 450 - 300,
+      row * 220 + 50
+    );
+  }
+}
+context.restore();
 
         console.log(`✅ Page ${currentPage} rendered`);
       } catch (err) {
