@@ -1,10 +1,34 @@
 import { useState } from 'react';
 import { X, CheckCircle, XCircle, FileText, User, Calendar } from 'lucide-react';
+import ProtectedPDFViewer from '../research/ProtectedPDFViewer';
 
 const AdminReviewModal = ({ paper, onClose, onSuccess }) => {
   const [decision, setDecision] = useState('approved');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPDF, setShowPDF] = useState(false);
+  const [signedUrl, setSignedUrl] = useState(null);
+
+  const handleOpenPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${paper._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        alert('Failed to load PDF');
+        return;
+      }
+
+      const data = await res.json();
+      setSignedUrl(data.paper.signedPdfUrl);
+      setShowPDF(true);
+    } catch (error) {
+      console.error('PDF load error:', error);
+      alert('Failed to load PDF: ' + error.message);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!notes.trim()) {
@@ -37,6 +61,16 @@ const AdminReviewModal = ({ paper, onClose, onSuccess }) => {
       setLoading(false);
     }
   };
+
+  if (showPDF && signedUrl) {
+    return (
+      <ProtectedPDFViewer 
+        signedPdfUrl={signedUrl}
+        paperTitle={paper.title}
+        onClose={() => setShowPDF(false)}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -91,15 +125,13 @@ const AdminReviewModal = ({ paper, onClose, onSuccess }) => {
 
           <div>
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">View Full Document</h4>
-            
-             <a href={paper.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600"
+            <button 
+              onClick={handleOpenPDF}
+              className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition"
             >
               <FileText size={18} />
-              Open PDF
-            </a>
+              Open PDF Viewer
+            </button>
           </div>
 
           <div>
