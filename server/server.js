@@ -17,6 +17,7 @@ import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
 import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 import teamRoutes from './src/routes/team.routes.js';
+import notificationRoutes from './src/routes/notification.routes.js';
 
 dotenv.config();
 
@@ -74,6 +75,7 @@ app.use('/api/valid-student-ids', validStudentIdRoutes);
 app.use('/api/valid-faculty-ids', validFacultyIdRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api', apiLimiter);
+app.use('/api/notifications', notificationRoutes);
 
 console.log('✅ All routes registered');
 

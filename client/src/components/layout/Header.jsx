@@ -1,20 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Moon, Sun, Menu, X, LogOut, User, Bell } from 'lucide-react';
+import { Moon, Sun, Menu, X, LogOut, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [logos, setLogos] = useState({ school: null, college: null, conserve: null });
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: 'Your research was approved', time: '2h ago', read: false },
-    { id: 2, text: 'New research in your field', time: '1d ago', read: false },
-    { id: 3, text: 'System maintenance scheduled', time: '3d ago', read: true }
-  ]);
   const location = useLocation();
 
   useEffect(() => {
@@ -40,7 +35,6 @@ const Header = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
   const isActive = (path) => location.pathname === path;
 
   const navLinks = [
@@ -49,10 +43,6 @@ const Header = () => {
     { path: '/about', label: 'About' },
     { path: '/help', label: 'Help' },
   ];
-
-  const markAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b-4 border-navy dark:border-accent shadow-lg sticky top-0 z-50">
@@ -93,44 +83,8 @@ const Header = () => {
                   Dashboard
                 </Link>
 
-                {/* NOTIFICATION BELL */}
-                <div className="relative">
-                  <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-                    <Bell size={20} className="text-gray-700 dark:text-gray-300" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Notification Dropdown */}
-                  {showNotifications && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>
-                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 animate-slide-up">
-                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                          <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
-                          {unreadCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">{unreadCount} new</span>}
-                        </div>
-                        <div className="max-h-96 overflow-y-auto">
-                          {notifications.map((notif) => (
-                            <div key={notif.id} onClick={() => markAsRead(notif.id)} className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer transition ${!notif.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                              <div className="flex items-start justify-between">
-                                <p className="text-sm text-gray-900 dark:text-white flex-1">{notif.text}</p>
-                                {!notif.read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-1 ml-2 flex-shrink-0"></span>}
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="p-3 text-center border-t border-gray-200 dark:border-gray-700">
-                          <button onClick={() => setShowNotifications(false)} className="text-sm text-navy hover:underline">View All</button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                {/* NOTIFICATION BELL COMPONENT */}
+                <NotificationBell />
 
                 <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800">
                   <User size={18} className="text-gray-600 dark:text-gray-400" />
@@ -170,6 +124,7 @@ const Header = () => {
             {user ? (
               <>
                 <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg font-medium bg-navy text-white">Dashboard</Link>
+                <Link to="/notifications" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-800">Notifications</Link>
                 <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Logout</button>
               </>
             ) : (
