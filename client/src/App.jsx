@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard';
 import Browse from './pages/Browse';
 import ResearchDetail from './pages/ResearchDetail';
 import Layout from './components/layout/Layout';
+import Notifications from './pages/Notifications';
 
 function App() {
   return (
@@ -46,6 +47,11 @@ function App() {
             <Route path="/browse" element={
               <ProtectedRoute>
                 <Layout><Browse /></Layout>
+              </ProtectedRoute>
+            } />
+              <Route path="/notifications" element={
+              <ProtectedRoute>
+                <Layout><Notifications /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/research/:id" element={

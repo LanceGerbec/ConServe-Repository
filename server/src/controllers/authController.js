@@ -8,6 +8,7 @@ import AuditLog from '../models/AuditLog.js';
 import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
 import { sendWelcomeEmail, sendAdminNewUserNotification } from '../utils/emailService.js';
+import { notifyNewUserRegistered } from '../utils/notificationService.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -69,15 +70,15 @@ export const register = async (req, res) => {
       });
 
       // SEND EMAILS - NEW CODE
-      try {
-        await sendWelcomeEmail(user);
-        await sendAdminNewUserNotification(user);
-        console.log('✅ Welcome & Admin notification emails sent');
-      } catch (emailError) {
-        console.error('⚠️ Email send failed:', emailError);
-        // Don't block registration if email fails
-      }
-
+        try {
+      await sendWelcomeEmail(user);
+      await sendAdminNewUserNotification(user);
+      console.log('✅ Welcome & Admin notification emails sent');
+    } catch (emailError) {
+      console.error('⚠️ Email send failed:', emailError);
+    }
+ await notifyNewUserRegistered(user);
+ 
       return res.status(201).json({
         message: 'Registration successful. Check your email and await admin approval.',
         user: {

@@ -10,6 +10,11 @@ import { generateCitation } from '../utils/citationGenerator.js';
 import { generateSignedPdfUrl, verifySignedUrl } from '../utils/signedUrl.js';
 import { sendAdminNewResearchNotification } from '../utils/emailService.js';
 import mongoose from 'mongoose';
+import { 
+  notifyNewResearchSubmitted, 
+  notifyViewMilestone 
+} from '../utils/notificationService.js';
+
 
 export const submitResearch = async (req, res) => {
   try {
@@ -57,15 +62,16 @@ export const submitResearch = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    // SEND EMAIL TO ADMIN - NEW CODE
+    // NOTIFY ADMINS & FACULTY
+    const populatedPaper = await Research.findById(paper._id)
+      .populate('submittedBy', 'firstName lastName email');
+    
+    await notifyNewResearchSubmitted(populatedPaper);
+    
     try {
-      const populatedPaper = await Research.findById(paper._id)
-        .populate('submittedBy', 'firstName lastName email');
       await sendAdminNewResearchNotification(populatedPaper);
-      console.log('✅ Admin notification email sent');
     } catch (emailError) {
-      console.error('⚠️ Email send failed:', emailError);
-      // Don't block submission if email fails
+      console.error('⚠️ Email failed:', emailError);
     }
 
     console.log('✅ Research uploaded:', uploadStream.id);
@@ -75,6 +81,7 @@ export const submitResearch = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const streamPDFWithToken = async (req, res) => {
   try {
@@ -187,8 +194,15 @@ export const getResearchById = async (req, res) => {
     const paperObj = paper.toObject();
     paperObj.signedPdfUrl = signedPdfUrl;
 
+    // Increment views & check milestone
+    const previousViews = paper.views;
     paper.views += 1;
     await paper.save();
+    
+    // Notify author of view milestones
+    if (previousViews + 1 !== previousViews) {
+      await notifyViewMilestone(paper, paper.views);
+    }
 
     res.json({ paper: paperObj });
   } catch (error) {
