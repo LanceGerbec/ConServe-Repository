@@ -1,11 +1,7 @@
-// ============================================
-// FILE: server/src/routes/auth.routes.js
-// REPLACE ENTIRE FILE WITH THIS
-// ============================================
 import express from 'express';
 import { register, login, logout, getCurrentUser } from '../controllers/authController.js';
-import { auth, authorize } from '../middleware/auth.js';  // ✅ ADDED authorize IMPORT
-import { sendEmail } from '../utils/emailService.js';
+import { auth, authorize } from '../middleware/auth.js';
+import { sendEmail, testEmailConnection } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -14,7 +10,20 @@ router.post('/login', login);
 router.post('/logout', auth, logout);
 router.get('/me', auth, getCurrentUser);
 
-// Test Email Endpoint (Admin Only)
+// TEST EMAIL CONNECTION (Admin Only)
+router.get('/test-email-connection', auth, authorize('admin'), async (req, res) => {
+  try {
+    const isConnected = await testEmailConnection();
+    res.json({ 
+      success: isConnected, 
+      message: isConnected ? '✅ Email server connected' : '❌ Connection failed'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SEND TEST EMAIL (Admin Only)
 router.post('/test-email', auth, authorize('admin'), async (req, res) => {
   try {
     await sendEmail({
@@ -23,34 +32,23 @@ router.post('/test-email', auth, authorize('admin'), async (req, res) => {
       html: `
         <!DOCTYPE html>
         <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 Email System is Working!</h1>
-            </div>
-            <div class="content">
-              <p>Hello <strong>${req.user.firstName}</strong>,</p>
-              <p>This is a test email from ConServe Research Repository.</p>
-              <p>If you're receiving this, your email configuration is <strong>working correctly!</strong></p>
-              <p><strong>System Details:</strong></p>
-              <ul>
-                <li>Server: ${process.env.NODE_ENV}</li>
-                <li>Time: ${new Date().toLocaleString()}</li>
-                <li>Recipient: ${req.user.email}</li>
-              </ul>
-            </div>
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
-            </div>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1>🎉 Email System is Working!</h1>
+          </div>
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb;">
+            <p>Hello <strong>${req.user.firstName}</strong>,</p>
+            <p>This is a test email from ConServe Research Repository.</p>
+            <p>If you're receiving this, your email configuration is <strong>working correctly!</strong></p>
+            <p><strong>System Details:</strong></p>
+            <ul>
+              <li>Server: ${process.env.NODE_ENV}</li>
+              <li>Time: ${new Date().toLocaleString()}</li>
+              <li>Recipient: ${req.user.email}</li>
+            </ul>
+          </div>
+          <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+            <p>© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
           </div>
         </body>
         </html>

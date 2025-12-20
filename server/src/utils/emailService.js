@@ -1,34 +1,72 @@
-// ============================================
-// FILE: server/src/utils/emailService.js
-// REPLACE ENTIRE FILE - SIMPLIFIED VERSION
-// ============================================
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Enhanced transporter with better error handling
+const createTransporter = () => {
+  const config = {
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT) || 587,
+    secure: process.env.EMAIL_SECURE === 'true', // false for 587, true for 465
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false // Allow self-signed certs in development
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 30000, // 30 seconds
+  };
+
+  console.log('📧 Email Config:', {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.auth.user,
+    hasPassword: !!config.auth.pass
+  });
+
+  return nodemailer.createTransporter(config);
+};
 
 export const sendEmail = async (options) => {
+  const transporter = createTransporter();
+
   const mailOptions = {
-    from: `ConServe <${process.env.EMAIL_USER}>`,
+    from: `"ConServe" <${process.env.EMAIL_USER}>`,
     to: options.to,
     subject: options.subject,
     html: options.html,
   };
 
   try {
+    console.log('📤 Sending email to:', options.to);
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent:', info.messageId);
     return info;
   } catch (error) {
-    console.error('❌ Email error:', error);
+    console.error('❌ Email error:', error.message);
+    console.error('Error code:', error.code);
+    
+    // Don't throw error in production - log it instead
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Email failed but continuing...');
+      return null;
+    }
     throw error;
+  }
+};
+
+// Test email connectivity
+export const testEmailConnection = async () => {
+  const transporter = createTransporter();
+  try {
+    await transporter.verify();
+    console.log('✅ Email server connection verified');
+    return true;
+  } catch (error) {
+    console.error('❌ Email verification failed:', error.message);
+    return false;
   }
 };
 
@@ -36,7 +74,7 @@ export const sendWelcomeEmail = async (user) => {
   const html = `
     <!DOCTYPE html>
     <html>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1>🎉 Welcome to ConServe!</h1>
       </div>
@@ -62,7 +100,7 @@ export const sendWelcomeEmail = async (user) => {
     </html>
   `;
 
-  await sendEmail({
+  return await sendEmail({
     to: user.email,
     subject: '🎉 Welcome to ConServe - Account Pending Approval',
     html,
@@ -93,7 +131,7 @@ export const sendApprovalEmail = async (user) => {
     </html>
   `;
 
-  await sendEmail({
+  return await sendEmail({
     to: user.email,
     subject: '✅ Your ConServe Account Has Been Approved',
     html,
@@ -127,8 +165,8 @@ export const sendAdminNewUserNotification = async (user) => {
     </html>
   `;
 
-  await sendEmail({
-    to: process.env.ADMIN_EMAIL || 'conserve2025@gmail.com',
+  return await sendEmail({
+    to: process.env.ADMIN_EMAIL,
     subject: '🔔 New User Registration - Approval Required',
     html,
   });
@@ -163,8 +201,8 @@ export const sendAdminNewResearchNotification = async (research) => {
     </html>
   `;
 
-  await sendEmail({
-    to: process.env.ADMIN_EMAIL || 'conserve2025@gmail.com',
+  return await sendEmail({
+    to: process.env.ADMIN_EMAIL,
     subject: '📚 New Research Submission - Review Required',
     html,
   });
