@@ -1,11 +1,12 @@
 // client/src/components/dashboard/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
-import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle, Trash2, Eye, Edit } from 'lucide-react';
+import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
 import ValidStudentIdsManagement from '../admin/ValidStudentIdsManagement';
+import ValidFacultyIdsManagement from '../admin/ValidFacultyIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -193,7 +194,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
-        {['overview', 'users', 'research', 'student-ids', 'analytics', 'logs', 'settings'].map((tab) => (
+        {['overview', 'users', 'research', 'student-ids', 'faculty-ids', 'analytics', 'logs', 'settings'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -380,6 +381,7 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === 'student-ids' && <ValidStudentIdsManagement />}
+      {activeTab === 'faculty-ids' && <ValidFacultyIdsManagement />}
       {activeTab === 'analytics' && <AnalyticsDashboard />}
       {activeTab === 'logs' && <ActivityLogs />}
       {activeTab === 'settings' && <SettingsManagement />}

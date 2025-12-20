@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import AuditLog from '../models/AuditLog.js';
 import ValidStudentId from '../models/ValidStudentId.js';
+import ValidFacultyId from '../models/ValidFacultyId.js'; // ADD THIS
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -13,7 +14,71 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
-    // Validate student ID first
+    // Validate ID based on role
+    if (role === 'faculty') {
+      // Validate Faculty ID
+      const validFacultyId = await ValidFacultyId.findOne({
+        facultyId: studentId.toUpperCase(),
+        status: 'active'
+      });
+
+      if (!validFacultyId) {
+        return res.status(400).json({ 
+          error: 'Invalid faculty ID. Please contact the administrator.' 
+        });
+      }
+
+      if (validFacultyId.isUsed) {
+        return res.status(400).json({ 
+          error: 'This faculty ID has already been registered.' 
+        });
+      }
+
+      // Check if user exists
+      const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
+      if (existingUser) {
+        return res.status(400).json({ 
+          error: 'User with this email or faculty ID already exists' 
+        });
+      }
+
+      // Create user
+      const user = await User.create({
+        firstName,
+        lastName,
+        email,
+        studentId,
+        password,
+        role: 'faculty',
+        isApproved: false
+      });
+
+      // Mark faculty ID as used
+      validFacultyId.isUsed = true;
+      validFacultyId.registeredUser = user._id;
+      await validFacultyId.save();
+
+      await AuditLog.create({
+        user: user._id,
+        action: 'FACULTY_REGISTERED',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        details: { email, facultyId: studentId }
+      });
+
+      return res.status(201).json({
+        message: 'Registration successful. Awaiting admin approval.',
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role
+        }
+      });
+    }
+
+    // Validate Student ID (existing code)
     const validStudentId = await ValidStudentId.findOne({
       studentId: studentId.toUpperCase(),
       status: 'active'
@@ -31,7 +96,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
     if (existingUser) {
       return res.status(400).json({ 
@@ -39,7 +103,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // Create user
     const user = await User.create({
       firstName,
       lastName,
@@ -50,12 +113,10 @@ export const register = async (req, res) => {
       isApproved: false
     });
 
-    // Mark student ID as used
     validStudentId.isUsed = true;
     validStudentId.registeredUser = user._id;
     await validStudentId.save();
 
-    // Log registration
     await AuditLog.create({
       user: user._id,
       action: 'USER_REGISTERED',
@@ -79,6 +140,8 @@ export const register = async (req, res) => {
     res.status(500).json({ error: 'Registration failed' });
   }
 };
+
+// ... rest of the code stays the same
 
 export const login = async (req, res) => {
   try {

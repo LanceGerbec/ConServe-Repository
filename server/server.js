@@ -15,6 +15,8 @@ import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
 import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
+import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js'; // ADD THIS
+
 
 dotenv.config();
 
@@ -71,6 +73,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/valid-student-ids', validStudentIdRoutes);
+app.use('/api/valid-faculty-ids', validFacultyIdRoutes); // ADD THIS
 console.log('✅ All routes registered');
 
 // 404 handler
