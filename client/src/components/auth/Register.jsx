@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus, Loader2, CheckCircle, X, Home, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -18,6 +18,13 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // CRITICAL FIX: Re-check ID when role changes
+  useEffect(() => {
+    if (formData.studentId) {
+      checkStudentId(formData.studentId);
+    }
+  }, [formData.role]);
+
   const getPasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 12) strength++;
@@ -31,40 +38,47 @@ const Register = () => {
   const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
- const checkStudentId = async (id) => {
-  if (!id || id.length < 3) {
-    setStudentIdValid(null);
-    setStudentInfo(null);
-    return;
-  }
+  const checkStudentId = async (id) => {
+    if (!id || id.length < 3) {
+      setStudentIdValid(null);
+      setStudentInfo(null);
+      return;
+    }
 
-  setCheckingId(true);
-  try {
-    // Check based on selected role
-    const endpoint = formData.role === 'faculty' 
-      ? `valid-faculty-ids/check/${id}` 
-      : `valid-student-ids/check/${id}`;
-    
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
-    const data = await res.json();
-    
-    if (data.valid) {
-      setStudentIdValid(true);
-      setStudentInfo(formData.role === 'faculty' ? data.facultyInfo : data.studentInfo);
-      setError('');
-    } else {
+    setCheckingId(true);
+    try {
+      // FIXED: Proper endpoint selection based on role
+      const endpoint = formData.role === 'faculty' 
+        ? `valid-faculty-ids/check/${id}` 
+        : `valid-student-ids/check/${id}`;
+      
+      console.log(`🔍 Checking ${formData.role} ID:`, id, '→', endpoint);
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
+      const data = await res.json();
+      
+      console.log('✅ Response:', data);
+      
+      if (data.valid) {
+        setStudentIdValid(true);
+        // FIXED: Handle both studentInfo and facultyInfo
+        setStudentInfo(data.studentInfo || data.facultyInfo);
+        setError('');
+      } else {
+        setStudentIdValid(false);
+        setStudentInfo(null);
+        setError(data.message || `Invalid ${formData.role} ID`);
+      }
+    } catch (err) {
+      console.error('❌ Check error:', err);
       setStudentIdValid(false);
       setStudentInfo(null);
-      setError(data.message || 'Invalid ID');
+      setError('Failed to verify ID');
+    } finally {
+      setCheckingId(false);
     }
-  } catch (err) {
-    setStudentIdValid(false);
-    setStudentInfo(null);
-    setError('Failed to verify ID');
-  } finally {
-    setCheckingId(false);
-  }
-};
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -75,7 +89,7 @@ const Register = () => {
     }
 
     if (studentIdValid !== true) {
-      setError('Please enter a valid student ID number');
+      setError(`Please enter a valid ${formData.role} ID number`);
       return;
     }
 
@@ -178,9 +192,30 @@ const Register = () => {
             <p className="mt-1 text-xs text-gray-500">Use your official NEUST email address</p>
           </div>
 
+          {/* FIXED: Role selection BEFORE ID input */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Student/Faculty ID <span className="text-red-500">*</span>
+              Role <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.role}
+              onChange={(e) => {
+                setFormData({ ...formData, role: e.target.value });
+                // Reset validation when role changes
+                setStudentIdValid(null);
+                setStudentInfo(null);
+                setError('');
+              }}
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            >
+              <option value="student">Student</option>
+              <option value="faculty">Faculty</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              {formData.role === 'faculty' ? 'Faculty ID' : 'Student ID'} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <input
@@ -197,7 +232,7 @@ const Register = () => {
                   studentIdValid === false ? 'border-red-500' :
                   'border-gray-300 dark:border-gray-700'
                 } focus:border-navy bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
-                placeholder="2021-12345"
+                placeholder={formData.role === 'faculty' ? 'FAC-12345' : '2021-12345'}
               />
               {checkingId && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -216,24 +251,12 @@ const Register = () => {
                 <p className="text-sm text-green-700 dark:text-green-400">
                   ✓ Valid ID: <strong>{studentInfo.fullName}</strong>
                   {studentInfo.course && ` - ${studentInfo.course}`}
+                  {studentInfo.department && ` - ${studentInfo.department}`}
                   {studentInfo.yearLevel && ` (${studentInfo.yearLevel})`}
+                  {studentInfo.position && ` (${studentInfo.position})`}
                 </p>
               </div>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Role <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              <option value="student">Student</option>
-              <option value="faculty">Faculty</option>
-            </select>
           </div>
 
           <div>
