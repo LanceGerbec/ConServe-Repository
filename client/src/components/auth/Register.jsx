@@ -31,36 +31,40 @@ const Register = () => {
   const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
-  const checkStudentId = async (id) => {
-    if (!id || id.length < 4) {
-      setStudentIdValid(null);
-      setStudentInfo(null);
-      return;
-    }
+ const checkStudentId = async (id) => {
+  if (!id || id.length < 3) {
+    setStudentIdValid(null);
+    setStudentInfo(null);
+    return;
+  }
 
-    setCheckingId(true);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/valid-student-ids/check/${id}`);
-      const data = await res.json();
-      
-      if (data.valid) {
-        setStudentIdValid(true);
-        setStudentInfo(data.studentInfo);
-        setError('');
-      } else {
-        setStudentIdValid(false);
-        setStudentInfo(null);
-        setError(data.message || 'Invalid student ID');
-      }
-    } catch (err) {
+  setCheckingId(true);
+  try {
+    // Check based on selected role
+    const endpoint = formData.role === 'faculty' 
+      ? `valid-faculty-ids/check/${id}` 
+      : `valid-student-ids/check/${id}`;
+    
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
+    const data = await res.json();
+    
+    if (data.valid) {
+      setStudentIdValid(true);
+      setStudentInfo(formData.role === 'faculty' ? data.facultyInfo : data.studentInfo);
+      setError('');
+    } else {
       setStudentIdValid(false);
       setStudentInfo(null);
-      setError('Failed to verify student ID');
-    } finally {
-      setCheckingId(false);
+      setError(data.message || 'Invalid ID');
     }
-  };
-
+  } catch (err) {
+    setStudentIdValid(false);
+    setStudentInfo(null);
+    setError('Failed to verify ID');
+  } finally {
+    setCheckingId(false);
+  }
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');

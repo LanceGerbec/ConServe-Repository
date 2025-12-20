@@ -14,9 +14,8 @@ import reviewRoutes from './src/routes/review.routes.js';
 import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
 import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
+import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
-import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js'; // ADD THIS
-
 
 dotenv.config();
 
@@ -26,7 +25,7 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 initGridFS();
 
-// CRITICAL: Ultra-permissive CORS
+// CORS
 app.use(cors({
   origin: '*',
   credentials: false,
@@ -35,7 +34,6 @@ app.use(cors({
   exposedHeaders: '*'
 }));
 
-// FIXED: Allow iframe embedding but keep other security
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: false,
@@ -44,7 +42,6 @@ app.use(helmet({
   frameguard: false
 }));
 
-// Custom headers
 app.use((req, res, next) => {
   res.removeHeader('X-Frame-Options');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -73,7 +70,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/valid-student-ids', validStudentIdRoutes);
-app.use('/api/valid-faculty-ids', validFacultyIdRoutes); // ADD THIS
+app.use('/api/valid-faculty-ids', validFacultyIdRoutes);
 console.log('✅ All routes registered');
 
 // 404 handler

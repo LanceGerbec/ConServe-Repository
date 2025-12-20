@@ -2,7 +2,7 @@ import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import AuditLog from '../models/AuditLog.js';
 import ValidStudentId from '../models/ValidStudentId.js';
-import ValidFacultyId from '../models/ValidFacultyId.js'; // ADD THIS
+import ValidFacultyId from '../models/ValidFacultyId.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -14,9 +14,16 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
-    // Validate ID based on role
+    // Check if user already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
+    if (existingUser) {
+      return res.status(400).json({ 
+        error: 'User with this email or ID already exists' 
+      });
+    }
+
+    // Validate based on role
     if (role === 'faculty') {
-      // Validate Faculty ID
       const validFacultyId = await ValidFacultyId.findOne({
         facultyId: studentId.toUpperCase(),
         status: 'active'
@@ -34,15 +41,6 @@ export const register = async (req, res) => {
         });
       }
 
-      // Check if user exists
-      const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
-      if (existingUser) {
-        return res.status(400).json({ 
-          error: 'User with this email or faculty ID already exists' 
-        });
-      }
-
-      // Create user
       const user = await User.create({
         firstName,
         lastName,
@@ -53,7 +51,6 @@ export const register = async (req, res) => {
         isApproved: false
       });
 
-      // Mark faculty ID as used
       validFacultyId.isUsed = true;
       validFacultyId.registeredUser = user._id;
       await validFacultyId.save();
@@ -78,7 +75,7 @@ export const register = async (req, res) => {
       });
     }
 
-    // Validate Student ID (existing code)
+    // Student registration
     const validStudentId = await ValidStudentId.findOne({
       studentId: studentId.toUpperCase(),
       status: 'active'
@@ -93,13 +90,6 @@ export const register = async (req, res) => {
     if (validStudentId.isUsed) {
       return res.status(400).json({ 
         error: 'This student ID has already been registered.' 
-      });
-    }
-
-    const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
-    if (existingUser) {
-      return res.status(400).json({ 
-        error: 'User with this email or student ID already exists' 
       });
     }
 
@@ -141,8 +131,6 @@ export const register = async (req, res) => {
   }
 };
 
-// ... rest of the code stays the same
-
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -174,7 +162,6 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Reset login attempts and update last login
     await User.findByIdAndUpdate(user._id, {
       $set: { loginAttempts: 0, lastLogin: new Date() },
       $unset: { lockoutUntil: 1 }
