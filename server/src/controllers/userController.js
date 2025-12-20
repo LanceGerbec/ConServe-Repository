@@ -70,8 +70,13 @@ export const approveUser = async (req, res) => {
       details: { email: user.email }
     });
 
+    // ADDED: Send in-app notification
+    const { notifyAccountApproved } = await import('../utils/notificationService.js');
+    await notifyAccountApproved(user._id);
+
     // Send approval email
     try {
+      const { sendApprovalEmail } = await import('../utils/emailService.js');
       await sendApprovalEmail(user);
     } catch (emailError) {
       console.error('Email send failed:', emailError);

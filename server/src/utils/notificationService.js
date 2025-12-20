@@ -1,3 +1,5 @@
+// REPLACE THE ENTIRE FILE with this complete version:
+
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
@@ -13,7 +15,7 @@ export const notifyNewResearchSubmitted = async (research) => {
     const notifications = adminsAndFaculty.map(user => ({
       recipient: user._id,
       type: 'NEW_RESEARCH_SUBMITTED',
-      title: 'New Research Submitted',
+      title: '📚 New Research Submitted',
       message: `"${research.title}" by ${research.submittedBy.firstName} ${research.submittedBy.lastName}`,
       link: `/research/${research._id}`,
       relatedResearch: research._id,
@@ -22,9 +24,55 @@ export const notifyNewResearchSubmitted = async (research) => {
     }));
 
     await Notification.insertMany(notifications);
-    console.log(`✅ Notified ${notifications.length} admins/faculty`);
+    console.log(`✅ Notified ${notifications.length} admins/faculty of new research`);
   } catch (error) {
-    console.error('❌ Notification error:', error);
+    console.error('❌ New research notification error:', error);
+  }
+};
+
+// Notify author when research status changes (FIXED - handles all statuses)
+export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
+  try {
+    const statusConfig = {
+      approved: {
+        emoji: '✅',
+        title: 'Research Approved!',
+        message: `Great news! Your research "${research.title}" has been approved and is now published.`,
+        priority: 'high'
+      },
+      rejected: {
+        emoji: '❌',
+        title: 'Research Needs Revision',
+        message: `Your research "${research.title}" was not approved. Reason: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
+        priority: 'high'
+      },
+      revision: {
+        emoji: '📝',
+        title: 'Revisions Requested',
+        message: `Please revise your research "${research.title}". Feedback: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
+        priority: 'high'
+      }
+    };
+
+    const config = statusConfig[newStatus];
+    if (!config) {
+      console.warn(`⚠️ Unknown status: ${newStatus}`);
+      return;
+    }
+
+    await Notification.create({
+      recipient: research.submittedBy._id || research.submittedBy,
+      type: `RESEARCH_${newStatus.toUpperCase()}`,
+      title: `${config.emoji} ${config.title}`,
+      message: config.message,
+      link: `/research/${research._id}`,
+      relatedResearch: research._id,
+      priority: config.priority
+    });
+
+    console.log(`✅ ${newStatus.toUpperCase()} notification sent to author`);
+  } catch (error) {
+    console.error('❌ Research status notification error:', error);
   }
 };
 
@@ -37,7 +85,7 @@ export const notifyViewMilestone = async (research, views) => {
     await Notification.create({
       recipient: research.submittedBy,
       type: 'RESEARCH_VIEWED',
-      title: `${views} Views Milestone! 🎉`,
+      title: `🎉 ${views} Views Milestone!`,
       message: `Your research "${research.title}" has reached ${views} views!`,
       link: `/research/${research._id}`,
       relatedResearch: research._id,
@@ -50,25 +98,29 @@ export const notifyViewMilestone = async (research, views) => {
   }
 };
 
-// Notify user of new registration (admins only)
+// Notify admins of new user registration
 export const notifyNewUserRegistered = async (user) => {
   try {
-    const admins = await User.find({ role: 'admin', isApproved: true, isActive: true });
+    const admins = await User.find({ 
+      role: 'admin', 
+      isApproved: true, 
+      isActive: true 
+    });
 
     const notifications = admins.map(admin => ({
       recipient: admin._id,
       type: 'NEW_USER_REGISTERED',
-      title: 'New User Registration',
-      message: `${user.firstName} ${user.lastName} (${user.role}) registered`,
-      link: '/dashboard?tab=users',
+      title: '👤 New User Registration',
+      message: `${user.firstName} ${user.lastName} (${user.role}) - ${user.email}`,
+      link: '/dashboard',
       relatedUser: user._id,
       priority: 'high'
     }));
 
     await Notification.insertMany(notifications);
-    console.log(`✅ Notified ${notifications.length} admins`);
+    console.log(`✅ Notified ${notifications.length} admins of new user`);
   } catch (error) {
-    console.error('❌ User notification error:', error);
+    console.error('❌ User registration notification error:', error);
   }
 };
 
@@ -78,39 +130,26 @@ export const notifyAccountApproved = async (userId) => {
     await Notification.create({
       recipient: userId,
       type: 'ACCOUNT_APPROVED',
-      title: 'Account Approved! 🎉',
-      message: 'Your ConServe account has been approved. You can now login.',
+      title: '✅ Account Approved!',
+      message: 'Your ConServe account has been approved. You can now login and access the system.',
       link: '/dashboard',
       priority: 'high'
     });
 
-    console.log(`✅ Approval notification sent to user ${userId}`);
+    console.log(`✅ Account approval notification sent to user ${userId}`);
   } catch (error) {
     console.error('❌ Approval notification error:', error);
   }
 };
 
-// Notify author when research is reviewed
-export const notifyResearchReviewed = async (research, review) => {
+// Notify user when account is rejected/deleted
+export const notifyAccountRejected = async (userEmail, userName) => {
   try {
-    const statusMessages = {
-      approved: 'Your research has been approved! 🎉',
-      rejected: 'Your research needs revision.',
-      revision: 'Revisions requested for your research.'
-    };
-
-    await Notification.create({
-      recipient: research.submittedBy,
-      type: `RESEARCH_${review.decision.toUpperCase()}`,
-      title: statusMessages[review.decision],
-      message: `"${research.title}" - ${review.comments.substring(0, 100)}...`,
-      link: `/research/${research._id}`,
-      relatedResearch: research._id,
-      priority: 'high'
-    });
-
-    console.log(`✅ Review notification sent: ${review.decision}`);
+    // Since user is deleted, we can't send in-app notification
+    // This is just for logging purposes
+    console.log(`⚠️ Account rejected: ${userName} (${userEmail})`);
+    // Email notification would be sent via emailService
   } catch (error) {
-    console.error('❌ Review notification error:', error);
+    console.error('❌ Rejection notification error:', error);
   }
 };

@@ -9,6 +9,8 @@ import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
 import { sendWelcomeEmail, sendAdminNewUserNotification } from '../utils/emailService.js';
 import { notifyNewUserRegistered } from '../utils/notificationService.js';
+import Notification from '../models/Notification.js';
+import { notifyNewUserRegistered, notifyAccountApproved } from '../utils/notificationService.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -70,15 +72,28 @@ export const register = async (req, res) => {
       });
 
       // SEND EMAILS - NEW CODE
-        try {
-      await sendWelcomeEmail(user);
-      await sendAdminNewUserNotification(user);
-      console.log('✅ Welcome & Admin notification emails sent');
-    } catch (emailError) {
-      console.error('⚠️ Email send failed:', emailError);
-    }
+    try {
+  await sendWelcomeEmail(user);
+  await sendAdminNewUserNotification(user);
+  console.log('✅ Welcome & Admin notification emails sent');
+} catch (emailError) {
+  console.error('⚠️ Email send failed:', emailError);
+}
+
+// Create in-app notification for the new user
+await Notification.create({
+  recipient: user._id,
+  type: 'ACCOUNT_APPROVED',
+  title: '🎉 Account Created Successfully!',
+  message: 'Your account has been created. Please wait for admin approval to access the system. You will receive a notification once approved.',
+  priority: 'high'
+});
+
+// Notify user (call the notification service)
+await notifyNewUserRegistered(user);
+
  await notifyNewUserRegistered(user);
- 
+
       return res.status(201).json({
         message: 'Registration successful. Check your email and await admin approval.',
         user: {

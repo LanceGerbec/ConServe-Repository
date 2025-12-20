@@ -34,6 +34,9 @@ export const submitReview = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
+    const { notifyResearchStatusChange } = await import('../utils/notificationService.js');
+await notifyResearchStatusChange(research, decision, comments);
+
     // Send email notification
     const emailSubject = decision === 'approved' ? 'Your Research Has Been Approved!' :
                         decision === 'rejected' ? 'Research Review: Revision Required' :

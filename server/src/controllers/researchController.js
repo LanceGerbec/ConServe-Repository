@@ -213,7 +213,9 @@ export const getResearchById = async (req, res) => {
 export const updateResearchStatus = async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
-    const paper = await Research.findById(req.params.id);
+    const paper = await Research.findById(req.params.id)
+      .populate('submittedBy', 'firstName lastName email');
+      
     if (!paper) return res.status(404).json({ error: 'Not found' });
 
     paper.status = status;
@@ -221,8 +223,13 @@ export const updateResearchStatus = async (req, res) => {
     if (status === 'approved') paper.approvedDate = new Date();
     await paper.save();
 
+    // ADDED: Send notification to author
+    const { notifyResearchStatusChange } = await import('../utils/notificationService.js');
+    await notifyResearchStatusChange(paper, status, revisionNotes || '');
+
     res.json({ message: `Research ${status}`, paper });
   } catch (error) {
+    console.error('❌ Update status error:', error);
     res.status(500).json({ error: 'Update failed' });
   }
 };

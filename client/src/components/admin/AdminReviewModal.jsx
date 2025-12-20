@@ -30,37 +30,42 @@ const AdminReviewModal = ({ paper, onClose, onSuccess }) => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!notes.trim()) {
-      alert('Please provide review notes');
-      return;
-    }
+const handleSubmit = async () => {
+  if (!notes.trim()) {
+    alert('Please provide review notes');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${paper._id}/status`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: decision, revisionNotes: notes })
-      });
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/research/${paper._id}/status`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: decision, revisionNotes: notes })
+    });
 
-      if (res.ok) {
-        alert(`Research ${decision} successfully`);
-        onSuccess();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to update status');
-      }
-    } catch (error) {
-      alert('Connection error: ' + error.message);
-    } finally {
-      setLoading(false);
+    if (res.ok) {
+      const successMessages = {
+        approved: '✅ Research approved successfully! Author has been notified.',
+        rejected: '❌ Research rejected. Author has been notified.',
+        revision: '📝 Revisions requested. Author has been notified.'
+      };
+      alert(successMessages[decision] || 'Status updated successfully');
+      onSuccess();
+    } else {
+      const data = await res.json();
+      alert(data.error || 'Failed to update status');
     }
-  };
+  } catch (error) {
+    alert('Connection error: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (showPDF && signedUrl) {
     return (
