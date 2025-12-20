@@ -17,5 +17,18 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          pdfjs: ['pdfjs-dist']
+        }
+      }
+    }
+  },
+  optimizeDeps: {
+    include: ['pdfjs-dist']
   }
 })
