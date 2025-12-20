@@ -1,3 +1,7 @@
+// ============================================
+// FILE: server/src/middleware/auth.js
+// MAKE SURE IT LOOKS LIKE THIS
+// ============================================
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 

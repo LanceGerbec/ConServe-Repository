@@ -1,6 +1,11 @@
+// ============================================
+// FILE: server/src/routes/auth.routes.js
+// REPLACE ENTIRE FILE WITH THIS
+// ============================================
 import express from 'express';
 import { register, login, logout, getCurrentUser } from '../controllers/authController.js';
-import { auth } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';  // ✅ ADDED authorize IMPORT
+import { sendEmail } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -12,8 +17,6 @@ router.get('/me', auth, getCurrentUser);
 // Test Email Endpoint (Admin Only)
 router.post('/test-email', auth, authorize('admin'), async (req, res) => {
   try {
-    const { sendEmail } = await import('../utils/emailService.js');
-    
     await sendEmail({
       to: req.user.email,
       subject: '✅ ConServe Email Test',
