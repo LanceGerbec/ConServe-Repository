@@ -1,37 +1,67 @@
-// ============================================
-// FILE: client/src/components/dashboard/StudentDashboard.jsx - UPDATED
-// ============================================
-import { useState } from 'react'; // ADD THIS
+import { useState, useEffect } from 'react';
 import { BookOpen, Upload, Heart, Bell, TrendingUp, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import SubmitResearch from '../research/SubmitResearch'; // ADD THIS
+import SubmitResearch from '../research/SubmitResearch';
 import RecentlyViewed from '../research/RecentlyViewed';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
-  const [showSubmitModal, setShowSubmitModal] = useState(false); // ADD THIS
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [bookmarks, setBookmarks] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [stats, setStats] = useState({ submissions: 0, favorites: 0, read: 0, pending: 0 });
 
- const quickActions = [
-  { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper', action: 'submit' },
-  { icon: BookOpen, label: 'Browse Papers', color: 'bg-blue-500', desc: 'Explore the repository', action: 'browse' }, // MODIFIED
-  { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers' },
-  { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', desc: 'View updates', badge: '3' }
-];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const recentActivity = [
-    { action: 'Viewed', title: 'Impact of Telehealth on Patient Care', time: '2 hours ago' },
-    { action: 'Bookmarked', title: 'Nursing Leadership in Crisis', time: '1 day ago' },
-    { action: 'Searched', title: 'Mental Health Nursing', time: '3 days ago' }
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const [bookmarksRes, submissionsRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/bookmarks/my-bookmarks`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/research/my-submissions`, { headers })
+      ]);
+
+      const bookmarksData = await bookmarksRes.json();
+      const submissionsData = await submissionsRes.json();
+
+      setBookmarks(bookmarksData.bookmarks || []);
+      setStats({
+        submissions: submissionsData.count || 0,
+        favorites: bookmarksData.count || 0,
+        read: 0,
+        pending: submissionsData.papers?.filter(p => p.status === 'pending').length || 0
+      });
+
+      // Mock notifications (replace with real API)
+      setNotifications([
+        { id: 1, text: 'Your research "Sample Title" was approved', time: '2 hours ago', read: false },
+        { id: 2, text: 'New research in your field', time: '1 day ago', read: false },
+        { id: 3, text: 'System maintenance scheduled', time: '3 days ago', read: true }
+      ]);
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  };
+
+  const handleQuickAction = (action) => {
+    if (action === 'submit') setShowSubmitModal(true);
+    else if (action === 'browse') window.location.href = '/browse';
+    else if (action === 'favorites') setShowFavorites(true);
+    else if (action === 'notifications') setShowNotifications(true);
+  };
+
+  const quickActions = [
+    { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper', action: 'submit' },
+    { icon: BookOpen, label: 'Browse Papers', color: 'bg-blue-500', desc: 'Explore the repository', action: 'browse' },
+    { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers', action: 'favorites' },
+    { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', desc: 'View updates', action: 'notifications', badge: notifications.filter(n => !n.read).length }
   ];
-
-  // Update handleQuickAction function:
-const handleQuickAction = (action) => {
-  if (action === 'submit') {
-    setShowSubmitModal(true);
-  } else if (action === 'browse') {
-    window.location.href = '/browse'; // ADD THIS
-  }
-};
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -44,10 +74,10 @@ const handleQuickAction = (action) => {
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'My Submissions', value: '0', icon: Upload, color: 'text-blue-600' },
-          { label: 'Favorites', value: '0', icon: Heart, color: 'text-red-600' },
-          { label: 'Papers Read', value: '0', icon: BookOpen, color: 'text-green-600' },
-          { label: 'Pending Reviews', value: '0', icon: Clock, color: 'text-orange-600' }
+          { label: 'My Submissions', value: stats.submissions, icon: Upload, color: 'text-blue-600' },
+          { label: 'Favorites', value: stats.favorites, icon: Heart, color: 'text-red-600' },
+          { label: 'Papers Read', value: stats.read, icon: BookOpen, color: 'text-green-600' },
+          { label: 'Pending Reviews', value: stats.pending, icon: Clock, color: 'text-orange-600' }
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
@@ -59,17 +89,17 @@ const handleQuickAction = (action) => {
         ))}
       </div>
 
-      {/* Quick Actions - MODIFIED */}
+      {/* Quick Actions */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickActions.map((action, i) => (
             <button 
               key={i}
-              onClick={() => handleQuickAction(action.action)} // ADD THIS
+              onClick={() => handleQuickAction(action.action)}
               className="relative bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group"
             >
-              {action.badge && (
+              {action.badge > 0 && (
                 <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                   {action.badge}
                 </span>
@@ -84,83 +114,20 @@ const handleQuickAction = (action) => {
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* My Submissions */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">My Submissions</h2>
-            <button className="text-sm text-navy hover:text-navy-700 font-semibold">View All →</button>
-          </div>
-          <div className="text-center py-8">
-            <Upload className="mx-autotext-gray-400 mb-3" size={48} />
-<p className="text-gray-600 dark:text-gray-400 mb-4">No submissions yet</p>
-<button
-onClick={() => setShowSubmitModal(true)} // ADD THIS
-className="bg-navy text-white px-6 py-2 rounded-lg hover:bg-navy-800 transition"
->
-Submit Your First Research
-</button>
-</div>
-</div>{/* Recent Activity */}
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h2>
-        <TrendingUp className="text-gray-400" size={20} />
-      </div>
-      <div className="space-y-4">
-        {recentActivity.map((activity, i) => (
-          <div key={i} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            <div className="w-2 h-2 bg-navy rounded-full mt-2"></div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {activity.action}: <span className="text-gray-600 dark:text-gray-400">{activity.title}</span>
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{activity.time}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-
-  {/* Help Section */}
-  <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-6 rounded-lg">
-    <h3 className="font-bold text-gray-900 dark:text-white mb-2">Need Help Getting Started?</h3>
-    <p className="text-gray-700 dark:text-gray-300 text-sm mb-4">
-      Check out our comprehensive guide on how to submit your research paper.
-    </p>
-    <button className="text-navy hover:text-navy-700 font-semibold text-sm">
-      View Submission Guide →
-    </button>
-  </div>
-
-  {/* ADD THIS MODAL */}
-  {showSubmitModal && (
-    <SubmitResearch 
-      onClose={() => setShowSubmitModal(false)}
-      onSuccess={() => {
-        setShowSubmitModal(false);
-        // Optionally refresh submissions list
-      }}
-    />
-  )}
-
-{/* Recently Viewed Section */}
+      {/* Recently Viewed */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentlyViewed />
         
-        {/* Quick Stats Card */}
         <div className="bg-gradient-to-br from-navy to-accent text-white rounded-2xl p-6 shadow-lg">
           <h3 className="text-xl font-bold mb-4">Your Activity</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span>Papers Read This Month</span>
-              <span className="text-3xl font-bold">0</span>
+              <span className="text-3xl font-bold">{stats.read}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Favorites Added</span>
-              <span className="text-3xl font-bold">0</span>
+              <span className="text-3xl font-bold">{stats.favorites}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Searches Made</span>
@@ -170,7 +137,72 @@ Submit Your First Research
         </div>
       </div>
 
-</div>
-);
+      {/* Modals */}
+      {showSubmitModal && (
+        <SubmitResearch 
+          onClose={() => setShowSubmitModal(false)}
+          onSuccess={() => { setShowSubmitModal(false); fetchData(); }}
+        />
+      )}
+
+      {/* Favorites Modal */}
+      {showFavorites && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Favorites ({bookmarks.length})</h2>
+              <button onClick={() => setShowFavorites(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {bookmarks.length === 0 ? (
+                <div className="text-center py-12">
+                  <Heart size={64} className="mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">No favorites yet</p>
+                  <button onClick={() => { setShowFavorites(false); window.location.href = '/browse'; }} className="mt-4 text-navy hover:underline">
+                    Browse Papers
+                  </button>
+                </div>
+              ) : (
+                bookmarks.map((bookmark) => (
+                  <a key={bookmark._id} href={`/research/${bookmark.research._id}`} className="block p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-2">{bookmark.research.title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{bookmark.research.authors.join(', ')}</p>
+                  </a>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {showNotifications && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h2>
+              <button onClick={() => setShowNotifications(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              {notifications.map((notif) => (
+                <div key={notif.id} className={`p-4 rounded-lg ${notif.read ? 'bg-gray-50 dark:bg-gray-900' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+                  <div className="flex items-start justify-between">
+                    <p className="text-gray-900 dark:text-white">{notif.text}</p>
+                    {!notif.read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2"></span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
+
 export default StudentDashboard;
