@@ -30,23 +30,23 @@ const TeamManagement = () => {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
+  if (!file.type.startsWith('image/')) {
+    setError('Please select an image file');
+    return;
+  }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
-      return;
-    }
+  if (file.size > 10 * 1024 * 1024) { 
+    setError('Image must be less than 10MB');
+    return;
+  }
 
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    setError('');
-  };
+  setImageFile(file);
+  setImagePreview(URL.createObjectURL(file));
+  setError('');
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -228,7 +228,7 @@ const TeamManagement = () => {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">Click to upload photo</p>
+                  <p className="text-xs text-gray-500">Click to upload photo (Max: 10MB)</p>
                 </label>
                 <input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               </div>
