@@ -1,6 +1,5 @@
 // ============================================
 // FILE: server/src/controllers/authController.js
-// REPLACE ENTIRE FILE WITH THIS
 // ============================================
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
@@ -8,9 +7,8 @@ import AuditLog from '../models/AuditLog.js';
 import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
 import { sendWelcomeEmail, sendAdminNewUserNotification } from '../utils/emailService.js';
-import { notifyNewUserRegistered } from '../utils/notificationService.js';
-import Notification from '../models/Notification.js';
 import { notifyNewUserRegistered, notifyAccountApproved } from '../utils/notificationService.js';
+import Notification from '../models/Notification.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -22,15 +20,11 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
     if (existingUser) {
-      return res.status(400).json({ 
-        error: 'User with this email or ID already exists' 
-      });
+      return res.status(400).json({ error: 'User with this email or ID already exists' });
     }
 
-    // Validate based on role
     if (role === 'faculty') {
       const validFacultyId = await ValidFacultyId.findOne({
         facultyId: studentId.toUpperCase(),
@@ -38,25 +32,15 @@ export const register = async (req, res) => {
       });
 
       if (!validFacultyId) {
-        return res.status(400).json({ 
-          error: 'Invalid faculty ID. Please contact the administrator.' 
-        });
+        return res.status(400).json({ error: 'Invalid faculty ID. Please contact the administrator.' });
       }
 
       if (validFacultyId.isUsed) {
-        return res.status(400).json({ 
-          error: 'This faculty ID has already been registered.' 
-        });
+        return res.status(400).json({ error: 'This faculty ID has already been registered.' });
       }
 
       const user = await User.create({
-        firstName,
-        lastName,
-        email,
-        studentId,
-        password,
-        role: 'faculty',
-        isApproved: false
+        firstName, lastName, email, studentId, password, role: 'faculty', isApproved: false
       });
 
       validFacultyId.isUsed = true;
@@ -71,28 +55,22 @@ export const register = async (req, res) => {
         details: { email, facultyId: studentId }
       });
 
-      // SEND EMAILS - NEW CODE
-    try {
-  await sendWelcomeEmail(user);
-  await sendAdminNewUserNotification(user);
-  console.log('✅ Welcome & Admin notification emails sent');
-} catch (emailError) {
-  console.error('⚠️ Email send failed:', emailError);
-}
+      try {
+        await sendWelcomeEmail(user);
+        await sendAdminNewUserNotification(user);
+      } catch (emailError) {
+        console.error('⚠️ Email send failed:', emailError);
+      }
 
-// Create in-app notification for the new user
-await Notification.create({
-  recipient: user._id,
-  type: 'ACCOUNT_APPROVED',
-  title: '🎉 Account Created Successfully!',
-  message: 'Your account has been created. Please wait for admin approval to access the system. You will receive a notification once approved.',
-  priority: 'high'
-});
+      await Notification.create({
+        recipient: user._id,
+        type: 'ACCOUNT_APPROVED',
+        title: '🎉 Account Created Successfully!',
+        message: 'Your account has been created. Please wait for admin approval to access the system. You will receive a notification once approved.',
+        priority: 'high'
+      });
 
-// Notify user (call the notification service)
-await notifyNewUserRegistered(user);
-
- await notifyNewUserRegistered(user);
+      await notifyNewUserRegistered(user);
 
       return res.status(201).json({
         message: 'Registration successful. Check your email and await admin approval.',
@@ -106,32 +84,21 @@ await notifyNewUserRegistered(user);
       });
     }
 
-    // Student registration
     const validStudentId = await ValidStudentId.findOne({
       studentId: studentId.toUpperCase(),
       status: 'active'
     });
 
     if (!validStudentId) {
-      return res.status(400).json({ 
-        error: 'Invalid student ID. Please contact the administrator.' 
-      });
+      return res.status(400).json({ error: 'Invalid student ID. Please contact the administrator.' });
     }
 
     if (validStudentId.isUsed) {
-      return res.status(400).json({ 
-        error: 'This student ID has already been registered.' 
-      });
+      return res.status(400).json({ error: 'This student ID has already been registered.' });
     }
 
     const user = await User.create({
-      firstName,
-      lastName,
-      email,
-      studentId,
-      password,
-      role: role || 'student',
-      isApproved: false
+      firstName, lastName, email, studentId, password, role: role || 'student', isApproved: false
     });
 
     validStudentId.isUsed = true;
@@ -146,25 +113,26 @@ await notifyNewUserRegistered(user);
       details: { email, studentId }
     });
 
-    // SEND EMAILS - NEW CODE
     try {
       await sendWelcomeEmail(user);
       await sendAdminNewUserNotification(user);
-      console.log('✅ Welcome & Admin notification emails sent');
     } catch (emailError) {
       console.error('⚠️ Email send failed:', emailError);
-      // Don't block registration if email fails
     }
+
+    await Notification.create({
+      recipient: user._id,
+      type: 'ACCOUNT_APPROVED',
+      title: '🎉 Account Created Successfully!',
+      message: 'Your account has been created. Please wait for admin approval.',
+      priority: 'high'
+    });
+
+    await notifyNewUserRegistered(user);
 
     res.status(201).json({
       message: 'Registration successful. Check your email and await admin approval.',
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role
-      }
+      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role }
     });
   } catch (error) {
     console.error('Registration error:', error);
