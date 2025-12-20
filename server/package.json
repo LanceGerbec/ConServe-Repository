@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "create-admin": "node src/scripts/createAdmin.js"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,13 +22,12 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
+    "pdfjs-dist": "3.11.174",
     "qrcode": "^1.5.3",
     "speakeasy": "^2.0.0",
-    "winston": "^3.11.0",
-      "pdfjs-dist": "3.11.174"
+    "winston": "^3.11.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   }
 }
-
