@@ -1,10 +1,11 @@
-// client/src/pages/Home.jsx
 import { Link } from 'react-router-dom';
-import { BookOpen, Shield, TrendingUp, Users, ArrowRight, Eye, Upload, Search, Star } from 'lucide-react';
+import { BookOpen, Shield, TrendingUp, Users, ArrowRight, Search, Upload, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 
 const Home = () => {
   const { user } = useAuth();
+  const [currentFeature, setCurrentFeature] = useState(0);
 
   const features = [
     { icon: BookOpen, title: 'Research Archive', desc: 'Access published nursing research papers', color: 'text-blue-600' },
@@ -13,12 +14,35 @@ const Home = () => {
     { icon: Users, title: 'Collaboration', desc: 'Connect with fellow researchers', color: 'text-navy' }
   ];
 
-  const stats = [
-    { icon: BookOpen, value: '0', label: 'Research Papers', color: 'from-blue-500 to-blue-600' },
-    { icon: Users, value: '0', label: 'Active Users', color: 'from-purple-500 to-purple-600' },
-    { icon: Eye, value: '0', label: 'Total Views', color: 'from-green-500 to-green-600' },
-    { icon: Upload, value: '0', label: 'This Month', color: 'from-orange-500 to-orange-600' }
+  const interactiveFeatures = [
+    {
+      title: '🔒 Advanced Security',
+      description: 'Dynamic watermarking, disabled downloads, and comprehensive audit logging',
+      gradient: 'from-red-500 to-orange-500'
+    },
+    {
+      title: '📚 Research Repository',
+      description: 'Organized collection of nursing research with powerful search capabilities',
+      gradient: 'from-blue-500 to-cyan-500'
+    },
+    {
+      title: '✅ Review System',
+      description: 'Faculty review process with ratings and revision management',
+      gradient: 'from-green-500 to-emerald-500'
+    },
+    {
+      title: '📊 Analytics Dashboard',
+      description: 'Track views, citations, and research impact metrics',
+      gradient: 'from-purple-500 to-pink-500'
+    }
   ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentFeature((prev) => (prev + 1) % interactiveFeatures.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-20">
@@ -39,7 +63,6 @@ const Home = () => {
         {/* Dynamic buttons based on login status */}
         <div className="flex flex-wrap gap-4 justify-center">
           {user ? (
-            // Logged in users see these buttons
             <>
               <Link
                 to="/browse"
@@ -68,7 +91,6 @@ const Home = () => {
               </Link>
             </>
           ) : (
-            // Not logged in users see these buttons
             <>
               <Link
                 to="/register"
@@ -97,7 +119,50 @@ const Home = () => {
         )}
       </section>
 
-      {/* Features */}
+      {/* Interactive Feature Showcase */}
+      <section className="py-12">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 flex items-center justify-center gap-2">
+            <Sparkles className="text-navy" size={32} />
+            Platform Highlights
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">Explore what makes ConServe powerful</p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 shadow-2xl border border-gray-200 dark:border-gray-700 relative overflow-hidden">
+          {/* Animated background gradient */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${interactiveFeatures[currentFeature].gradient} opacity-10 transition-all duration-1000`}></div>
+          
+          <div className="relative z-10 text-center">
+            <div className="mb-6 animate-fade-in">
+              <h3 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                {interactiveFeatures[currentFeature].title}
+              </h3>
+              <p className="text-xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
+                {interactiveFeatures[currentFeature].description}
+              </p>
+            </div>
+
+            {/* Progress dots */}
+            <div className="flex justify-center gap-3 mt-8">
+              {interactiveFeatures.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentFeature(index)}
+                  className={`transition-all duration-300 rounded-full ${
+                    index === currentFeature 
+                      ? 'w-12 h-3 bg-navy' 
+                      : 'w-3 h-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400'
+                  }`}
+                  aria-label={`Feature ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {features.map((feature, i) => (
           <div
@@ -113,63 +178,7 @@ const Home = () => {
         ))}
       </section>
 
-      {/* Real-Time Stats */}
-      <section>
-        <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-8">
-          Platform Statistics <span className="text-sm text-gray-500 font-normal">(Live)</span>
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((stat, i) => (
-            <div 
-              key={i}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
-            >
-              <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-4 shadow-md`}>
-                <stat.icon className="text-white" size={24} />
-              </div>
-              <div className="text-4xl font-bold text-navy dark:text-accent mb-2">
-                {stat.value}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                {stat.label}
-              </div>
-              <div className="mt-2 flex items-center text-xs text-green-600 dark:text-green-400">
-                <TrendingUp size={14} className="mr-1" />
-                <span>Updated live</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-          Statistics updated in real-time based on platform activity
-        </p>
-      </section>
-
-      {/* User Reviews */}
-      <section className="bg-navy rounded-3xl p-12 shadow-xl">
-        <h2 className="text-3xl font-bold text-center text-white mb-8">
-          What Our Users Say
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { name: 'Student Researcher', rating: 5, text: 'Easy to use and very secure. Perfect for storing my research!' },
-            { name: 'Faculty Member', rating: 5, text: 'Great platform for collaboration and sharing academic work.' },
-            { name: 'Nursing Student', rating: 5, text: 'Love the simple interface and quick access to research papers.' }
-          ].map((review, i) => (
-            <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <div className="flex mb-3">
-                {[...Array(review.rating)].map((_, j) => (
-                  <Star key={j} size={18} className="text-yellow-400 fill-yellow-400" />
-                ))}
-              </div>
-              <p className="text-white mb-4">"{review.text}"</p>
-              <p className="text-blue-200 text-sm font-semibold">- {review.name}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA Section - Only show for non-logged in users */}
+      {/* CTA Section - Only for non-logged in users */}
       {!user && (
         <section className="bg-gray-100 dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-200 dark:border-gray-700">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">

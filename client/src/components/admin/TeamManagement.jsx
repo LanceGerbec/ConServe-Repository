@@ -228,7 +228,7 @@ const TeamManagement = () => {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">Click to upload photo (Max: 10MB)</p>
+                  <p className="text-xs text-gray-500">Click to upload photo</p>
                 </label>
                 <input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               </div>

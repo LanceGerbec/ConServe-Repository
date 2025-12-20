@@ -1,8 +1,5 @@
-// ============================================
-// Footer.jsx - Updated Email
-// ============================================
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, ArrowUp } from 'lucide-react';
+import { Mail, MapPin, ArrowUp } from 'lucide-react';
 
 const Footer = () => {
   const scrollToTop = () => {
@@ -52,8 +49,7 @@ const Footer = () => {
               <div className="flex items-start space-x-2">
                 <MapPin size={18} className="mt-0.5 flex-shrink-0 text-navy" />
                 <div>
-                  <p>Nueva Ecija University</p>
-                  <p>College of Nursing</p>
+                  <p>NEUST - College of Nursing</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -61,10 +57,6 @@ const Footer = () => {
                 <a href="mailto:conserve2025@gmail.com" className="hover:text-white transition-colors">
                   conserve2025@gmail.com
                 </a>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone size={18} className="text-navy" />
-                <span>+63 123 456 7890</span>
               </div>
             </div>
           </div>
