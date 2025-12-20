@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Upload, Heart, Bell, TrendingUp, Clock } from 'lucide-react';
+import { BookOpen, Upload, Heart, TrendingUp, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
 import RecentlyViewed from '../research/RecentlyViewed';
@@ -7,11 +7,9 @@ import RecentlyViewed from '../research/RecentlyViewed';
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [bookmarks, setBookmarks] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [stats, setStats] = useState({ submissions: 0, favorites: 0, read: 0, pending: 0 });
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [stats, setStats] = useState({ submissions: 0, favorites: 0, pending: 0 });
 
   useEffect(() => {
     fetchData();
@@ -34,16 +32,8 @@ const StudentDashboard = () => {
       setStats({
         submissions: submissionsData.count || 0,
         favorites: bookmarksData.count || 0,
-        read: 0,
         pending: submissionsData.papers?.filter(p => p.status === 'pending').length || 0
       });
-
-      // Mock notifications (replace with real API)
-      setNotifications([
-        { id: 1, text: 'Your research "Sample Title" was approved', time: '2 hours ago', read: false },
-        { id: 2, text: 'New research in your field', time: '1 day ago', read: false },
-        { id: 3, text: 'System maintenance scheduled', time: '3 days ago', read: true }
-      ]);
     } catch (error) {
       console.error('Fetch error:', error);
     }
@@ -53,14 +43,12 @@ const StudentDashboard = () => {
     if (action === 'submit') setShowSubmitModal(true);
     else if (action === 'browse') window.location.href = '/browse';
     else if (action === 'favorites') setShowFavorites(true);
-    else if (action === 'notifications') setShowNotifications(true);
   };
 
   const quickActions = [
     { icon: Upload, label: 'Submit Research', color: 'bg-navy', desc: 'Upload your research paper', action: 'submit' },
     { icon: BookOpen, label: 'Browse Papers', color: 'bg-blue-500', desc: 'Explore the repository', action: 'browse' },
-    { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers', action: 'favorites' },
-    { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', desc: 'View updates', action: 'notifications', badge: notifications.filter(n => !n.read).length }
+    { icon: Heart, label: 'My Favorites', color: 'bg-red-500', desc: 'Saved research papers', action: 'favorites' }
   ];
 
   return (
@@ -72,11 +60,10 @@ const StudentDashboard = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           { label: 'My Submissions', value: stats.submissions, icon: Upload, color: 'text-blue-600' },
           { label: 'Favorites', value: stats.favorites, icon: Heart, color: 'text-red-600' },
-          { label: 'Papers Read', value: stats.read, icon: BookOpen, color: 'text-green-600' },
           { label: 'Pending Reviews', value: stats.pending, icon: Clock, color: 'text-orange-600' }
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
@@ -92,18 +79,13 @@ const StudentDashboard = () => {
       {/* Quick Actions */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {quickActions.map((action, i) => (
             <button 
               key={i}
               onClick={() => handleQuickAction(action.action)}
-              className="relative bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group"
+              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group"
             >
-              {action.badge > 0 && (
-                <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                  {action.badge}
-                </span>
-              )}
               <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                 <action.icon className="text-white" size={24} />
               </div>
@@ -122,16 +104,16 @@ const StudentDashboard = () => {
           <h3 className="text-xl font-bold mb-4">Your Activity</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span>Papers Read This Month</span>
-              <span className="text-3xl font-bold">{stats.read}</span>
+              <span>Submissions</span>
+              <span className="text-3xl font-bold">{stats.submissions}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Favorites Added</span>
               <span className="text-3xl font-bold">{stats.favorites}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span>Searches Made</span>
-              <span className="text-3xl font-bold">0</span>
+              <span>Pending Reviews</span>
+              <span className="text-3xl font-bold">{stats.pending}</span>
             </div>
           </div>
         </div>
@@ -172,31 +154,6 @@ const StudentDashboard = () => {
                   </a>
                 ))
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notifications Modal */}
-      {showNotifications && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h2>
-              <button onClick={() => setShowNotifications(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                ✕
-              </button>
-            </div>
-            <div className="p-6 space-y-3">
-              {notifications.map((notif) => (
-                <div key={notif.id} className={`p-4 rounded-lg ${notif.read ? 'bg-gray-50 dark:bg-gray-900' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
-                  <div className="flex items-start justify-between">
-                    <p className="text-gray-900 dark:text-white">{notif.text}</p>
-                    {!notif.read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2"></span>}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                </div>
-              ))}
             </div>
           </div>
         </div>

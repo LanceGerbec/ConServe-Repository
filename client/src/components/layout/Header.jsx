@@ -34,6 +34,12 @@ const Header = () => {
     }
   };
 
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
   const isActive = (path) => location.pathname === path;
 
@@ -131,7 +137,7 @@ const Header = () => {
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{user.firstName}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-700' : user.role === 'faculty' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{user.role}</span>
                 </div>
-                <button onClick={logout} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                <button onClick={handleLogout} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                   <LogOut size={18} />
                 </button>
               </>
@@ -164,7 +170,7 @@ const Header = () => {
             {user ? (
               <>
                 <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg font-medium bg-navy text-white">Dashboard</Link>
-                <button onClick={() => { logout(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Logout</button>
+                <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Logout</button>
               </>
             ) : (
               <>

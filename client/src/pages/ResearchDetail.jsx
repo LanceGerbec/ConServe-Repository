@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
@@ -14,11 +14,17 @@ const ResearchDetail = () => {
   const [bookmarked, setBookmarked] = useState(false);
   const [showCitation, setShowCitation] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => {
     fetchPaper();
     checkBookmark();
   }, [id]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
 
   const fetchPaper = async () => {
     try {
@@ -57,8 +63,41 @@ const ResearchDetail = () => {
       });
       const data = await res.json();
       setBookmarked(data.bookmarked);
+      showToast(data.bookmarked ? '✓ Added to favorites!' : '✓ Removed from favorites!');
     } catch (error) {
       console.error('Bookmark error:', error);
+      showToast('Failed to update bookmark', 'error');
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareText = `Check out this research: ${paper.title}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: paper.title,
+          text: shareText,
+          url: shareUrl
+        });
+        showToast('✓ Shared successfully!');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          copyToClipboard(shareUrl);
+        }
+      }
+    } else {
+      copyToClipboard(shareUrl);
+    }
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('✓ Link copied to clipboard!');
+    } catch (error) {
+      showToast('Failed to copy link', 'error');
     }
   };
 
@@ -84,6 +123,16 @@ const ResearchDetail = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-24 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-up ${
+          toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'
+        } text-white`}>
+          <Check size={20} />
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-6 transition">
         <ArrowLeft size={20} className="mr-2" />
         Back
@@ -140,7 +189,10 @@ const ResearchDetail = () => {
             <Quote size={18} />
             Cite
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          <button 
+            onClick={handleShare}
+            className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+          >
             <Share2 size={18} />
             Share
           </button>
@@ -182,16 +234,8 @@ const ResearchDetail = () => {
             🔒 View-Only Protected Document
           </p>
           <p className="text-gray-700 dark:text-gray-300 mb-4 text-sm">
-            This PDF is strictly for viewing only. All protection measures are active:
+            This PDF is strictly for viewing only. All protection measures are active.
           </p>
-          
-          <ul className="text-xs text-gray-600 dark:text-gray-400 mb-6 space-y-1">
-            <li>✓ Right-click disabled</li>
-            <li>✓ Download blocked</li>
-            <li>✓ Print disabled</li>
-            <li>✓ Screenshot detection active</li>
-            <li>✓ All access logged and tracked</li>
-          </ul>
           
           <button
             onClick={() => setShowPDF(true)}
@@ -200,27 +244,25 @@ const ResearchDetail = () => {
             <FileText size={20} />
             Open Viewer (View Only)
           </button>
-          
-          <p className="text-xs text-red-600 dark:text-red-400 mt-4 font-bold">
-⚠️ Violations are logged and may result in access suspension
-</p>
-</div>
-</div>
-{showPDF && (
-  <ProtectedPDFViewer 
-    signedPdfUrl={paper.signedPdfUrl}
-    paperTitle={paper.title}
-    onClose={() => setShowPDF(false)}
-  />
-)}
+        </div>
+      </div>
 
-  {showCitation && (
-    <CitationModal
-      paper={paper}
-      onClose={() => setShowCitation(false)}
-    />
-  )}
-</div>
-);
+      {showPDF && (
+        <ProtectedPDFViewer 
+          signedPdfUrl={paper.signedPdfUrl}
+          paperTitle={paper.title}
+          onClose={() => setShowPDF(false)}
+        />
+      )}
+
+      {showCitation && (
+        <CitationModal
+          paper={paper}
+          onClose={() => setShowCitation(false)}
+        />
+      )}
+    </div>
+  );
 };
+
 export default ResearchDetail;
