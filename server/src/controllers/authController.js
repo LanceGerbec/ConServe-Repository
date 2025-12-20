@@ -1,8 +1,13 @@
+// ============================================
+// FILE: server/src/controllers/authController.js
+// REPLACE ENTIRE FILE WITH THIS
+// ============================================
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import AuditLog from '../models/AuditLog.js';
 import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
+import { sendWelcomeEmail, sendAdminNewUserNotification } from '../utils/emailService.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -63,8 +68,18 @@ export const register = async (req, res) => {
         details: { email, facultyId: studentId }
       });
 
+      // SEND EMAILS - NEW CODE
+      try {
+        await sendWelcomeEmail(user);
+        await sendAdminNewUserNotification(user);
+        console.log('✅ Welcome & Admin notification emails sent');
+      } catch (emailError) {
+        console.error('⚠️ Email send failed:', emailError);
+        // Don't block registration if email fails
+      }
+
       return res.status(201).json({
-        message: 'Registration successful. Awaiting admin approval.',
+        message: 'Registration successful. Check your email and await admin approval.',
         user: {
           id: user._id,
           firstName: user.firstName,
@@ -115,8 +130,18 @@ export const register = async (req, res) => {
       details: { email, studentId }
     });
 
+    // SEND EMAILS - NEW CODE
+    try {
+      await sendWelcomeEmail(user);
+      await sendAdminNewUserNotification(user);
+      console.log('✅ Welcome & Admin notification emails sent');
+    } catch (emailError) {
+      console.error('⚠️ Email send failed:', emailError);
+      // Don't block registration if email fails
+    }
+
     res.status(201).json({
-      message: 'Registration successful. Awaiting admin approval.',
+      message: 'Registration successful. Check your email and await admin approval.',
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -183,7 +208,8 @@ export const login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        studentId: user.studentId
       }
     });
   } catch (error) {

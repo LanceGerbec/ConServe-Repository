@@ -1,9 +1,14 @@
+// ============================================
+// FILE: server/src/controllers/researchController.js
+// REPLACE ENTIRE FILE WITH THIS
+// ============================================
 import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
 import { getGridFSBucket } from '../config/gridfs.js';
 import { Readable } from 'stream';
 import { generateCitation } from '../utils/citationGenerator.js';
 import { generateSignedPdfUrl, verifySignedUrl } from '../utils/signedUrl.js';
+import { sendAdminNewResearchNotification } from '../utils/emailService.js';
 import mongoose from 'mongoose';
 
 export const submitResearch = async (req, res) => {
@@ -52,8 +57,19 @@ export const submitResearch = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    console.log('✅ Uploaded:', uploadStream.id);
-    res.status(201).json({ message: 'Success', paper });
+    // SEND EMAIL TO ADMIN - NEW CODE
+    try {
+      const populatedPaper = await Research.findById(paper._id)
+        .populate('submittedBy', 'firstName lastName email');
+      await sendAdminNewResearchNotification(populatedPaper);
+      console.log('✅ Admin notification email sent');
+    } catch (emailError) {
+      console.error('⚠️ Email send failed:', emailError);
+      // Don't block submission if email fails
+    }
+
+    console.log('✅ Research uploaded:', uploadStream.id);
+    res.status(201).json({ message: 'Research submitted successfully', paper });
   } catch (error) {
     console.error('❌ Submit error:', error);
     res.status(500).json({ error: error.message });
@@ -277,7 +293,6 @@ export const logViolation = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Create audit log
     const logEntry = await AuditLog.create({
       user: req.user._id,
       action: `VIOLATION_${violationType.toUpperCase()}`,
@@ -305,9 +320,6 @@ export const logViolation = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Log violation error:', error.message);
-    console.error('Stack:', error.stack);
-    
-    // Still return success to not break frontend
     res.status(200).json({ 
       message: 'Logged with error', 
       error: error.message 
