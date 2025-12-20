@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { FileCheck, MessageSquare, Award, Users, Eye } from 'lucide-react';
+import { FileCheck, MessageSquare, Award, Users, Eye, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import ReviewForm from '../review/ReviewForm';
+import SubmitResearch from '../research/SubmitResearch';
 
 const FacultyDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({ totalReviews: 0, approved: 0, rejected: 0, revisions: 0 });
   const [pendingPapers, setPendingPapers] = useState([]);
   const [selectedPaper, setSelectedPaper] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,6 +75,24 @@ const FacultyDashboard = () => {
         ))}
       </div>
 
+      {/* ADDED: Quick Actions Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={() => setShowSubmitModal(true)}
+          className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 hover:shadow-xl transition-all duration-300"
+        >
+          <Upload size={24} />
+          <span className="font-bold text-lg">Submit Research</span>
+        </button>
+        
+          <a href="/browse"
+          className="flex items-center justify-center gap-3 bg-blue-500 text-white p-6 rounded-xl shadow-md hover:bg-blue-600 hover:shadow-xl transition-all duration-300"
+        >
+          <Eye size={24} />
+          <span className="font-bold text-lg">Browse Papers</span>
+        </a>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Submissions for Review</h2>
         {pendingPapers.length === 0 ? (
@@ -103,7 +124,7 @@ const FacultyDashboard = () => {
                     View
                   </button>
                   <button
-                    onClick={() => setSelectedPaper(paper)}
+                    onClick={() => { setSelectedPaper(paper); setShowReviewModal(true); }}
                     className="flex-1 flex items-center justify-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition"
                   >
                     <MessageSquare size={16} />
@@ -116,11 +137,21 @@ const FacultyDashboard = () => {
         )}
       </div>
 
-      {selectedPaper && (
+      {showReviewModal && selectedPaper && (
         <ReviewForm
           paper={selectedPaper}
-          onClose={() => setSelectedPaper(null)}
+          onClose={() => { setSelectedPaper(null); setShowReviewModal(false); }}
           onSuccess={fetchData}
+        />
+      )}
+
+      {showSubmitModal && (
+        <SubmitResearch
+          onClose={() => setShowSubmitModal(false)}
+          onSuccess={() => {
+            setShowSubmitModal(false);
+            fetchData();
+          }}
         />
       )}
     </div>
