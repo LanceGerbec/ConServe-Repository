@@ -15,26 +15,35 @@ const ResearchList = () => {
     fetchPapers();
   }, [filters]);
 
-  const fetchPapers = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const params = new URLSearchParams({ 
-        search, 
-        ...filters 
-      }).toString();
-      
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/research?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      const data = await res.json();
-      setPapers(data.papers || []);
-    } catch (error) {
-      console.error('Fetch error:', error);
-    } finally {
-      setLoading(false);
+const fetchPapers = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // CRITICAL: Students AND Faculty only see approved papers
+    // Only Admin can see all statuses
+    let statusFilter = filters.status;
+    if (user?.role !== 'admin') {
+      statusFilter = 'approved'; // Force approved for non-admin users
     }
-  };
+    
+    const params = new URLSearchParams({ 
+      search, 
+      category: filters.category,
+      status: statusFilter
+    }).toString();
+    
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/research?${params}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    const data = await res.json();
+    setPapers(data.papers || []);
+  } catch (error) {
+    console.error('Fetch error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -103,23 +112,23 @@ const ResearchList = () => {
                 <option value="Published">Published</option>
               </select>
             </div>
-            {user?.role === 'admin' && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Status
-                </label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
-                >
-                  <option value="">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-            )}
+           {user?.role === 'admin' && (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+      Status
+    </label>
+    <select
+      value={filters.status}
+      onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
+    >
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="approved">Approved</option>
+      <option value="rejected">Rejected</option>
+    </select>
+  </div>
+)}
           </div>
           <div className="flex gap-3 mt-4">
             <button

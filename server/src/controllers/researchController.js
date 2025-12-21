@@ -185,26 +185,38 @@ export const getResearchById = async (req, res) => {
     const paper = await Research.findById(req.params.id)
       .populate('submittedBy', 'firstName lastName email');
 
-    if (!paper) return res.status(404).json({ error: 'Not found' });
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
+
+    // CRITICAL: Only allow access to approved papers
+    // Exception: Admin or the paper's author can view any status
+    const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
+      return res.status(403).json({ 
+        error: 'This research is not available. Only approved research can be viewed.',
+        status: paper.status
+      });
+    }
 
     const signedPdfUrl = generateSignedPdfUrl(paper.gridfsId.toString(), req.user._id.toString());
     
     const paperObj = paper.toObject();
     paperObj.signedPdfUrl = signedPdfUrl;
 
-    // Increment views & check milestone
-    const previousViews = paper.views;
-    paper.views += 1;
-    await paper.save();
-    
-    // Notify author of view milestones
-    if (previousViews + 1 !== previousViews) {
+    // Only increment views for approved papers
+    if (paper.status === 'approved') {
+      const previousViews = paper.views;
+      paper.views += 1;
+      await paper.save();
+      
       await notifyViewMilestone(paper, paper.views);
     }
 
     res.json({ paper: paperObj });
   } catch (error) {
-    res.status(500).json({ error: 'Fetch failed' });
+    console.error('Fetch paper error:', error);
+    res.status(500).json({ error: 'Failed to fetch paper' });
   }
 };
 
