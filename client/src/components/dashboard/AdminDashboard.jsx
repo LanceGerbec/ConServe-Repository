@@ -1,7 +1,7 @@
-// client/src/components/dashboard/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
 import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLocation, useNavigate } from 'react-router-dom'; // ADD THIS
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
@@ -10,11 +10,12 @@ import ValidFacultyIdsManagement from '../admin/ValidFacultyIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
 import TeamManagement from '../admin/TeamManagement';
 
-
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation(); // ADD THIS
+  const navigate = useNavigate(); // ADD THIS
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 },
@@ -28,6 +29,36 @@ const AdminDashboard = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // ADD THIS: Check for review query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const reviewId = params.get('review');
+    
+    if (reviewId) {
+      fetchPaperForReview(reviewId);
+      // Clean URL without refreshing
+      navigate('/dashboard', { replace: true });
+    }
+  }, [location.search]);
+
+  // ADD THIS: Fetch specific paper for review
+  const fetchPaperForReview = async (paperId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/research/${paperId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedPaper(data.paper);
+        setShowReviewModal(true);
+      }
+    } catch (error) {
+      console.error('Fetch paper error:', error);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -366,9 +397,9 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{paper.views || 0}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a href={`/research/${paper._id}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700" title="View">
+                        <button onClick={() => handleReviewPaper(paper)} className="text-blue-600 hover:text-blue-700" title="Review">
                           <Eye size={18} />
-                        </a>
+                        </button>
                         <button onClick={() => handleDeleteResearch(paper._id, paper.title)} className="text-red-600 hover:text-red-700" title="Delete">
                           <Trash2 size={18} />
                         </button>

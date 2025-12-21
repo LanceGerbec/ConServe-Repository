@@ -15,7 +15,7 @@ export const notifyNewResearchSubmitted = async (research) => {
       type: 'NEW_RESEARCH_SUBMITTED',
       title: '📚 New Research Submitted',
       message: `"${research.title}" by ${research.submittedBy.firstName} ${research.submittedBy.lastName}`,
-      link: `/research/${research._id}`,
+      link: `/dashboard?review=${research._id}`, // CHANGED: Direct to review modal
       relatedResearch: research._id,
       relatedUser: research.submittedBy._id,
       priority: 'high'
@@ -28,7 +28,7 @@ export const notifyNewResearchSubmitted = async (research) => {
   }
 };
 
-// Notify author when research status changes (ONLY AUTHOR - NOT FACULTY)
+// Notify author when research status changes
 export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
   try {
     const statusConfig = {
@@ -58,7 +58,6 @@ export const notifyResearchStatusChange = async (research, newStatus, reviewNote
       return;
     }
 
-    // ONLY notify the author (submittedBy), NOT faculty
     await Notification.create({
       recipient: research.submittedBy._id || research.submittedBy,
       type: `RESEARCH_${newStatus.toUpperCase()}`,
@@ -69,13 +68,12 @@ export const notifyResearchStatusChange = async (research, newStatus, reviewNote
       priority: config.priority
     });
 
-    console.log(`✅ ${newStatus.toUpperCase()} notification sent to AUTHOR ONLY`);
+    console.log(`✅ ${newStatus.toUpperCase()} notification sent to author`);
   } catch (error) {
     console.error('❌ Research status notification error:', error);
   }
 };
 
-// Notify author when research reaches view milestone
 export const notifyViewMilestone = async (research, views) => {
   try {
     const milestones = [10, 25, 50, 100, 250, 500, 1000];
@@ -97,7 +95,6 @@ export const notifyViewMilestone = async (research, views) => {
   }
 };
 
-// Notify admins of new user registration
 export const notifyNewUserRegistered = async (user) => {
   try {
     const admins = await User.find({ 
@@ -123,7 +120,6 @@ export const notifyNewUserRegistered = async (user) => {
   }
 };
 
-// Notify user when account is approved
 export const notifyAccountApproved = async (userId) => {
   try {
     await Notification.create({
@@ -141,7 +137,6 @@ export const notifyAccountApproved = async (userId) => {
   }
 };
 
-// Notify user when account is rejected/deleted
 export const notifyAccountRejected = async (userEmail, userName) => {
   try {
     console.log(`⚠️ Account rejected: ${userName} (${userEmail})`);
