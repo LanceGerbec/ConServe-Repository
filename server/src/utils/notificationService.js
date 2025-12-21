@@ -1,7 +1,6 @@
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
-// Notify admins & faculty of new research submission
 export const notifyNewResearchSubmitted = async (research) => {
   try {
     const adminsAndFaculty = await User.find({ 
@@ -15,7 +14,7 @@ export const notifyNewResearchSubmitted = async (research) => {
       type: 'NEW_RESEARCH_SUBMITTED',
       title: '📚 New Research Submitted',
       message: `"${research.title}" by ${research.submittedBy.firstName} ${research.submittedBy.lastName}`,
-      link: `/dashboard?review=${research._id}`, // CHANGED: Direct to review modal
+      link: `/dashboard?review=${research._id}`, // Same link, but dashboard handles differently
       relatedResearch: research._id,
       relatedUser: research.submittedBy._id,
       priority: 'high'
@@ -28,7 +27,6 @@ export const notifyNewResearchSubmitted = async (research) => {
   }
 };
 
-// Notify author when research status changes
 export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
   try {
     const statusConfig = {

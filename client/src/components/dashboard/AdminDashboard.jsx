@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Users, FileText, Shield, Activity, UserCheck, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useLocation, useNavigate } from 'react-router-dom'; // ADD THIS
+import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
@@ -14,8 +14,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const location = useLocation(); // ADD THIS
-  const navigate = useNavigate(); // ADD THIS
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 },
@@ -30,26 +30,25 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // ADD THIS: Check for review query parameter
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const reviewId = params.get('review');
-    
     if (reviewId) {
       fetchPaperForReview(reviewId);
-      // Clean URL without refreshing
       navigate('/dashboard', { replace: true });
     }
   }, [location.search]);
 
-  // ADD THIS: Fetch specific paper for review
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
+
   const fetchPaperForReview = async (paperId) => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/research/${paperId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       if (res.ok) {
         const data = await res.json();
         setSelectedPaper(data.paper);
@@ -60,15 +59,10 @@ const AdminDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-
       const [userStats, researchStats, pendingUsersData, pendingResearchData, allUsersData, allResearchData] = await Promise.all([
         fetch(`${API_URL}/users/stats`, { headers }).then(r => r.json()),
         fetch(`${API_URL}/research/stats`, { headers }).then(r => r.json()),
@@ -77,7 +71,6 @@ const AdminDashboard = () => {
         activeTab === 'users' ? fetch(`${API_URL}/users`, { headers }).then(r => r.json()) : Promise.resolve({ users: [] }),
         activeTab === 'research' ? fetch(`${API_URL}/research`, { headers }).then(r => r.json()) : Promise.resolve({ papers: [] })
       ]);
-
       setStats({ users: userStats, research: researchStats });
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
@@ -162,7 +155,7 @@ const AdminDashboard = () => {
       const res = await fetch(`${API_URL}/research/${researchId}/status`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'approved' })
+        body: JSON.stringify({ status: 'approved', revisionNotes: 'Quick approval' })
       });
       if (res.ok) {
         alert('Research approved successfully');
@@ -228,13 +221,7 @@ const AdminDashboard = () => {
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
         {['overview', 'users', 'research', 'student-ids', 'faculty-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
-              activeTab === tab ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
             {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
           </button>
         ))}
@@ -263,12 +250,10 @@ const AdminDashboard = () => {
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {pendingUsers.map((u) => (
                     <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
-                          <p className="text-xs text-gray-500 mt-1">Role: {u.role} | ID: {u.studentId}</p>
-                        </div>
+                      <div className="mb-3">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
+                        <p className="text-xs text-gray-500 mt-1">Role: {u.role} | ID: {u.studentId}</p>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => handleApproveUser(u._id)} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">
@@ -336,18 +321,10 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{u.firstName} {u.lastName}</td>
                     <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{u.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        u.role === 'admin' ? 'bg-red-100 text-red-700' :
-                        u.role === 'faculty' ? 'bg-blue-100 text-blue-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>{u.role}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-red-100 text-red-700' : u.role === 'faculty' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{u.role}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        u.isApproved && u.isActive ? 'bg-green-100 text-green-700' :
-                        !u.isApproved ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.isApproved && u.isActive ? 'bg-green-100 text-green-700' : !u.isApproved ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
                         {u.isApproved && u.isActive ? 'Active' : !u.isApproved ? 'Pending' : 'Inactive'}
                       </span>
                     </td>
@@ -388,11 +365,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{paper.title}</td>
                     <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        paper.status === 'approved' ? 'bg-green-100 text-green-700' :
-                        paper.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>{paper.status}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${paper.status === 'approved' ? 'bg-green-100 text-green-700' : paper.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{paper.status}</span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{paper.views || 0}</td>
                     <td className="px-6 py-4 text-right">

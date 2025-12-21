@@ -38,7 +38,7 @@ const FacultyDashboard = () => {
       if (res.ok) {
         const data = await res.json();
         setSelectedPaper(data.paper);
-        setShowReviewModal(true);
+        setShowReviewModal(true); // Open FACULTY REVIEW FORM
       }
     } catch (error) {
       console.error('Fetch paper error:', error);
@@ -99,10 +99,7 @@ const FacultyDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => setShowSubmitModal(true)}
-          className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 hover:shadow-xl transition-all duration-300"
-        >
+        <button onClick={() => setShowSubmitModal(true)} className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 hover:shadow-xl transition-all duration-300">
           <Upload size={24} />
           <span className="font-bold text-lg">Submit Research</span>
         </button>
