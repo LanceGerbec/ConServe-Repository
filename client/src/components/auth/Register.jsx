@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus, Loader2, CheckCircle, X, Home, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import Toast from '../common/Toast';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -15,15 +16,19 @@ const Register = () => {
   const [studentIdValid, setStudentIdValid] = useState(null);
   const [studentInfo, setStudentInfo] = useState(null);
   const [checkingId, setCheckingId] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  // CRITICAL FIX: Re-check ID when role changes
   useEffect(() => {
     if (formData.studentId) {
       checkStudentId(formData.studentId);
     }
   }, [formData.role]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
 
   const getPasswordStrength = (password) => {
     let strength = 0;
@@ -47,21 +52,15 @@ const Register = () => {
 
     setCheckingId(true);
     try {
-      // FIXED: Proper endpoint selection based on role
       const endpoint = formData.role === 'faculty' 
         ? `valid-faculty-ids/check/${id}` 
         : `valid-student-ids/check/${id}`;
       
-      console.log(`🔍 Checking ${formData.role} ID:`, id, '→', endpoint);
-      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
       const data = await res.json();
       
-      console.log('✅ Response:', data);
-      
       if (data.valid) {
         setStudentIdValid(true);
-        // FIXED: Handle both studentInfo and facultyInfo
         setStudentInfo(data.studentInfo || data.facultyInfo);
         setError('');
       } else {
@@ -70,7 +69,6 @@ const Register = () => {
         setError(data.message || `Invalid ${formData.role} ID`);
       }
     } catch (err) {
-      console.error('❌ Check error:', err);
       setStudentIdValid(false);
       setStudentInfo(null);
       setError('Failed to verify ID');
@@ -107,7 +105,12 @@ const Register = () => {
     const result = await register(formData);
     
     if (result.success) {
-      navigate('/login');
+      showToast('🎉 Account created successfully! Please wait for admin approval. You will receive an email notification once your account is approved.', 'success');
+      
+      // Redirect to login after 5 seconds
+      setTimeout(() => {
+        navigate('/login');
+      }, 5000);
     } else {
       setError(result.error || 'Registration failed');
     }
@@ -116,6 +119,15 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast 
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+      )}
+
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl p-10 border border-gray-200 dark:border-gray-800 my-8 animate-scale-in relative">
         <div className="absolute top-4 right-4 flex space-x-2">
           <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group" title="Back to Home">
@@ -192,7 +204,6 @@ const Register = () => {
             <p className="mt-1 text-xs text-gray-500">Use your official NEUST email address</p>
           </div>
 
-          {/* FIXED: Role selection BEFORE ID input */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Role <span className="text-red-500">*</span>
@@ -201,7 +212,6 @@ const Register = () => {
               value={formData.role}
               onChange={(e) => {
                 setFormData({ ...formData, role: e.target.value });
-                // Reset validation when role changes
                 setStudentIdValid(null);
                 setStudentInfo(null);
                 setError('');
