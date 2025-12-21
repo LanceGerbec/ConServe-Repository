@@ -9,6 +9,8 @@ import ValidStudentIdsManagement from '../admin/ValidStudentIdsManagement';
 import ValidFacultyIdsManagement from '../admin/ValidFacultyIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
 import TeamManagement from '../admin/TeamManagement';
+import ConfirmModal from '../common/ConfirmModal';
+import Toast from '../common/Toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -30,7 +32,14 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // FIXED: Handle adminReview URL parameter
+  // Modal & Toast States
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null, action: null });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const adminReviewId = params.get('adminReview');
@@ -94,19 +103,27 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('✅ User approved');
+        showToast('✅ User approved successfully', 'success');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed');
+        showToast(data.error || 'Failed to approve user', 'error');
       }
     } catch (error) {
-      alert('Connection error');
+      showToast('Connection error', 'error');
     }
   };
 
-  const handleDeleteUser = async (userId, userName) => {
-    if (!confirm(`Delete "${userName}"?`)) return;
+  const handleDeleteUser = (userId, userName) => {
+    setConfirmModal({
+      isOpen: true,
+      data: { userId, userName },
+      action: 'deleteUser'
+    });
+  };
+
+  const confirmDeleteUser = async () => {
+    const { userId } = confirmModal.data;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/users/${userId}/reject`, {
@@ -114,19 +131,27 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('✅ User deleted');
+        showToast('✅ User deleted successfully', 'success');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed');
+        showToast(data.error || 'Failed to delete user', 'error');
       }
     } catch (error) {
-      alert('Connection error');
+      showToast('Connection error', 'error');
     }
   };
 
-  const handleDeleteResearch = async (researchId, title) => {
-    if (!confirm(`Delete "${title}"?`)) return;
+  const handleDeleteResearch = (researchId, title) => {
+    setConfirmModal({
+      isOpen: true,
+      data: { researchId, title },
+      action: 'deleteResearch'
+    });
+  };
+
+  const confirmDeleteResearch = async () => {
+    const { researchId } = confirmModal.data;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/research/${researchId}`, {
@@ -134,14 +159,14 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('✅ Research deleted');
+        showToast('✅ Research deleted successfully', 'success');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed');
+        showToast(data.error || 'Failed to delete', 'error');
       }
     } catch (error) {
-      alert('Connection error');
+      showToast('Connection error', 'error');
     }
   };
 
@@ -159,20 +184,30 @@ const AdminDashboard = () => {
         body: JSON.stringify({ status: 'approved', revisionNotes: 'Quick approval' })
       });
       if (res.ok) {
-        alert('✅ Approved');
+        showToast('✅ Research approved successfully', 'success');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed');
+        showToast(data.error || 'Failed to approve', 'error');
       }
     } catch (error) {
-      alert('Connection error');
+      showToast('Connection error', 'error');
     }
   };
 
-  const handleQuickReject = async (researchId) => {
+  const handleQuickReject = (researchId) => {
+    setConfirmModal({
+      isOpen: true,
+      data: { researchId },
+      action: 'rejectResearch'
+    });
+  };
+
+  const confirmRejectResearch = async () => {
+    const { researchId } = confirmModal.data;
     const notes = prompt('Rejection reason:');
     if (!notes) return;
+    
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/research/${researchId}/status`, {
@@ -181,14 +216,30 @@ const AdminDashboard = () => {
         body: JSON.stringify({ status: 'rejected', revisionNotes: notes })
       });
       if (res.ok) {
-        alert('✅ Rejected');
+        showToast('✅ Research rejected successfully', 'success');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed');
+        showToast(data.error || 'Failed to reject', 'error');
       }
     } catch (error) {
-      alert('Connection error');
+      showToast('Connection error', 'error');
+    }
+  };
+
+  const handleConfirmAction = () => {
+    switch (confirmModal.action) {
+      case 'deleteUser':
+        confirmDeleteUser();
+        break;
+      case 'deleteResearch':
+        confirmDeleteResearch();
+        break;
+      case 'rejectResearch':
+        confirmRejectResearch();
+        break;
+      default:
+        break;
     }
   };
 
@@ -209,6 +260,38 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast 
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={handleConfirmAction}
+        title={
+          confirmModal.action === 'deleteUser' 
+            ? 'Delete User?' 
+            : confirmModal.action === 'deleteResearch'
+            ? 'Delete Research Paper?'
+            : 'Reject Research?'
+        }
+        message={
+          confirmModal.action === 'deleteUser'
+            ? `Are you sure you want to delete "${confirmModal.data?.userName}"? This action cannot be undone.`
+            : confirmModal.action === 'deleteResearch'
+            ? `Are you sure you want to permanently delete "${confirmModal.data?.title}"? This action cannot be undone.`
+            : 'This will reject the research paper. You will be prompted for a reason in the next step.'
+        }
+        confirmText={confirmModal.action === 'rejectResearch' ? 'Continue' : 'Delete'}
+        type={confirmModal.action === 'rejectResearch' ? 'warning' : 'danger'}
+      />
+
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
           <p className="text-red-700 dark:text-red-400">{error}</p>
