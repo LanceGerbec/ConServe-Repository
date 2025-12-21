@@ -30,11 +30,12 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // FIXED: Handle adminReview URL parameter
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const reviewId = params.get('review');
-    if (reviewId) {
-      fetchPaperForReview(reviewId);
+    const adminReviewId = params.get('adminReview');
+    if (adminReviewId) {
+      fetchPaperForReview(adminReviewId);
       navigate('/dashboard', { replace: true });
     }
   }, [location.search]);
@@ -55,7 +56,7 @@ const AdminDashboard = () => {
         setShowReviewModal(true);
       }
     } catch (error) {
-      console.error('Fetch paper error:', error);
+      console.error('❌ Fetch paper error:', error);
     }
   };
 
@@ -78,8 +79,8 @@ const AdminDashboard = () => {
       setAllResearch(allResearchData.papers || []);
       setError('');
     } catch (error) {
-      console.error('Fetch error:', error);
-      setError('Failed to load data: ' + error.message);
+      console.error('❌ Fetch error:', error);
+      setError('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -93,19 +94,19 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('User approved successfully');
+        alert('✅ User approved');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to approve user');
+        alert(data.error || 'Failed');
       }
     } catch (error) {
-      alert('Connection error: ' + error.message);
+      alert('Connection error');
     }
   };
 
   const handleDeleteUser = async (userId, userName) => {
-    if (!confirm(`Permanently delete user "${userName}"? This action cannot be undone.`)) return;
+    if (!confirm(`Delete "${userName}"?`)) return;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/users/${userId}/reject`, {
@@ -113,19 +114,19 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('User deleted successfully');
+        alert('✅ User deleted');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to delete user');
+        alert(data.error || 'Failed');
       }
     } catch (error) {
-      alert('Connection error: ' + error.message);
+      alert('Connection error');
     }
   };
 
   const handleDeleteResearch = async (researchId, title) => {
-    if (!confirm(`Permanently delete research "${title}"? This action cannot be undone.`)) return;
+    if (!confirm(`Delete "${title}"?`)) return;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/research/${researchId}`, {
@@ -133,14 +134,14 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('Research deleted successfully');
+        alert('✅ Research deleted');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to delete research');
+        alert(data.error || 'Failed');
       }
     } catch (error) {
-      alert('Connection error: ' + error.message);
+      alert('Connection error');
     }
   };
 
@@ -158,19 +159,19 @@ const AdminDashboard = () => {
         body: JSON.stringify({ status: 'approved', revisionNotes: 'Quick approval' })
       });
       if (res.ok) {
-        alert('Research approved successfully');
+        alert('✅ Approved');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to approve research');
+        alert(data.error || 'Failed');
       }
     } catch (error) {
-      alert('Connection error: ' + error.message);
+      alert('Connection error');
     }
   };
 
   const handleQuickReject = async (researchId) => {
-    const notes = prompt('Enter rejection reason:');
+    const notes = prompt('Rejection reason:');
     if (!notes) return;
     try {
       const token = localStorage.getItem('token');
@@ -180,14 +181,14 @@ const AdminDashboard = () => {
         body: JSON.stringify({ status: 'rejected', revisionNotes: notes })
       });
       if (res.ok) {
-        alert('Research rejected successfully');
+        alert('✅ Rejected');
         fetchData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to reject research');
+        alert(data.error || 'Failed');
       }
     } catch (error) {
-      alert('Connection error: ' + error.message);
+      alert('Connection error');
     }
   };
 
@@ -216,12 +217,12 @@ const AdminDashboard = () => {
 
       <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-8 shadow-lg">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-        <p className="text-blue-100">Welcome, {user?.firstName} - System Administrator</p>
+        <p className="text-blue-100">Welcome, {user?.firstName}</p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
         {['overview', 'users', 'research', 'student-ids', 'faculty-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
             {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
           </button>
         ))}
@@ -229,7 +230,7 @@ const AdminDashboard = () => {
 
       {activeTab === 'overview' && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {adminStats.map((stat, i) => (
               <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
                 <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
@@ -243,19 +244,17 @@ const AdminDashboard = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending User Approvals</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Users</h2>
               {pendingUsers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No pending approvals</div>
+                <div className="text-center py-8 text-gray-500">No pending users</div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {pendingUsers.map((u) => (
                     <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                      <div className="mb-3">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
-                        <p className="text-xs text-gray-500 mt-1">Role: {u.role} | ID: {u.studentId}</p>
-                      </div>
-                      <div className="flex gap-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">{u.role} | {u.studentId}</p>
+                      <div className="flex gap-2 mt-3">
                         <button onClick={() => handleApproveUser(u._id)} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">
                           <CheckCircle size={16} className="inline mr-1" /> Approve
                         </button>
@@ -330,7 +329,7 @@ const AdminDashboard = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       {u.role !== 'admin' && (
-                        <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="text-red-600 hover:text-red-700" title="Delete User">
+                        <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="text-red-600 hover:text-red-700">
                           <Trash2 size={18} />
                         </button>
                       )}
@@ -346,7 +345,7 @@ const AdminDashboard = () => {
       {activeTab === 'research' && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Research Papers ({allResearch.length})</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Research ({allResearch.length})</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -370,10 +369,10 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{paper.views || 0}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleReviewPaper(paper)} className="text-blue-600 hover:text-blue-700" title="Review">
+                        <button onClick={() => handleReviewPaper(paper)} className="text-blue-600 hover:text-blue-700">
                           <Eye size={18} />
                         </button>
-                        <button onClick={() => handleDeleteResearch(paper._id, paper.title)} className="text-red-600 hover:text-red-700" title="Delete">
+                        <button onClick={() => handleDeleteResearch(paper._id, paper.title)} className="text-red-600 hover:text-red-700">
                           <Trash2 size={18} />
                         </button>
                       </div>
