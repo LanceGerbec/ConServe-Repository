@@ -36,7 +36,7 @@ const About = () => {
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
           About <span className="text-navy">ConServe</span>
         </h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">Preserving excellence in nursing research since 2024</p>
+        <p className="text-xl text-gray-600 dark:text-gray-400">Preserving excellence in nursing research</p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 mb-8">

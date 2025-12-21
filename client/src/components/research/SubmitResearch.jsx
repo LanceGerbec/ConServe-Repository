@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, FileText, X, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const SubmitResearch = ({ onClose, onSuccess }) => {
@@ -11,6 +11,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     authors: [user?.firstName + ' ' + user?.lastName || ''],
+    coAuthors: [],
     abstract: '',
     keywords: [],
     category: 'Completed',
@@ -18,6 +19,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   });
 
   const [currentKeyword, setCurrentKeyword] = useState('');
+  const [currentCoAuthor, setCurrentCoAuthor] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -46,6 +48,17 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
     setFormData({ ...formData, keywords: formData.keywords.filter(k => k !== keyword) });
   };
 
+  const addCoAuthor = () => {
+    if (currentCoAuthor.trim() && !formData.coAuthors.includes(currentCoAuthor.trim())) {
+      setFormData({ ...formData, coAuthors: [...formData.coAuthors, currentCoAuthor.trim()] });
+      setCurrentCoAuthor('');
+    }
+  };
+
+  const removeCoAuthor = (index) => {
+    setFormData({ ...formData, coAuthors: formData.coAuthors.filter((_, i) => i !== index) });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -61,7 +74,11 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       const data = new FormData();
       data.append('file', file);
       data.append('title', formData.title);
-      data.append('authors', JSON.stringify(formData.authors));
+      
+      // Combine main author and co-authors
+      const allAuthors = [...formData.authors, ...formData.coAuthors];
+      data.append('authors', JSON.stringify(allAuthors));
+      
       data.append('abstract', formData.abstract);
       data.append('keywords', JSON.stringify(formData.keywords));
       data.append('category', formData.category);
@@ -118,7 +135,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
         )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Step 1: Basic Info */}
+          {/* Step 1: Basic Info + Authors */}
           {step === 1 && (
             <div className="space-y-4 animate-fade-in">
               <div>
@@ -133,6 +150,56 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                   className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="Enter your research title"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Primary Author <span className="text-red-500">*</span>
+                </label>
+                <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-xl">
+                  <p className="text-gray-900 dark:text-white font-medium">{formData.authors[0]}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">You (Primary Author)</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Co-Authors
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={currentCoAuthor}
+                    onChange={(e) => setCurrentCoAuthor(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCoAuthor())}
+                    className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Add co-author name and press Enter"
+                  />
+                  <button
+                    type="button"
+                    onClick={addCoAuthor}
+                    className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add
+                  </button>
+                </div>
+                {formData.coAuthors.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.coAuthors.map((coAuthor, i) => (
+                      <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg">
+                        <span className="text-gray-900 dark:text-white">{coAuthor}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeCoAuthor(i)}
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

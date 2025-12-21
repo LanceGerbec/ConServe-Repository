@@ -153,9 +153,14 @@ const ResearchDetail = () => {
 
         <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
           <div className="flex items-center">
-            <User size={16} className="mr-2" />
-            <span>{paper.authors.join(', ')}</span>
-          </div>
+  <User size={16} className="mr-2" />
+  <span>
+    {paper.authors[0]}
+    {paper.coAuthors && paper.coAuthors.length > 0 && (
+      <> (with {paper.coAuthors.join(', ')})</>
+    )}
+  </span>
+</div>
           <div className="flex items-center">
             <Calendar size={16} className="mr-2" />
             <span>{new Date(paper.createdAt).toLocaleDateString()}</span>

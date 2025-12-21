@@ -178,9 +178,12 @@ const ResearchList = () => {
 
               {/* Authors */}
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-3">
-                <User size={14} className="mr-1" />
-                <span className="line-clamp-1">{paper.authors.join(', ')}</span>
-              </div>
+  <User size={14} className="mr-1" />
+  <span className="line-clamp-1">
+    {paper.authors[0]}
+    {paper.coAuthors && paper.coAuthors.length > 0 && ` (with ${paper.coAuthors.join(', ')})`}
+  </span>
+</div>
 
               {/* Abstract */}
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
