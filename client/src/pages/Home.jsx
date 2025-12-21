@@ -1,26 +1,40 @@
+// client/src/pages/Home.jsx
 import { Link } from 'react-router-dom';
-import { BookOpen, Shield, TrendingUp, Users, ArrowRight, Search, Upload, Sparkles, Award, Lock, Zap } from 'lucide-react';
+import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Award, Lock, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import SubmitResearch from '../components/research/SubmitResearch';
 
 const Home = () => {
   const { user } = useAuth();
-  const [currentFeature, setCurrentFeature] = useState(0);
+  const [currentHighlight, setCurrentHighlight] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const features = [
     { icon: BookOpen, title: 'Research Archive', desc: 'Access published nursing research papers', color: 'from-blue-500 to-blue-600' },
     { icon: Shield, title: 'Secure Storage', desc: 'Protected with advanced security', color: 'from-green-500 to-green-600' },
-    { icon: TrendingUp, title: 'Impact Metrics', desc: 'Track research views and engagement', color: 'from-purple-500 to-purple-600' },
     { icon: Users, title: 'Collaboration', desc: 'Connect with fellow researchers', color: 'from-navy to-accent' }
   ];
 
-  const interactiveFeatures = [
-    { title: '🔒 Advanced Security', description: 'Dynamic watermarking, disabled downloads, and comprehensive audit logging', gradient: 'from-red-500 to-orange-500' },
-    { title: '📚 Research Repository', description: 'Organized collection of nursing research with powerful search capabilities', gradient: 'from-blue-500 to-cyan-500' },
-    { title: '✅ Review System', description: 'Faculty review process with ratings and revision management', gradient: 'from-green-500 to-emerald-500' },
-    { title: '📊 Analytics Dashboard', description: 'Track views, citations, and research impact metrics', gradient: 'from-purple-500 to-pink-500' }
+  const highlights = [
+    { 
+      icon: '📚', 
+      title: 'Research Repository', 
+      description: 'Organized collection of nursing research with powerful search capabilities',
+      gradient: 'from-blue-500 to-cyan-500'
+    },
+    { 
+      icon: '🔒', 
+      title: 'Advanced Security', 
+      description: 'Dynamic watermarking, disabled downloads, and comprehensive audit logging',
+      gradient: 'from-red-500 to-orange-500'
+    },
+    { 
+      icon: '✅', 
+      title: 'Review System', 
+      description: 'Faculty review process with ratings and revision management',
+      gradient: 'from-green-500 to-emerald-500'
+    }
   ];
 
   const stats = [
@@ -32,28 +46,36 @@ const Home = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentFeature((prev) => (prev + 1) % interactiveFeatures.length);
+      setCurrentHighlight((prev) => (prev + 1) % highlights.length);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="space-y-20">
-      {/* Hero with Animated Background */}
+      {/* Hero Section with Nursing-themed Background */}
       <section className="relative text-center py-20 animate-fade-in overflow-hidden">
-        {/* Animated gradient background */}
+        {/* Subtle Nursing-themed Background Pattern */}
+        <div className="absolute inset-0 -z-10 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L30 25 M30 35 L30 55 M5 30 L25 30 M35 30 L55 30' stroke='%231e3a8a' stroke-width='2' fill='none'/%3E%3C/svg%3E")`,
+            backgroundSize: '60px 60px'
+          }}></div>
+        </div>
+
+        {/* Animated gradient orbs */}
         <div className="absolute inset-0 -z-10 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-navy rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent rounded-full blur-3xl animate-pulse delay-700"></div>
         </div>
 
         <div className="inline-flex items-center gap-2 bg-navy/10 px-4 py-2 rounded-full mb-6 animate-bounce">
-          <Sparkles className="text-navy" size={20} />
-          <span className="text-sm font-semibold text-navy">NEUST College of Nursing</span>
+          <span className="text-sm font-semibold text-navy">✨ NEUST College of Nursing</span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-          Welcome to <span className="bg-gradient-to-r from-navy to-accent bg-clip-text text-transparent">ConServe</span>
+        {/* Premium-looking Title (No Gradient) */}
+        <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight tracking-tight">
+          Welcome to <span className="text-navy dark:text-accent">ConServe</span>
         </h1>
         
         <p className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -64,7 +86,7 @@ const Home = () => {
           Your gateway to academic excellence. Discover, share, and preserve nursing research with industry-leading security.
         </p>
         
-        {/* Dynamic CTAs */}
+        {/* CTAs */}
         <div className="flex flex-wrap gap-4 justify-center">
           {user ? (
             <>
@@ -90,7 +112,7 @@ const Home = () => {
             </>
           ) : (
             <>
-              <Link to="/register" className="group flex items-center space-x-2 bg-gradient-to-r from-navy to-accent hover:from-navy-800 hover:to-accent-dark text-white px-10 py-4 rounded-xl font-bold shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300">
+              <Link to="/register" className="group flex items-center space-x-2 bg-navy hover:bg-navy-800 text-white px-10 py-4 rounded-xl font-bold shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300">
                 <span>Get Started</span>
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -124,67 +146,54 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Interactive Feature Showcase */}
-      <section className="py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4 flex items-center justify-center gap-3">
-            <Sparkles className="text-navy animate-pulse" size={36} />
-            Platform Highlights
-          </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400">Explore what makes ConServe powerful</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 shadow-2xl border-2 border-gray-200 dark:border-gray-700 relative overflow-hidden">
-          <div className={`absolute inset-0 bg-gradient-to-br ${interactiveFeatures[currentFeature].gradient} opacity-10 transition-all duration-1000`}></div>
-          
-          <div className="relative z-10 text-center">
-            <div className="mb-6 animate-fade-in">
-              <h3 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                {interactiveFeatures[currentFeature].title}
-              </h3>
-              <p className="text-2xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-                {interactiveFeatures[currentFeature].description}
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-3 mt-8">
-              {interactiveFeatures.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentFeature(index)}
-                  className={`transition-all duration-300 rounded-full ${
-                    index === currentFeature ? 'w-12 h-3 bg-navy' : 'w-3 h-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid with Hover Effects */}
+      {/* Core Features - No Icons, Clean Cards */}
       <section>
         <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">Core Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {features.map((feature, i) => (
-            <div
-              key={i}
-              className="relative bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:-translate-y-2 border border-gray-200 dark:border-gray-700 overflow-hidden"
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center mb-6 group-hover:scale-125 group-hover:rotate-12 transition-all duration-300 shadow-lg">
-                  <feature.icon className={`bg-gradient-to-r ${feature.color} bg-clip-text text-transparent`} size={28} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{feature.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400">{feature.desc}</p>
-              </div>
+            <div key={i} className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:-translate-y-2 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{feature.title}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{feature.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA */}
+      {/* Platform Highlights - Interactive & Elegant */}
+      <section className="py-12">
+        <div className="text-center mb-8">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Platform Highlights</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-400">Explore what makes ConServe powerful</p>
+        </div>
+
+        <div className="relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-3xl p-12 shadow-2xl border border-gray-200 dark:border-gray-700">
+          {/* Content */}
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="text-6xl mb-4">{highlights[currentHighlight].icon}</div>
+            <h3 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              {highlights[currentHighlight].title}
+            </h3>
+            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+              {highlights[currentHighlight].description}
+            </p>
+          </div>
+
+          {/* Interactive Dots */}
+          <div className="flex justify-center gap-3">
+            {highlights.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentHighlight(index)}
+                className={`transition-all duration-300 rounded-full ${
+                  index === currentHighlight ? 'w-12 h-3 bg-navy' : 'w-3 h-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
       {!user ? (
         <section className="relative bg-gradient-to-r from-navy via-accent to-navy rounded-3xl p-12 text-center shadow-2xl overflow-hidden">
           <div className="absolute inset-0 opacity-20">
