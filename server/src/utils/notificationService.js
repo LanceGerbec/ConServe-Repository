@@ -1,4 +1,7 @@
-// server/src/utils/notificationService.js
+// ============================================
+// FILE: server/src/utils/notificationService.js
+// COMPLETE UPDATED VERSION
+// ============================================
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
@@ -16,7 +19,7 @@ export const notifyNewResearchSubmitted = async (research) => {
       type: 'NEW_RESEARCH_SUBMITTED',
       title: '📚 New Research Submitted',
       message: `"${research.title}" by ${research.submittedBy.firstName} ${research.submittedBy.lastName}`,
-      link: `/dashboard?review=${research._id}`,
+      link: `/dashboard?adminReview=${research._id}`,
       relatedResearch: research._id,
       relatedUser: research.submittedBy._id,
       priority: 'high'
@@ -43,7 +46,7 @@ export const notifyFacultyOfApprovedPaper = async (research) => {
       type: 'RESEARCH_APPROVED_FOR_REVIEW',
       title: '✅ New Paper Approved - Ready for Faculty Review',
       message: `"${research.title}" has been approved by admin. You can now provide your review.`,
-      link: `/dashboard?review=${research._id}`,
+      link: `/dashboard?facultyReview=${research._id}`,
       relatedResearch: research._id,
       priority: 'high'
     }));

@@ -19,9 +19,9 @@ const FacultyDashboard = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const reviewId = params.get('review');
-    if (reviewId) {
-      fetchPaperForReview(reviewId);
+    const facultyReviewId = params.get('facultyReview');
+    if (facultyReviewId) {
+      fetchPaperForReview(facultyReviewId);
       navigate('/dashboard', { replace: true });
     }
   }, [location.search]);
@@ -51,7 +51,6 @@ const FacultyDashboard = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Fetch approved papers (faculty reviews approved papers only)
       const [statsRes, approvedRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/reviews/stats`, { headers }),
         fetch(`${import.meta.env.VITE_API_URL}/research?status=approved`, { headers })
@@ -104,11 +103,11 @@ const FacultyDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button onClick={() => setShowSubmitModal(true)} className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 transition">
+        <button onClick={() => setShowSubmitModal(true)} className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 hover:shadow-xl transition-all duration-300">
           <Upload size={24} />
           <span className="font-bold text-lg">Submit Research</span>
         </button>
-        <a href="/browse" className="flex items-center justify-center gap-3 bg-blue-500 text-white p-6 rounded-xl shadow-md hover:bg-blue-600 transition">
+        <a href="/browse" className="flex items-center justify-center gap-3 bg-blue-500 text-white p-6 rounded-xl shadow-md hover:bg-blue-600 hover:shadow-xl transition-all duration-300">
           <Eye size={24} />
           <span className="font-bold text-lg">Browse Papers</span>
         </a>
@@ -131,11 +130,13 @@ const FacultyDashboard = () => {
                   <p className="text-xs text-gray-500 mt-1">Approved: {new Date(paper.approvedDate || paper.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => window.location.href = `/research/${paper._id}`} className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
-                    <Eye size={16} className="inline mr-1" /> View
+                  <button onClick={() => window.location.href = `/research/${paper._id}`} className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                    <Eye size={16} />
+                    View
                   </button>
-                  <button onClick={() => { setSelectedPaper(paper); setShowReviewModal(true); }} className="flex-1 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition text-sm">
-                    <MessageSquare size={16} className="inline mr-1" /> Review
+                  <button onClick={() => { setSelectedPaper(paper); setShowReviewModal(true); }} className="flex-1 flex items-center justify-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition">
+                    <MessageSquare size={16} />
+                    Review
                   </button>
                 </div>
               </div>
