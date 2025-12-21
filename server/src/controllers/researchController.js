@@ -1,6 +1,6 @@
 // ============================================
 // FILE: server/src/controllers/researchController.js
-// REPLACE ENTIRE FILE WITH THIS
+// COMPLETE UPDATED VERSION
 // ============================================
 import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
@@ -14,7 +14,6 @@ import {
   notifyNewResearchSubmitted, 
   notifyViewMilestone 
 } from '../utils/notificationService.js';
-
 
 export const submitResearch = async (req, res) => {
   try {
@@ -62,7 +61,7 @@ export const submitResearch = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    // NOTIFY ADMINS & FACULTY
+    // NOTIFY ADMINS ONLY (not faculty)
     const populatedPaper = await Research.findById(paper._id)
       .populate('submittedBy', 'firstName lastName email');
     
@@ -81,7 +80,6 @@ export const submitResearch = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const streamPDFWithToken = async (req, res) => {
   try {
@@ -223,9 +221,14 @@ export const updateResearchStatus = async (req, res) => {
     if (status === 'approved') paper.approvedDate = new Date();
     await paper.save();
 
-    // ADDED: Send notification to author
-    const { notifyResearchStatusChange } = await import('../utils/notificationService.js');
+    // Notify author
+    const { notifyResearchStatusChange, notifyFacultyOfApprovedPaper } = await import('../utils/notificationService.js');
     await notifyResearchStatusChange(paper, status, revisionNotes || '');
+
+    // CRITICAL: Notify faculty ONLY when admin approves
+    if (status === 'approved') {
+      await notifyFacultyOfApprovedPaper(paper);
+    }
 
     res.json({ message: `Research ${status}`, paper });
   } catch (error) {

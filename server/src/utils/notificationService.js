@@ -1,32 +1,61 @@
+// server/src/utils/notificationService.js
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
+// ADMIN ONLY: Notify when research is submitted
 export const notifyNewResearchSubmitted = async (research) => {
   try {
-    const adminsAndFaculty = await User.find({ 
-      role: { $in: ['admin', 'faculty'] }, 
+    const admins = await User.find({ 
+      role: 'admin', 
       isApproved: true, 
       isActive: true 
     });
 
-    const notifications = adminsAndFaculty.map(user => ({
-      recipient: user._id,
+    const notifications = admins.map(admin => ({
+      recipient: admin._id,
       type: 'NEW_RESEARCH_SUBMITTED',
       title: '📚 New Research Submitted',
       message: `"${research.title}" by ${research.submittedBy.firstName} ${research.submittedBy.lastName}`,
-      link: `/dashboard?review=${research._id}`, // Same link, but dashboard handles differently
+      link: `/dashboard?review=${research._id}`,
       relatedResearch: research._id,
       relatedUser: research.submittedBy._id,
       priority: 'high'
     }));
 
     await Notification.insertMany(notifications);
-    console.log(`✅ Notified ${notifications.length} admins/faculty of new research`);
+    console.log(`✅ Notified ${notifications.length} admins of new research`);
   } catch (error) {
     console.error('❌ New research notification error:', error);
   }
 };
 
+// FACULTY ONLY: Notify when admin approves a paper
+export const notifyFacultyOfApprovedPaper = async (research) => {
+  try {
+    const faculty = await User.find({ 
+      role: 'faculty', 
+      isApproved: true, 
+      isActive: true 
+    });
+
+    const notifications = faculty.map(f => ({
+      recipient: f._id,
+      type: 'RESEARCH_APPROVED_FOR_REVIEW',
+      title: '✅ New Paper Approved - Ready for Faculty Review',
+      message: `"${research.title}" has been approved by admin. You can now provide your review.`,
+      link: `/dashboard?review=${research._id}`,
+      relatedResearch: research._id,
+      priority: 'high'
+    }));
+
+    await Notification.insertMany(notifications);
+    console.log(`✅ Notified ${notifications.length} faculty members of approved paper`);
+  } catch (error) {
+    console.error('❌ Faculty notification error:', error);
+  }
+};
+
+// Author notification when research status changes
 export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
   try {
     const statusConfig = {
@@ -51,10 +80,7 @@ export const notifyResearchStatusChange = async (research, newStatus, reviewNote
     };
 
     const config = statusConfig[newStatus];
-    if (!config) {
-      console.warn(`⚠️ Unknown status: ${newStatus}`);
-      return;
-    }
+    if (!config) return;
 
     await Notification.create({
       recipient: research.submittedBy._id || research.submittedBy,
@@ -86,8 +112,6 @@ export const notifyViewMilestone = async (research, views) => {
       relatedResearch: research._id,
       priority: 'medium'
     });
-
-    console.log(`✅ Milestone notification sent: ${views} views`);
   } catch (error) {
     console.error('❌ Milestone notification error:', error);
   }
@@ -128,17 +152,7 @@ export const notifyAccountApproved = async (userId) => {
       link: '/dashboard',
       priority: 'high'
     });
-
-    console.log(`✅ Account approval notification sent to user ${userId}`);
   } catch (error) {
     console.error('❌ Approval notification error:', error);
-  }
-};
-
-export const notifyAccountRejected = async (userEmail, userName) => {
-  try {
-    console.log(`⚠️ Account rejected: ${userName} (${userEmail})`);
-  } catch (error) {
-    console.error('❌ Rejection notification error:', error);
   }
 };

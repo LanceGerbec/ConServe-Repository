@@ -1,3 +1,4 @@
+// client/src/components/dashboard/FacultyDashboard.jsx
 import { useState, useEffect } from 'react';
 import { FileCheck, MessageSquare, Award, Users, Eye, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -38,7 +39,7 @@ const FacultyDashboard = () => {
       if (res.ok) {
         const data = await res.json();
         setSelectedPaper(data.paper);
-        setShowReviewModal(true); // Open FACULTY REVIEW FORM
+        setShowReviewModal(true);
       }
     } catch (error) {
       console.error('Fetch paper error:', error);
@@ -49,14 +50,18 @@ const FacultyDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [statsRes, pendingRes] = await Promise.all([
+      
+      // Fetch approved papers (faculty reviews approved papers only)
+      const [statsRes, approvedRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/reviews/stats`, { headers }),
-        fetch(`${import.meta.env.VITE_API_URL}/reviews/pending`, { headers })
+        fetch(`${import.meta.env.VITE_API_URL}/research?status=approved`, { headers })
       ]);
+      
       const statsData = await statsRes.json();
-      const pendingData = await pendingRes.json();
+      const approvedData = await approvedRes.json();
+      
       setStats(statsData);
-      setPendingPapers(pendingData.papers || []);
+      setPendingPapers(approvedData.papers || []);
     } catch (error) {
       console.error('Fetch error:', error);
     } finally {
@@ -65,10 +70,10 @@ const FacultyDashboard = () => {
   };
 
   const statCards = [
-    { icon: FileCheck, label: 'Pending Reviews', value: pendingPapers.length, color: 'bg-orange-500' },
-    { icon: MessageSquare, label: 'Total Reviews', value: stats.totalReviews, color: 'bg-blue-500' },
-    { icon: Award, label: 'Approved', value: stats.approved, color: 'bg-green-500' },
-    { icon: Users, label: 'Revisions', value: stats.revisions, color: 'bg-purple-500' }
+    { icon: FileCheck, label: 'Available for Review', value: pendingPapers.length, color: 'bg-blue-500' },
+    { icon: MessageSquare, label: 'Total Reviews', value: stats.totalReviews, color: 'bg-green-500' },
+    { icon: Award, label: 'Approved', value: stats.approved, color: 'bg-purple-500' },
+    { icon: Users, label: 'Revisions', value: stats.revisions, color: 'bg-orange-500' }
   ];
 
   if (loading) {
@@ -99,22 +104,22 @@ const FacultyDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button onClick={() => setShowSubmitModal(true)} className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 hover:shadow-xl transition-all duration-300">
+        <button onClick={() => setShowSubmitModal(true)} className="flex items-center justify-center gap-3 bg-green-500 text-white p-6 rounded-xl shadow-md hover:bg-green-600 transition">
           <Upload size={24} />
           <span className="font-bold text-lg">Submit Research</span>
         </button>
-        <a href="/browse" className="flex items-center justify-center gap-3 bg-blue-500 text-white p-6 rounded-xl shadow-md hover:bg-blue-600 hover:shadow-xl transition-all duration-300">
+        <a href="/browse" className="flex items-center justify-center gap-3 bg-blue-500 text-white p-6 rounded-xl shadow-md hover:bg-blue-600 transition">
           <Eye size={24} />
           <span className="font-bold text-lg">Browse Papers</span>
         </a>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Submissions for Review</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Approved Papers - Ready for Faculty Review</h2>
         {pendingPapers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <FileCheck size={48} className="mx-auto mb-3 text-gray-400" />
-            <p>No pending reviews at the moment</p>
+            <p>No approved papers available for review</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -123,16 +128,14 @@ const FacultyDashboard = () => {
                 <div className="flex-1 mb-3">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{paper.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
-                  <p className="text-xs text-gray-500 mt-1">Submitted: {new Date(paper.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">Approved: {new Date(paper.approvedDate || paper.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => window.location.href = `/research/${paper._id}`} className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-                    <Eye size={16} />
-                    View
+                  <button onClick={() => window.location.href = `/research/${paper._id}`} className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
+                    <Eye size={16} className="inline mr-1" /> View
                   </button>
-                  <button onClick={() => { setSelectedPaper(paper); setShowReviewModal(true); }} className="flex-1 flex items-center justify-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition">
-                    <MessageSquare size={16} />
-                    Review
+                  <button onClick={() => { setSelectedPaper(paper); setShowReviewModal(true); }} className="flex-1 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition text-sm">
+                    <MessageSquare size={16} className="inline mr-1" /> Review
                   </button>
                 </div>
               </div>
