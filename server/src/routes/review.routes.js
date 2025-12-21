@@ -10,6 +10,7 @@ import { auth, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Faculty can submit reviews (suggestions only)
 router.post('/', auth, authorize('faculty', 'admin'), submitReview);
 router.get('/my-reviews', auth, authorize('faculty', 'admin'), getMyReviews);
 router.get('/pending', auth, authorize('faculty', 'admin'), getPendingReviews);

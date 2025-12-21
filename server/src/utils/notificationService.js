@@ -1,5 +1,3 @@
-// REPLACE THE ENTIRE FILE with this complete version:
-
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
@@ -30,7 +28,7 @@ export const notifyNewResearchSubmitted = async (research) => {
   }
 };
 
-// Notify author when research status changes (FIXED - handles all statuses)
+// Notify author when research status changes (ONLY AUTHOR - NOT FACULTY)
 export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
   try {
     const statusConfig = {
@@ -60,6 +58,7 @@ export const notifyResearchStatusChange = async (research, newStatus, reviewNote
       return;
     }
 
+    // ONLY notify the author (submittedBy), NOT faculty
     await Notification.create({
       recipient: research.submittedBy._id || research.submittedBy,
       type: `RESEARCH_${newStatus.toUpperCase()}`,
@@ -70,7 +69,7 @@ export const notifyResearchStatusChange = async (research, newStatus, reviewNote
       priority: config.priority
     });
 
-    console.log(`✅ ${newStatus.toUpperCase()} notification sent to author`);
+    console.log(`✅ ${newStatus.toUpperCase()} notification sent to AUTHOR ONLY`);
   } catch (error) {
     console.error('❌ Research status notification error:', error);
   }
@@ -145,10 +144,7 @@ export const notifyAccountApproved = async (userId) => {
 // Notify user when account is rejected/deleted
 export const notifyAccountRejected = async (userEmail, userName) => {
   try {
-    // Since user is deleted, we can't send in-app notification
-    // This is just for logging purposes
     console.log(`⚠️ Account rejected: ${userName} (${userEmail})`);
-    // Email notification would be sent via emailService
   } catch (error) {
     console.error('❌ Rejection notification error:', error);
   }

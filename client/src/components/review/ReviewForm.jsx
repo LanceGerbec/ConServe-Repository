@@ -3,10 +3,8 @@ import { X, Send, AlertCircle } from 'lucide-react';
 
 const ReviewForm = ({ paper, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
-    decision: 'approved',
     comments: '',
-    ratings: { methodology: 5, clarity: 5, contribution: 5, overall: 5 },
-    revisionDeadline: ''
+    ratings: { methodology: 5, clarity: 5, contribution: 5, overall: 5 }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +29,7 @@ const ReviewForm = ({ paper, onClose, onSuccess }) => {
       });
 
       if (res.ok) {
+        alert('✅ Review submitted successfully!');
         onSuccess?.();
         onClose();
       } else {
@@ -49,11 +48,14 @@ const ReviewForm = ({ paper, onClose, onSuccess }) => {
       <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Submit Review</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Submit Faculty Review</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X size={24} />
             </button>
           </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            📝 Provide suggestions and feedback. Admin will make the final decision.
+          </p>
         </div>
 
         {error && (
@@ -67,21 +69,6 @@ const ReviewForm = ({ paper, onClose, onSuccess }) => {
           <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
             <h3 className="font-bold text-gray-900 dark:text-white mb-2">{paper.title}</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">By: {paper.authors.join(', ')}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Decision <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.decision}
-              onChange={(e) => setFormData({ ...formData, decision: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
-            >
-              <option value="approved">Approve</option>
-              <option value="revision">Request Revision</option>
-              <option value="rejected">Reject</option>
-            </select>
           </div>
 
           <div>
@@ -117,31 +104,16 @@ const ReviewForm = ({ paper, onClose, onSuccess }) => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Comments <span className="text-red-500">*</span>
+              Comments & Suggestions <span className="text-red-500">*</span>
             </label>
             <textarea
               rows={6}
               value={formData.comments}
               onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
               className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 resize-none"
-              placeholder="Provide detailed feedback..."
+              placeholder="Provide detailed feedback and suggestions for improvement..."
             />
           </div>
-
-          {formData.decision === 'revision' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Revision Deadline
-              </label>
-              <input
-                type="date"
-                value={formData.revisionDeadline}
-                onChange={(e) => setFormData({ ...formData, revisionDeadline: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
-              />
-            </div>
-          )}
 
           <button
             type="submit"

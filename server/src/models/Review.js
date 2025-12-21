@@ -1,6 +1,3 @@
-// ============================================
-// FILE: server/src/models/Review.js
-// ============================================
 import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema({
@@ -16,8 +13,8 @@ const reviewSchema = new mongoose.Schema({
   },
   decision: { 
     type: String, 
-    enum: ['approved', 'rejected', 'revision'], 
-    required: true 
+    enum: ['pending', 'approved', 'rejected', 'revision'], 
+    default: 'pending'
   },
   comments: { type: String, required: true },
   ratings: {

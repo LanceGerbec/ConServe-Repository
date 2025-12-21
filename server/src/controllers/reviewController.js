@@ -3,55 +3,44 @@ import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
 import { sendEmail } from '../utils/emailService.js';
 
+// Faculty submits review (SUGGESTIONS ONLY - NO STATUS CHANGE)
 export const submitReview = async (req, res) => {
   try {
-    const { researchId, decision, comments, ratings, revisionDeadline } = req.body;
+    const { researchId, comments, ratings } = req.body;
     
-    const research = await Research.findById(researchId).populate('submittedBy', 'email firstName lastName');
+    const research = await Research.findById(researchId)
+      .populate('submittedBy', 'email firstName lastName');
+    
     if (!research) return res.status(404).json({ error: 'Research not found' });
 
+    // Faculty can ONLY submit comments/suggestions
     const review = await Review.create({
       research: researchId,
       reviewer: req.user._id,
-      decision,
+      decision: 'pending', // Faculty review stays pending
       comments,
       ratings,
-      revisionRequested: decision === 'revision',
-      revisionDeadline: decision === 'revision' ? revisionDeadline : null
+      revisionRequested: false
     });
-
-    research.status = decision === 'approved' ? 'approved' : decision === 'rejected' ? 'rejected' : 'revision';
-    research.reviewedBy = req.user._id;
-    if (decision === 'revision') research.revisionNotes = comments;
-    await research.save();
 
     await AuditLog.create({
       user: req.user._id,
-      action: `REVIEW_${decision.toUpperCase()}`,
+      action: 'FACULTY_REVIEW_SUBMITTED',
       resource: 'Research',
       resourceId: researchId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
 
-    const { notifyResearchStatusChange } = await import('../utils/notificationService.js');
-await notifyResearchStatusChange(research, decision, comments);
-
-    // Send email notification
-    const emailSubject = decision === 'approved' ? 'Your Research Has Been Approved!' :
-                        decision === 'rejected' ? 'Research Review: Revision Required' :
-                        'Research Review: Changes Requested';
-    
+    // Email notification to author
     await sendEmail({
       to: research.submittedBy.email,
-      subject: emailSubject,
+      subject: 'Faculty Review Received',
       html: `
-        <h2>Research Review Update</h2>
+        <h2>Faculty Review Received</h2>
         <p>Hello ${research.submittedBy.firstName},</p>
-        <p>Your research paper "<strong>${research.title}</strong>" has been reviewed.</p>
-        <p><strong>Decision:</strong> ${decision.toUpperCase()}</p>
+        <p>Your research paper "<strong>${research.title}</strong>" has received feedback from faculty.</p>
         <p><strong>Comments:</strong> ${comments}</p>
-        ${decision === 'revision' ? `<p><strong>Revision Deadline:</strong> ${new Date(revisionDeadline).toLocaleDateString()}</p>` : ''}
         <p>Login to ConServe to view full details.</p>
       `
     });
