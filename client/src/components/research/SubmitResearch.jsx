@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Upload, FileText, X, CheckCircle, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import Toast from '../common/Toast';
 
 const SubmitResearch = ({ onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -8,6 +9,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [file, setFile] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [formData, setFormData] = useState({
     title: '',
     authors: [user?.firstName + ' ' + user?.lastName || ''],
@@ -23,23 +25,18 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   const [currentCoAuthor, setCurrentCoAuthor] = useState('');
 
   const subjectAreas = [
-    'Pediatric Nursing',
-    'Adult Health Nursing',
-    'Maternal and Child Nursing',
-    'Community Health Nursing',
-    'Mental Health Nursing',
-    'Nursing Informatics',
-    'Geriatric Nursing',
-    'Critical Care Nursing',
-    'Oncology Nursing',
-    'Surgical Nursing',
-    'Emergency Nursing',
-    'Public Health Nursing',
-    'Other'
+    'Pediatric Nursing', 'Adult Health Nursing', 'Maternal and Child Nursing',
+    'Community Health Nursing', 'Mental Health Nursing', 'Nursing Informatics',
+    'Geriatric Nursing', 'Critical Care Nursing', 'Oncology Nursing',
+    'Surgical Nursing', 'Emergency Nursing', 'Public Health Nursing', 'Other'
   ];
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -112,8 +109,12 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
 
       const result = await res.json();
       if (res.ok) {
-        onSuccess?.();
-        onClose();
+        showToast('🎉 Research submitted successfully! Your paper is now pending admin review. You will receive a notification once it has been reviewed.', 'success');
+        
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 3000);
       } else {
         setError(result.error || 'Submission failed');
       }
@@ -127,281 +128,289 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   const progress = (step / 3) * 100;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Submit Research Paper</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <X size={24} />
-            </button>
+    <>
+      {toast.show && (
+        <Toast 
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+          duration={5000}
+        />
+      )}
+
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Submit Research Paper</h2>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="bg-navy h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Step {step} of 3</p>
           </div>
-          
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-navy h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Step {step} of 3</p>
-        </div>
 
-        {error && (
-          <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
-            <p className="text-red-700 dark:text-red-400">{error}</p>
-          </div>
-        )}
+          {error && (
+            <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
+              <p className="text-red-700 dark:text-red-400">{error}</p>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {step === 1 && (
-            <div className="space-y-4 animate-fade-in">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Research Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter your research title"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Primary Author <span className="text-red-500">*</span>
-                </label>
-                <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-xl">
-                  <p className="text-gray-900 dark:text-white font-medium">{formData.authors[0]}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">You (Primary Author)</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Co-Authors
-                </label>
-                <div className="flex gap-2 mb-2">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {step === 1 && (
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Research Title <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    value={currentCoAuthor}
-                    onChange={(e) => setCurrentCoAuthor(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCoAuthor())}
-                    className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Add co-author name"
+                    required
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Enter your research title"
                   />
-                  <button
-                    type="button"
-                    onClick={addCoAuthor}
-                    className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition flex items-center gap-2"
-                  >
-                    <Plus size={16} />
-                    Add
-                  </button>
                 </div>
-                {formData.coAuthors.length > 0 && (
-                  <div className="space-y-2">
-                    {formData.coAuthors.map((coAuthor, i) => (
-                      <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg">
-                        <span className="text-gray-900 dark:text-white">{coAuthor}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeCoAuthor(i)}
-                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600"
-                        >
-                          <Trash2 size={16} />
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Primary Author <span className="text-red-500">*</span>
+                  </label>
+                  <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-xl">
+                    <p className="text-gray-900 dark:text-white font-medium">{formData.authors[0]}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">You (Primary Author)</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Co-Authors
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={currentCoAuthor}
+                      onChange={(e) => setCurrentCoAuthor(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCoAuthor())}
+                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Add co-author name"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCoAuthor}
+                      className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition flex items-center gap-2"
+                    >
+                      <Plus size={16} />
+                      Add
+                    </button>
+                  </div>
+                  {formData.coAuthors.length > 0 && (
+                    <div className="space-y-2">
+                      {formData.coAuthors.map((coAuthor, i) => (
+                        <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg">
+                          <span className="text-gray-900 dark:text-white">{coAuthor}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeCoAuthor(i)}
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="Completed">Completed</option>
+                      <option value="Published">Published</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Year Completed <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.yearCompleted}
+                      onChange={(e) => setFormData({ ...formData, yearCompleted: parseInt(e.target.value) })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      {years.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Subject Area <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.subjectArea}
+                    onChange={(e) => setFormData({ ...formData, subjectArea: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Select Subject Area</option>
+                    {subjectAreas.map(area => (
+                      <option key={area} value={area}>{area}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Abstract <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={6}
+                    value={formData.abstract}
+                    onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                    placeholder="Enter your research abstract..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Keywords
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={currentKeyword}
+                      onChange={(e) => setCurrentKeyword(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Add keyword"
+                    />
+                    <button
+                      type="button"
+                      onClick={addKeyword}
+                      className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.keywords.map((keyword, i) => (
+                      <span key={i} className="bg-navy/10 text-navy px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                        {keyword}
+                        <button type="button" onClick={() => removeKeyword(keyword)}>
+                          <X size={14} />
                         </button>
-                      </div>
+                      </span>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {step === 3 && (
+              <div className="space-y-4 animate-fade-in">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Category <span className="text-red-500">*</span>
+                    Upload PDF <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    required
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="Completed">Completed</option>
-                    <option value="Published">Published</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Year Completed <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.yearCompleted}
-                    onChange={(e) => setFormData({ ...formData, yearCompleted: parseInt(e.target.value) })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    {years.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Subject Area <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.subjectArea}
-                  onChange={(e) => setFormData({ ...formData, subjectArea: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">Select Subject Area</option>
-                  {subjectAreas.map(area => (
-                    <option key={area} value={area}>{area}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4 animate-fade-in">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Abstract <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  required
-                  rows={6}
-                  value={formData.abstract}
-                  onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                  placeholder="Enter your research abstract..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Keywords
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={currentKeyword}
-                    onChange={(e) => setCurrentKeyword(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                    className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Add keyword"
-                  />
-                  <button
-                    type="button"
-                    onClick={addKeyword}
-                    className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition"
-                  >
-                    Add
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.keywords.map((keyword, i) => (
-                    <span key={i} className="bg-navy/10 text-navy px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                      {keyword}
-                      <button type="button" onClick={() => removeKeyword(keyword)}>
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4 animate-fade-in">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Upload PDF <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    {file ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <FileText className="text-navy" size={32} />
-                        <div className="text-left">
-                          <p className="font-semibold text-gray-900 dark:text-white">{file.name}</p>
-                          <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      {file ? (
+                        <div className="flex items-center justify-center gap-3">
+                          <FileText className="text-navy" size={32} />
+                          <div className="text-left">
+                            <p className="font-semibold text-gray-900 dark:text-white">{file.name}</p>
+                            <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <CheckCircle className="text-green-500" size={24} />
                         </div>
-                        <CheckCircle className="text-green-500" size={24} />
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="mx-auto text-gray-400 mb-3" size={48} />
-                        <p className="text-gray-600 dark:text-gray-400 mb-2">Click to upload PDF</p>
-                        <p className="text-sm text-gray-500">Maximum file size: 10MB</p>
-                      </>
-                    )}
-                  </label>
+                      ) : (
+                        <>
+                          <Upload className="mx-auto text-gray-400 mb-3" size={48} />
+                          <p className="text-gray-600 dark:text-gray-400 mb-2">Click to upload PDF</p>
+                          <p className="text-sm text-gray-500">Maximum file size: 10MB</p>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <strong>Note:</strong> Your research will be reviewed by the admin before being published.
+                  </p>
                 </div>
               </div>
+            )}
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <strong>Note:</strong> Your research will be reviewed by the admin before being published.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
-              onClick={() => step > 1 ? setStep(step - 1) : onClose()}
-              className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
-              {step === 1 ? 'Cancel' : 'Back'}
-            </button>
-            
-            {step < 3 ? (
+            <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
-                onClick={() => setStep(step + 1)}
-                className="px-6 py-3 bg-navy text-white rounded-xl hover:bg-navy-800 transition"
+                onClick={() => step > 1 ? setStep(step - 1) : onClose()}
+                className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
-                Next
+                {step === 1 ? 'Cancel' : 'Back'}
               </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={loading || !file}
-                className="px-6 py-3 bg-navy text-white rounded-xl hover:bg-navy-800 transition disabled:opacity-50 flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <span>Submit Research</span>
-                )}
-              </button>
-            )}
-          </div>
-        </form>
+              
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep(step + 1)}
+                  className="px-6 py-3 bg-navy text-white rounded-xl hover:bg-navy-800 transition"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading || !file}
+                  className="px-6 py-3 bg-navy text-white rounded-xl hover:bg-navy-800 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <span>Submit Research</span>
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
