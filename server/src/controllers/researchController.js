@@ -76,7 +76,7 @@ export const submitResearch = async (req, res) => {
 
 export const getAllResearch = async (req, res) => {
   try {
-    const { status, category, search, yearCompleted, subjectArea } = req.query;
+    const { status, category, search, yearCompleted, subjectArea, author } = req.query;
     let query = {};
 
     if (req.user.role === 'student') query.status = 'approved';
@@ -85,6 +85,10 @@ export const getAllResearch = async (req, res) => {
     if (category) query.category = category;
     if (yearCompleted) query.yearCompleted = parseInt(yearCompleted);
     if (subjectArea) query.subjectArea = { $regex: subjectArea, $options: 'i' };
+    
+    if (author) {
+      query.authors = { $regex: author, $options: 'i' };
+    }
     
     if (search) {
       query.$or = [

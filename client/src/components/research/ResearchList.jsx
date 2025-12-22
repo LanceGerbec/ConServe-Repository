@@ -11,7 +11,8 @@ const ResearchList = () => {
     category: '', 
     status: 'approved',
     yearCompleted: '',
-    subjectArea: ''
+    subjectArea: '',
+    author: '' // NEW: Author filter
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -52,7 +53,8 @@ const ResearchList = () => {
         category: filters.category,
         status: statusFilter,
         yearCompleted: filters.yearCompleted,
-        subjectArea: filters.subjectArea
+        subjectArea: filters.subjectArea,
+        author: filters.author // NEW: Pass author filter
       }).toString();
       
       const res = await fetch(`${import.meta.env.VITE_API_URL}/research?${params}`, {
@@ -78,7 +80,8 @@ const ResearchList = () => {
       category: '', 
       status: 'approved',
       yearCompleted: '',
-      subjectArea: ''
+      subjectArea: '',
+      author: '' // Reset author filter
     });
     setSearch('');
   };
@@ -128,7 +131,7 @@ const ResearchList = () => {
               <X size={20} />
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Category
@@ -174,6 +177,20 @@ const ResearchList = () => {
                   <option key={area} value={area}>{area}</option>
                 ))}
               </select>
+            </div>
+
+            {/* NEW: AUTHOR FILTER */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Author
+              </label>
+              <input
+                type="text"
+                value={filters.author}
+                onChange={(e) => setFilters({ ...filters, author: e.target.value })}
+                placeholder="Search by author name"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
             </div>
 
             {user?.role === 'admin' && (
@@ -225,89 +242,89 @@ const ResearchList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {papers.map((paper) => (
-    <div
-      key={paper._id}
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-      onClick={() => window.location.href = `/research/${paper._id}`}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs bg-navy/10 text-navy px-3 py-1 rounded-full font-semibold">
-          {paper.category}
-        </span>
-        <div className="flex items-center text-xs text-gray-500">
-          <Eye size={14} className="mr-1" />
-          {paper.views || 0}
-        </div>
-      </div>
+          {papers.map((paper) => (
+            <div
+              key={paper._id}
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+              onClick={() => window.location.href = `/research/${paper._id}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs bg-navy/10 text-navy px-3 py-1 rounded-full font-semibold">
+                  {paper.category}
+                </span>
+                <div className="flex items-center text-xs text-gray-500">
+                  <Eye size={14} className="mr-1" />
+                  {paper.views || 0}
+                </div>
+              </div>
 
-      <h3 className="font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 hover:text-navy transition">
-        {paper.title}
-      </h3>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 hover:text-navy transition">
+                {paper.title}
+              </h3>
 
-      {/* ALL AUTHORS */}
-      <div className="mb-3">
-        <div className="flex items-start gap-2">
-          <User size={14} className="text-gray-500 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-              {paper.authors.join(', ')}
-            </p>
-          </div>
-        </div>
-      </div>
+              {/* ALL AUTHORS */}
+              <div className="mb-3">
+                <div className="flex items-start gap-2">
+                  <User size={14} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                      {paper.authors.join(', ')}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
-        {paper.abstract}
-      </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
+                {paper.abstract}
+              </p>
 
-      {/* SUBJECT AREA */}
-      {paper.subjectArea && (
-        <div className="mb-3">
-          <span className="text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 px-2 py-1 rounded">
-            📚 {paper.subjectArea}
-          </span>
-        </div>
-      )}
+              {/* SUBJECT AREA */}
+              {paper.subjectArea && (
+                <div className="mb-3">
+                  <span className="text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 px-2 py-1 rounded">
+                    📚 {paper.subjectArea}
+                  </span>
+                </div>
+              )}
 
-      {paper.keywords?.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {paper.keywords.slice(0, 3).map((keyword, i) => (
-            <span key={i} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
-              {keyword}
-            </span>
+              {paper.keywords?.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {paper.keywords.slice(0, 3).map((keyword, i) => (
+                    <span key={i} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
+                      {keyword}
+                    </span>
+                  ))}
+                  {paper.keywords.length > 3 && (
+                    <span className="text-xs text-gray-500">+{paper.keywords.length - 3} more</span>
+                  )}
+                </div>
+              )}
+
+              {/* YEAR COMPLETED */}
+              <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} />
+                  <span className="font-medium">{paper.yearCompleted || new Date(paper.createdAt).getFullYear()}</span>
+                </div>
+                <div>
+                  {new Date(paper.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+
+              {user?.role === 'admin' && paper.status !== 'approved' && (
+                <div className="mt-3">
+                  <span className={`text-xs px-3 py-1 rounded-full ${
+                    paper.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    paper.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {paper.status}
+                  </span>
+                </div>
+              )}
+            </div>
           ))}
-          {paper.keywords.length > 3 && (
-            <span className="text-xs text-gray-500">+{paper.keywords.length - 3} more</span>
-          )}
         </div>
-      )}
-
-      {/* YEAR COMPLETED */}
-      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <Calendar size={14} />
-          <span className="font-medium">{paper.yearCompleted || new Date(paper.createdAt).getFullYear()}</span>
-        </div>
-        <div>
-          {new Date(paper.createdAt).toLocaleDateString()}
-        </div>
-      </div>
-
-      {user?.role === 'admin' && paper.status !== 'approved' && (
-        <div className="mt-3">
-          <span className={`text-xs px-3 py-1 rounded-full ${
-            paper.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-            paper.status === 'rejected' ? 'bg-red-100 text-red-700' :
-            'bg-green-100 text-green-700'
-          }`}>
-            {paper.status}
-          </span>
-        </div>
-      )}
-    </div>
-  ))}
-</div>
       )}
     </div>
   );
