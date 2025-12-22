@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
+import ReviewForm from '../components/review/ReviewForm';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -15,6 +16,7 @@ const ResearchDetail = () => {
   const [bookmarked, setBookmarked] = useState(false);
   const [showCitation, setShowCitation] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => {
@@ -49,7 +51,6 @@ const ResearchDetail = () => {
       const data = await res.json();
       setPaper(data.paper);
 
-      // Only check bookmark for approved papers
       if (data.paper.status === 'approved') {
         checkBookmark();
       }
@@ -124,9 +125,9 @@ const ResearchDetail = () => {
     );
   }
 
-  // ACCESS DENIED - Show error for non-approved papers
   const isAuthor = paper?.submittedBy?._id === user?.id;
   const isAdmin = user?.role === 'admin';
+  const isFaculty = user?.role === 'faculty';
   const canAccess = paper?.status === 'approved' || isAuthor || isAdmin;
 
   if (error || !canAccess) {
@@ -161,35 +162,17 @@ const ResearchDetail = () => {
       <div className="max-w-3xl mx-auto text-center py-16 animate-fade-in">
         <div className={`${info.bgClass} rounded-2xl p-12 shadow-xl border-2`}>
           <IconComponent className={`mx-auto text-${info.color}-500 mb-6`} size={80} />
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            {info.title}
-          </h2>
-          <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
-            {info.message}
-          </p>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{info.title}</h2>
+          <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">{info.message}</p>
           
-          {user?.role === 'faculty' && paper?.status === 'pending' && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded mb-6 text-left">
-              <p className="text-sm text-blue-700 dark:text-blue-400">
-                <strong>Note for Faculty:</strong> You can review pending papers from the Dashboard under "Pending Reviews".
-              </p>
-            </div>
-          )}
-
           <div className="flex gap-4 justify-center">
-            <button 
-              onClick={() => navigate('/browse')} 
-              className="flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg"
-            >
+            <button onClick={() => navigate('/browse')} className="flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg">
               <ArrowLeft size={20} />
               Browse Approved Papers
             </button>
             
             {user?.role === 'admin' && (
-              <button 
-                onClick={() => navigate('/dashboard')} 
-                className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg"
-              >
+              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg">
                 Go to Dashboard
               </button>
             )}
@@ -199,7 +182,6 @@ const ResearchDetail = () => {
     );
   }
 
-  // APPROVED PAPER OR AUTHORIZED USER - Show full details
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
       {toast.show && (
@@ -217,15 +199,12 @@ const ResearchDetail = () => {
       </button>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 mb-6">
-        {/* Status Badge for non-approved papers */}
         {paper.status !== 'approved' && (
           <div className={`mb-6 p-4 rounded-lg border-l-4 ${
             paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' :
             'bg-red-50 dark:bg-red-900/20 border-red-500'
           }`}>
-            <p className="font-bold text-gray-900 dark:text-white">
-              ⚠️ {paper.status.toUpperCase()} PAPER
-            </p>
+            <p className="font-bold text-gray-900 dark:text-white">⚠️ {paper.status.toUpperCase()} PAPER</p>
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
               {isAuthor ? 'This is your submission. Only you and admins can view this.' : 
                isAdmin ? 'Admin preview - This paper is not publicly visible yet.' : ''}
@@ -256,7 +235,7 @@ const ResearchDetail = () => {
           </div>
         </div>
 
-        {/* Action Buttons - Only for Approved Papers */}
+        {/* Action Buttons */}
         {paper.status === 'approved' && (
           <div className="flex gap-3 mb-6">
             <button
@@ -284,6 +263,17 @@ const ResearchDetail = () => {
               <Share2 size={18} />
               Share
             </button>
+
+            {/* FACULTY REVIEW BUTTON - ONLY FOR FACULTY */}
+            {isFaculty && (
+              <button
+                onClick={() => setShowReviewModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+              >
+                <MessageSquare size={18} />
+                Review
+              </button>
+            )}
           </div>
         )}
 
@@ -339,6 +329,7 @@ const ResearchDetail = () => {
         </div>
       </div>
 
+      {/* Modals */}
       {showPDF && (
         <ProtectedPDFViewer 
           signedPdfUrl={paper.signedPdfUrl}
@@ -351,6 +342,17 @@ const ResearchDetail = () => {
         <CitationModal
           paper={paper}
           onClose={() => setShowCitation(false)}
+        />
+      )}
+
+      {showReviewModal && isFaculty && (
+        <ReviewForm
+          paper={paper}
+          onClose={() => setShowReviewModal(false)}
+          onSuccess={() => {
+            setShowReviewModal(false);
+            fetchPaper();
+          }}
         />
       )}
     </div>
