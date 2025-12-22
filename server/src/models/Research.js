@@ -3,11 +3,12 @@ import mongoose from 'mongoose';
 const researchSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   authors: [{ type: String, required: true }],
-  coAuthors: [String], // NEW FIELD
+  coAuthors: [String],
   abstract: { type: String, required: true },
   keywords: [String],
   category: { type: String, enum: ['Completed', 'Published'], required: true },
   subjectArea: String,
+  yearCompleted: { type: Number, min: 1900, max: 2100 }, // NEW FIELD
   fileUrl: { type: String, required: true },
   fileSize: Number,
   fileName: String,
@@ -52,5 +53,7 @@ const researchSchema = new mongoose.Schema({
 
 researchSchema.index({ title: 'text', abstract: 'text', keywords: 'text' });
 researchSchema.index({ status: 1, submittedBy: 1 });
+researchSchema.index({ yearCompleted: 1 }); // NEW INDEX
+researchSchema.index({ subjectArea: 1 }); // NEW INDEX
 
 export default mongoose.model('Research', researchSchema);

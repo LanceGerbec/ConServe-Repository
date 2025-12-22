@@ -15,11 +15,31 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
     abstract: '',
     keywords: [],
     category: 'Completed',
-    subjectArea: ''
+    subjectArea: '',
+    yearCompleted: new Date().getFullYear()
   });
 
   const [currentKeyword, setCurrentKeyword] = useState('');
   const [currentCoAuthor, setCurrentCoAuthor] = useState('');
+
+  const subjectAreas = [
+    'Pediatric Nursing',
+    'Adult Health Nursing',
+    'Maternal and Child Nursing',
+    'Community Health Nursing',
+    'Mental Health Nursing',
+    'Nursing Informatics',
+    'Geriatric Nursing',
+    'Critical Care Nursing',
+    'Oncology Nursing',
+    'Surgical Nursing',
+    'Emergency Nursing',
+    'Public Health Nursing',
+    'Other'
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -75,7 +95,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       data.append('file', file);
       data.append('title', formData.title);
       
-      // Combine main author and co-authors
       const allAuthors = [...formData.authors, ...formData.coAuthors];
       data.append('authors', JSON.stringify(allAuthors));
       
@@ -83,6 +102,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       data.append('keywords', JSON.stringify(formData.keywords));
       data.append('category', formData.category);
       data.append('subjectArea', formData.subjectArea);
+      data.append('yearCompleted', formData.yearCompleted);
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/research`, {
         method: 'POST',
@@ -109,7 +129,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Submit Research Paper</h2>
@@ -118,7 +137,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             </button>
           </div>
           
-          {/* Progress Bar */}
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div 
               className="bg-navy h-2 rounded-full transition-all duration-300"
@@ -135,7 +153,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
         )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Step 1: Basic Info + Authors */}
           {step === 1 && (
             <div className="space-y-4 animate-fade-in">
               <div>
@@ -173,7 +190,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                     onChange={(e) => setCurrentCoAuthor(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCoAuthor())}
                     className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Add co-author name and press Enter"
+                    placeholder="Add co-author name"
                   />
                   <button
                     type="button"
@@ -202,37 +219,58 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="Completed">Completed</option>
-                  <option value="Published">Published</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="Completed">Completed</option>
+                    <option value="Published">Published</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Year Completed <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.yearCompleted}
+                    onChange={(e) => setFormData({ ...formData, yearCompleted: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    {years.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Subject Area
+                  Subject Area <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
+                  required
                   value={formData.subjectArea}
                   onChange={(e) => setFormData({ ...formData, subjectArea: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="e.g., Pediatric Nursing, Mental Health"
-                />
+                >
+                  <option value="">Select Subject Area</option>
+                  {subjectAreas.map(area => (
+                    <option key={area} value={area}>{area}</option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
 
-          {/* Step 2: Abstract & Keywords */}
           {step === 2 && (
             <div className="space-y-4 animate-fade-in">
               <div>
@@ -260,7 +298,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                     onChange={(e) => setCurrentKeyword(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
                     className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Add keyword and press Enter"
+                    placeholder="Add keyword"
                   />
                   <button
                     type="button"
@@ -284,7 +322,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* Step 3: File Upload */}
           {step === 3 && (
             <div className="space-y-4 animate-fade-in">
               <div>
@@ -328,7 +365,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* Navigation Buttons */}
           <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"

@@ -1,7 +1,3 @@
-// ============================================
-// FILE: server/src/controllers/researchController.js
-// COMPLETE UPDATED VERSION
-// ============================================
 import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
 import { getGridFSBucket } from '../config/gridfs.js';
@@ -10,18 +6,15 @@ import { generateCitation } from '../utils/citationGenerator.js';
 import { generateSignedPdfUrl, verifySignedUrl } from '../utils/signedUrl.js';
 import { sendAdminNewResearchNotification } from '../utils/emailService.js';
 import mongoose from 'mongoose';
-import { 
-  notifyNewResearchSubmitted, 
-  notifyViewMilestone 
-} from '../utils/notificationService.js';
+import { notifyNewResearchSubmitted, notifyViewMilestone } from '../utils/notificationService.js';
 
 export const submitResearch = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF required' });
 
-    const { title, authors, abstract, keywords, category, subjectArea } = req.body;
+    const { title, authors, abstract, keywords, category, subjectArea, yearCompleted } = req.body;
     if (!title || !authors || !abstract || !category) {
-      return res.status(400).json({ error: 'Missing fields' });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const bucket = getGridFSBucket();
@@ -44,6 +37,7 @@ export const submitResearch = async (req, res) => {
       keywords: typeof keywords === 'string' ? JSON.parse(keywords) : keywords,
       category,
       subjectArea,
+      yearCompleted: yearCompleted ? parseInt(yearCompleted) : undefined,
       submittedBy: req.user._id,
       fileUrl: `/api/research/file/${uploadStream.id}`,
       fileName: req.file.originalname,
@@ -61,7 +55,6 @@ export const submitResearch = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    // NOTIFY ADMINS ONLY (not faculty)
     const populatedPaper = await Research.findById(paper._id)
       .populate('submittedBy', 'firstName lastName email');
     
@@ -81,92 +74,23 @@ export const submitResearch = async (req, res) => {
   }
 };
 
-export const streamPDFWithToken = async (req, res) => {
-  try {
-    const { fileId } = req.params;
-    const { token } = req.query;
-
-    console.log('📄 PDF Stream Request:', { fileId, hasToken: !!token });
-
-    if (!token) {
-      console.error('❌ No token provided');
-      return res.status(401).json({ error: 'Token required' });
-    }
-
-    let decoded;
-    try {
-      decoded = verifySignedUrl(token);
-      console.log('✅ Token verified for user:', decoded.userId);
-    } catch (error) {
-      console.error('❌ Token verification failed:', error.message);
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    if (decoded.fileId !== fileId) {
-      console.error('❌ Token fileId mismatch');
-      return res.status(403).json({ error: 'Token does not match file' });
-    }
-
-    const bucket = getGridFSBucket();
-    const objectId = new mongoose.Types.ObjectId(fileId);
-
-    const files = await bucket.find({ _id: objectId }).toArray();
-    if (!files || files.length === 0) {
-      console.error('❌ File not found in GridFS:', fileId);
-      return res.status(404).json({ error: 'File not found' });
-    }
-
-    const file = files[0];
-    console.log('✅ Streaming file:', file.filename, `(${file.length} bytes)`);
-
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Length': file.length,
-      'Content-Disposition': 'inline; filename="protected.pdf"',
-      'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'private, no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'Access-Control-Allow-Origin': '*',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-      'Cross-Origin-Embedder-Policy': 'unsafe-none'
-    });
-
-    const downloadStream = bucket.openDownloadStream(objectId);
-
-    downloadStream.on('error', (error) => {
-      console.error('❌ Stream error:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Stream failed' });
-      }
-    });
-
-    downloadStream.on('end', () => {
-      console.log('✅ Stream completed:', fileId);
-    });
-
-    downloadStream.pipe(res);
-  } catch (error) {
-    console.error('❌ PDF stream error:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: error.message });
-    }
-  }
-};
-
 export const getAllResearch = async (req, res) => {
   try {
-    const { status, category, search } = req.query;
+    const { status, category, search, yearCompleted, subjectArea } = req.query;
     let query = {};
 
     if (req.user.role === 'student') query.status = 'approved';
     else if (status) query.status = status;
     
     if (category) query.category = category;
+    if (yearCompleted) query.yearCompleted = parseInt(yearCompleted);
+    if (subjectArea) query.subjectArea = { $regex: subjectArea, $options: 'i' };
+    
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { authors: { $regex: search, $options: 'i' } }
+        { authors: { $regex: search, $options: 'i' } },
+        { abstract: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -180,6 +104,53 @@ export const getAllResearch = async (req, res) => {
   }
 };
 
+export const streamPDFWithToken = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token required' });
+    }
+
+    let decoded;
+    try {
+      decoded = verifySignedUrl(token);
+    } catch (error) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    if (decoded.fileId !== fileId) {
+      return res.status(403).json({ error: 'Token does not match file' });
+    }
+
+    const bucket = getGridFSBucket();
+    const objectId = new mongoose.Types.ObjectId(fileId);
+
+    const files = await bucket.find({ _id: objectId }).toArray();
+    if (!files || files.length === 0) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const file = files[0];
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': file.length,
+      'Content-Disposition': 'inline; filename="protected.pdf"',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    const downloadStream = bucket.openDownloadStream(objectId);
+    downloadStream.pipe(res);
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+};
+
 export const getResearchById = async (req, res) => {
   try {
     const paper = await Research.findById(req.params.id)
@@ -187,35 +158,29 @@ export const getResearchById = async (req, res) => {
 
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
-    // CRITICAL: Only allow access to approved papers
-    // Exception: Admin or the paper's author can view any status
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
       return res.status(403).json({ 
-        error: 'This research is not available. Only approved research can be viewed.',
+        error: 'This research is not available.',
         status: paper.status
       });
     }
 
     const signedPdfUrl = generateSignedPdfUrl(paper.gridfsId.toString(), req.user._id.toString());
-    
     const paperObj = paper.toObject();
     paperObj.signedPdfUrl = signedPdfUrl;
 
-    // Only increment views for approved papers
     if (paper.status === 'approved') {
       const previousViews = paper.views;
       paper.views += 1;
       await paper.save();
-      
       await notifyViewMilestone(paper, paper.views);
     }
 
     res.json({ paper: paperObj });
   } catch (error) {
-    console.error('Fetch paper error:', error);
     res.status(500).json({ error: 'Failed to fetch paper' });
   }
 };
@@ -233,18 +198,15 @@ export const updateResearchStatus = async (req, res) => {
     if (status === 'approved') paper.approvedDate = new Date();
     await paper.save();
 
-    // Notify author
     const { notifyResearchStatusChange, notifyFacultyOfApprovedPaper } = await import('../utils/notificationService.js');
     await notifyResearchStatusChange(paper, status, revisionNotes || '');
 
-    // CRITICAL: Notify faculty ONLY when admin approves
     if (status === 'approved') {
       await notifyFacultyOfApprovedPaper(paper);
     }
 
     res.json({ message: `Research ${status}`, paper });
   } catch (error) {
-    console.error('❌ Update status error:', error);
     res.status(500).json({ error: 'Update failed' });
   }
 };
@@ -320,12 +282,10 @@ export const logViolation = async (req, res) => {
     const { researchId, violationType } = req.body;
     
     if (!req.user) {
-      console.error('❌ No user in request');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     if (!researchId || !violationType) {
-      console.error('❌ Missing researchId or violationType');
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -343,22 +303,8 @@ export const logViolation = async (req, res) => {
       }
     });
 
-    console.warn(`⚠️ VIOLATION LOGGED:`, {
-      user: req.user.email || req.user._id,
-      type: violationType,
-      researchId,
-      logId: logEntry._id
-    });
-
-    res.json({ 
-      message: 'Logged', 
-      violationId: logEntry._id 
-    });
+    res.json({ message: 'Logged', violationId: logEntry._id });
   } catch (error) {
-    console.error('❌ Log violation error:', error.message);
-    res.status(200).json({ 
-      message: 'Logged with error', 
-      error: error.message 
-    });
+    res.status(200).json({ message: 'Logged with error', error: error.message });
   }
 };
