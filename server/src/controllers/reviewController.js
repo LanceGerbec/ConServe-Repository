@@ -1,9 +1,10 @@
 import Review from '../models/Review.js';
 import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
+import Notification from '../models/Notification.js';
 import { sendEmail } from '../utils/emailService.js';
 
-// Faculty submits review (SUGGESTIONS ONLY - NO STATUS CHANGE)
+// Faculty submits review (SUGGESTIONS ONLY)
 export const submitReview = async (req, res) => {
   try {
     const { researchId, comments, ratings } = req.body;
@@ -13,11 +14,10 @@ export const submitReview = async (req, res) => {
     
     if (!research) return res.status(404).json({ error: 'Research not found' });
 
-    // Faculty can ONLY submit comments/suggestions
     const review = await Review.create({
       research: researchId,
       reviewer: req.user._id,
-      decision: 'pending', // Faculty review stays pending
+      decision: 'pending',
       comments,
       ratings,
       revisionRequested: false
@@ -32,18 +32,65 @@ export const submitReview = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    // Email notification to author
-    await sendEmail({
-      to: research.submittedBy.email,
-      subject: 'Faculty Review Received',
-      html: `
-        <h2>Faculty Review Received</h2>
-        <p>Hello ${research.submittedBy.firstName},</p>
-        <p>Your research paper "<strong>${research.title}</strong>" has received feedback from faculty.</p>
-        <p><strong>Comments:</strong> ${comments}</p>
-        <p>Login to ConServe to view full details.</p>
-      `
+    // 🔔 NOTIFY AUTHOR OF FACULTY REVIEW
+    await Notification.create({
+      recipient: research.submittedBy._id,
+      type: 'REVIEW_RECEIVED',
+      title: '📋 Faculty Review Received',
+      message: `Your research "${research.title}" has received feedback from ${req.user.firstName} ${req.user.lastName}.`,
+      link: `/research/${researchId}`,
+      relatedResearch: researchId,
+      relatedUser: req.user._id,
+      priority: 'high'
     });
+
+    // Email notification to author
+    try {
+      await sendEmail({
+        to: research.submittedBy.email,
+        subject: '📋 Faculty Review Received - ConServe',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <body style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1>📋 Faculty Review Received</h1>
+            </div>
+            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb;">
+              <p>Hello <strong>${research.submittedBy.firstName}</strong>,</p>
+              <p>Your research paper has received feedback from faculty.</p>
+              
+              <div style="background: #f9fafb; padding: 15px; border-left: 4px solid #1e3a8a; margin: 20px 0;">
+                <strong>Paper:</strong> ${research.title}<br>
+                <strong>Reviewed by:</strong> ${req.user.firstName} ${req.user.lastName}
+              </div>
+
+              <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <strong>Comments:</strong><br>
+                <p style="margin-top: 10px;">${comments}</p>
+              </div>
+
+              <p style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.CLIENT_URL}/research/${researchId}" 
+                   style="display: inline-block; padding: 12px 30px; background: #1e3a8a; color: white; text-decoration: none; border-radius: 8px;">
+                  View Full Review
+                </a>
+              </p>
+
+              <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                <strong>Note:</strong> This is a faculty review/suggestion. The admin will make the final decision on your paper.
+              </p>
+            </div>
+            <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+              <p>© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
+            </div>
+          </body>
+          </html>
+        `
+      });
+    } catch (emailError) {
+      console.error('⚠️ Email send failed:', emailError);
+    }
 
     res.json({ message: 'Review submitted successfully', review });
   } catch (error) {
