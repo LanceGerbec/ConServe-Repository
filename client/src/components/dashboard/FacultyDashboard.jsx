@@ -82,11 +82,10 @@ const FacultyDashboard = () => {
         <p className="text-blue-100">Faculty Dashboard</p>
       </div>
 
-      {/* Quick Stats - ALL CLICKABLE */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Quick Stats - 2 CLICKABLE CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[
           { label: 'My Submissions', value: stats.submissions, icon: Upload, color: 'text-blue-600', modal: 'submissions' },
-          { label: 'Favorites', value: stats.favorites, icon: Heart, color: 'text-red-600', modal: 'favorites' },
           { label: 'Reviewed Papers', value: stats.reviews, icon: MessageSquare, color: 'text-green-600', modal: 'reviews' }
         ].map((stat, i) => (
           <div 
