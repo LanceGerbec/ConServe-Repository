@@ -15,14 +15,17 @@ import analyticsRoutes from './src/routes/analytics.routes.js';
 import settingsRoutes from './src/routes/settings.routes.js';
 import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
 import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js';
-import { apiLimiter } from './src/middleware/rateLimiter.js';
 import teamRoutes from './src/routes/team.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
+import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// CRITICAL: Trust proxy FIRST (before any middleware)
+app.set('trust proxy', 1);
 
 connectDB();
 initGridFS();
@@ -56,10 +59,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-
 // Health check
 app.get('/', (req, res) => {
-  res.json({ message: 'ConServe API', status: 'running' });
+  res.json({ message: 'ConServe API', status: 'running', timestamp: new Date().toISOString() });
 });
 
 // API Routes
@@ -74,8 +76,10 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/valid-student-ids', validStudentIdRoutes);
 app.use('/api/valid-faculty-ids', validFacultyIdRoutes);
 app.use('/api/team', teamRoutes);
-app.use('/api', apiLimiter);
 app.use('/api/notifications', notificationRoutes);
+
+// Apply rate limiter to all API routes
+app.use('/api', apiLimiter);
 
 console.log('✅ All routes registered');
 
@@ -88,7 +92,7 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err);
-  res.status(500).json({ error: err.message });
+  res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 app.listen(PORT, () => {
