@@ -5,8 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
-import ValidStudentIdsManagement from '../admin/ValidStudentIdsManagement';
-import ValidFacultyIdsManagement from '../admin/ValidFacultyIdsManagement';
+import ValidIdsManagement from '../admin/ValidIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
 import TeamManagement from '../admin/TeamManagement';
 import ConfirmModal from '../common/ConfirmModal';
@@ -304,11 +303,11 @@ const AdminDashboard = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
-        {['overview', 'users', 'research', 'student-ids', 'faculty-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
-          </button>
-        ))}
+      {['overview', 'users', 'research', 'valid-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
+  <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+    {tab === 'valid-ids' ? 'Valid IDs' : tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+  </button>
+))}
       </div>
 
       {activeTab === 'overview' && (
@@ -468,8 +467,7 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {activeTab === 'student-ids' && <ValidStudentIdsManagement />}
-      {activeTab === 'faculty-ids' && <ValidFacultyIdsManagement />}
+      {activeTab === 'valid-ids' && <ValidIdsManagement />}
       {activeTab === 'team' && <TeamManagement />}
       {activeTab === 'analytics' && <AnalyticsDashboard />}
       {activeTab === 'logs' && <ActivityLogs />}

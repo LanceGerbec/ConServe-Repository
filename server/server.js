@@ -18,6 +18,7 @@ import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js';
 import teamRoutes from './src/routes/team.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
+import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
 
 dotenv.config();
 
@@ -77,6 +78,7 @@ app.use('/api/valid-student-ids', validStudentIdRoutes);
 app.use('/api/valid-faculty-ids', validFacultyIdRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/bulk-upload', bulkUploadRoutes);
 
 // Apply rate limiter to all API routes
 app.use('/api', apiLimiter);
