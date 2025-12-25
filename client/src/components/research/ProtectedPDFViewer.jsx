@@ -1,24 +1,26 @@
+// client/src/components/research/ProtectedPDFViewer.jsx
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import * as pdfjsLib from 'pdfjs-dist';
 
-// CRITICAL FIX: Create worker as blob URL to bypass CDN issues
-const createWorkerBlob = () => {
-  const workerCode = `
-    importScripts('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js');
-  `;
-  const blob = new Blob([workerCode], { type: 'application/javascript' });
-  return URL.createObjectURL(blob);
+// OPTIMIZED: Single worker initialization
+let pdfjsLib = null;
+let workerInitialized = false;
+
+const initPdfJs = async () => {
+  if (workerInitialized) return pdfjsLib;
+  
+  try {
+    pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    workerInitialized = true;
+    console.log('✅ PDF.js initialized:', pdfjsLib.version);
+    return pdfjsLib;
+  } catch (err) {
+    console.error('❌ PDF.js init failed:', err);
+    throw new Error('PDF viewer initialization failed');
+  }
 };
-
-// Set worker using blob URL
-try {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = createWorkerBlob();
-  console.log('✅ Worker initialized via blob URL');
-} catch (err) {
-  console.error('❌ Worker initialization failed:', err);
-}
 
 const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const { user } = useAuth();
@@ -32,16 +34,9 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const canvasRef = useRef(null);
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  console.log('🔧 PDF.js Config:', {
-    version: pdfjsLib.version,
-    worker: pdfjsLib.GlobalWorkerOptions.workerSrc?.substring(0, 50),
-    apiBase: API_BASE,
-    signedUrl: signedPdfUrl
-  });
-
   const logViolation = async (type) => {
+    setViolations(prev => prev + 1);
     try {
-      setViolations(prev => prev + 1);
       const token = localStorage.getItem('token');
       const urlParts = signedPdfUrl?.split('/') || [];
       const researchId = urlParts[2];
@@ -61,16 +56,15 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Load PDF with enhanced error handling
+  // Load PDF
   useEffect(() => {
     const loadPDF = async () => {
       try {
-        console.log('📄 Starting PDF load...');
+        console.log('📄 Loading PDF...');
         
+        const pdfjs = await initPdfJs();
         const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication required. Please login again.');
-        }
+        if (!token) throw new Error('Authentication required. Please login again.');
 
         const fullUrl = `${API_BASE}${signedPdfUrl}`;
         console.log('🔗 Fetching from:', fullUrl);
@@ -87,46 +81,27 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           const errorText = await response.text();
           console.error('❌ HTTP Error:', response.status, errorText);
           
-          if (response.status === 401) {
-            throw new Error('Session expired. Please login again.');
-          } else if (response.status === 404) {
-            throw new Error('PDF file not found on server.');
-          } else {
-            throw new Error(`Server error (${response.status})`);
-          }
+          if (response.status === 401) throw new Error('Session expired. Please login again.');
+          if (response.status === 404) throw new Error('PDF file not found on server.');
+          throw new Error(`Server error (${response.status})`);
         }
 
         const contentType = response.headers.get('content-type');
-        console.log('📦 Content-Type:', contentType);
-        
         if (!contentType?.includes('pdf')) {
-          throw new Error(`Invalid content type: ${contentType}`);
+          throw new Error('Invalid content type received from server');
         }
 
         const blob = await response.blob();
         console.log('✅ Blob received:', blob.size, 'bytes');
         
-        if (blob.size === 0) {
-          throw new Error('Received empty PDF file');
-        }
+        if (blob.size === 0) throw new Error('Received empty file from server');
         
         const arrayBuffer = await blob.arrayBuffer();
         console.log('🔄 Parsing PDF...');
         
-        const loadingTask = pdfjsLib.getDocument({
-          data: arrayBuffer,
-          // Remove cMapUrl to avoid external dependencies
-          verbosity: 0
-        });
-
-        loadingTask.onProgress = (progress) => {
-          if (progress.total > 0) {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
-            console.log(`⏳ Loading: ${percent}%`);
-          }
-        };
-        
+        const loadingTask = pdfjs.getDocument({ data: arrayBuffer, verbosity: 0 });
         const pdfDoc = await loadingTask.promise;
+        
         console.log('✅ PDF loaded:', pdfDoc.numPages, 'pages');
         
         setPdf(pdfDoc);
@@ -135,15 +110,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         setLoading(false);
       } catch (err) {
         console.error('❌ PDF Load Error:', err);
-        console.error('Stack:', err.stack);
-        
-        // User-friendly error messages
-        let userMessage = err.message;
-        if (err.message.includes('worker')) {
-          userMessage = 'PDF viewer initialization failed. Please refresh the page and try again.';
-        }
-        
-        setError(userMessage);
+        setError(err.message || 'Failed to load PDF');
         setLoading(false);
       }
     };
@@ -179,48 +146,32 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           viewport: viewport
         }).promise;
 
-// Add watermark - IMPROVED VERSION with clearer text
-context.save();
-context.globalAlpha = 0.2; // Increased opacity for better visibility
-context.font = 'bold 16px Arial, sans-serif'; // Better font
-context.fillStyle = '#ff0000';
-context.rotate(-35 * Math.PI / 180); // Slightly steeper angle
+        // OPTIMIZED WATERMARK
+        context.save();
+        context.globalAlpha = 0.2;
+        context.font = 'bold 16px Arial, sans-serif';
+        context.fillStyle = '#ff0000';
+        context.rotate(-35 * Math.PI / 180);
 
-// Format: "email@domain.com | ID: 2021-12345 | Dec 20, 2025 3:45 PM"
-const now = new Date();
-const dateStr = now.toLocaleDateString('en-US', { 
-  month: 'short', 
-  day: '2-digit', 
-  year: 'numeric' 
-});
-const timeStr = now.toLocaleTimeString('en-US', { 
-  hour: '2-digit', 
-  minute: '2-digit',
-  hour12: true 
-});
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const watermarkText = `${user?.email || 'PROTECTED'} | ID: ${user?.studentId || 'N/A'} | ${dateStr} ${timeStr}`;
 
-const watermarkText = `${user?.email || 'PROTECTED'} | ID: ${user?.studentId || 'N/A'} | ${dateStr} ${timeStr}`;
+        const cols = Math.ceil(canvas.width / 400) + 3;
+        const rows = Math.ceil(canvas.height / 180) + 3;
 
-// Tighter grid for more coverage
-const cols = Math.ceil(canvas.width / 400) + 3;
-const rows = Math.ceil(canvas.height / 180) + 3;
-
-for (let row = 0; row < rows; row++) {
-  for (let col = 0; col < cols; col++) {
-    // Add shadow for better readability
-    context.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    context.shadowBlur = 2;
-    context.shadowOffsetX = 1;
-    context.shadowOffsetY = 1;
-    
-    context.fillText(
-      watermarkText,
-      col * 450 - 300,
-      row * 220 + 50
-    );
-  }
-}
-context.restore();
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            context.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            context.shadowBlur = 2;
+            context.shadowOffsetX = 1;
+            context.shadowOffsetY = 1;
+            
+            context.fillText(watermarkText, col * 450 - 300, row * 220 + 50);
+          }
+        }
+        context.restore();
 
         console.log(`✅ Page ${currentPage} rendered`);
       } catch (err) {
@@ -287,7 +238,7 @@ context.restore();
         <div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
           <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
           <h3 className="text-white text-2xl font-bold mb-3">Failed to Load PDF</h3>
-          <p className="text-gray-300 mb-6 text-sm">{error}</p>
+          <p className="text-gray-300 mb-6 text-sm leading-relaxed">{error}</p>
           
           <div className="space-y-3">
             <button 
@@ -303,6 +254,10 @@ context.restore();
               ✕ Close
             </button>
           </div>
+          
+          <p className="text-xs text-gray-500 mt-6">
+            If the problem persists, please contact support
+          </p>
         </div>
       </div>
     );
@@ -384,7 +339,7 @@ context.restore();
 
       <div className="bg-red-600 px-4 py-2 text-center">
         <p className="text-white text-xs font-bold">
-          🚫 NO DOWNLOAD • NO PRINT • NO COPY • Monitored
+          🚫 NO DOWNLOAD • NO PRINT • NO COPY • All actions monitored
         </p>
       </div>
     </div>
