@@ -1,5 +1,5 @@
 // client/src/components/research/ProtectedPDFViewer.jsx
-// NETFLIX-STYLE ULTRA PROTECTION VERSION
+// ULTRA-SECURE PDF VIEWER - FIXED VERSION
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Lock, AlertCircle, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -30,19 +30,15 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
   const [userIP, setUserIP] = useState('Unknown');
-  const [isBlocked, setIsBlocked] = useState(false); // Netflix-style blocking
+  const [isBlocked, setIsBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'warning' });
-  const [screenRecording, setScreenRecording] = useState(false);
   
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const overlayCanvasRef = useRef(null); // For dynamic watermark
   const sessionTimerRef = useRef(null);
   const startTimeRef = useRef(Date.now());
-  const screenshotCheckRef = useRef(null);
-  const visibilityCheckRef = useRef(null);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
@@ -50,14 +46,12 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
 
-  // 🚨 NETFLIX-STYLE BLOCKING FUNCTION
   const blockContent = (reason) => {
     setIsBlocked(true);
     setBlockReason(reason);
     logViolation(reason);
-    showToast(`🚫 ${reason} - Content Blocked`, 'error');
+    showToast(`🚫 ${reason}`, 'error');
     
-    // Auto-close after 5 seconds for serious violations
     if (violations >= MAX_VIOLATIONS - 1) {
       setTimeout(() => {
         showToast('⚠️ Too many violations - Closing viewer', 'error');
@@ -66,7 +60,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Get IP
   useEffect(() => {
     fetch('https://api.ipify.org?format=json')
       .then(r => r.json())
@@ -74,7 +67,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       .catch(() => setUserIP('Protected'));
   }, []);
 
-  // Session timer
   useEffect(() => {
     sessionTimerRef.current = setTimeout(() => {
       setSessionExpired(true);
@@ -84,7 +76,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     return () => clearTimeout(sessionTimerRef.current);
   }, []);
 
-  // 🎬 NETFLIX-STYLE PROTECTION #1: Screenshot Detection
+  // Screenshot Detection
   useEffect(() => {
     let screenshotAttempts = 0;
     
@@ -92,8 +84,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       if (e.key === 'PrintScreen' || e.keyCode === 44) {
         screenshotAttempts++;
         blockContent('Screenshot Attempt Detected');
-        
-        // Hide content temporarily
         setTimeout(() => {
           if (screenshotAttempts < MAX_VIOLATIONS) {
             setIsBlocked(false);
@@ -105,63 +95,25 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     const preventPrintScreen = (e) => {
       if (e.key === 'PrintScreen') {
         e.preventDefault();
-        navigator.clipboard.writeText(''); // Clear clipboard
+        navigator.clipboard.writeText('');
         blockContent('Screenshot Blocked');
       }
     };
 
     document.addEventListener('keyup', detectScreenshot);
     document.addEventListener('keydown', preventPrintScreen);
-    
-    // Check for screenshot via clipboard monitoring
-    screenshotCheckRef.current = setInterval(() => {
-      if (document.visibilityState === 'hidden') {
-        // Possible screenshot via OS tools
-        setTimeout(() => {
-          if (document.visibilityState === 'visible') {
-            blockContent('Suspicious Activity Detected');
-            setTimeout(() => setIsBlocked(false), 2000);
-          }
-        }, 100);
-      }
-    }, 500);
 
     return () => {
       document.removeEventListener('keyup', detectScreenshot);
       document.removeEventListener('keydown', preventPrintScreen);
-      if (screenshotCheckRef.current) clearInterval(screenshotCheckRef.current);
     };
   }, [violations]);
 
-  // 🎬 NETFLIX-STYLE PROTECTION #2: Screen Recording Detection
-  useEffect(() => {
-    const detectRecording = async () => {
-      try {
-        // Check for screen capture API usage
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true }).catch(() => null);
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          setScreenRecording(true);
-          blockContent('Screen Recording Detected');
-          showToast('🎥 Screen recording blocked - Closing in 5s', 'error');
-          setTimeout(onClose, 5000);
-        }
-      } catch (e) {
-        // User denied or no recording - good
-      }
-    };
-
-    // Check every 3 seconds
-    const interval = setInterval(detectRecording, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // 🎬 NETFLIX-STYLE PROTECTION #3: Visibility Change = Instant Block
+  // Visibility Change Detection
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         blockContent('Window/Tab Changed');
-        // Auto-unblock after 2 seconds if user returns
         setTimeout(() => {
           if (!document.hidden && violations < MAX_VIOLATIONS) {
             setIsBlocked(false);
@@ -188,7 +140,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     };
   }, [violations]);
 
-  // 🎬 NETFLIX-STYLE PROTECTION #4: Developer Tools Detection
+  // Developer Tools Detection
   useEffect(() => {
     const detectDevTools = () => {
       const threshold = 160;
@@ -267,7 +219,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     else { setError('No PDF URL'); setLoading(false); }
   }, [signedPdfUrl, API_BASE]);
 
-  // NETFLIX-STYLE RENDERING with AGGRESSIVE WATERMARKS
+  // Render PDF with Aggressive Watermarks
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
 
@@ -288,7 +240,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           renderInteractiveForms: false
         }).promise;
 
-        // 🎬 NETFLIX-STYLE: Aggressive Multi-Layer Watermarks
+        // Multi-Layer Watermarks
         const now = new Date();
         const sessionId = Math.random().toString(36).substring(2, 8).toUpperCase();
         const timestamp = `${now.toLocaleTimeString()}`;
@@ -317,7 +269,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         }
         context.restore();
 
-        // Layer 2: Random position watermarks (Netflix-style)
+        // Layer 2: Random position watermarks
         context.globalAlpha = 0.12;
         for (let i = 0; i < 15; i++) {
           const x = Math.random() * canvas.width;
@@ -342,7 +294,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     renderPage();
   }, [pdf, currentPage, scale, user, userIP]);
 
-  // 🎬 NETFLIX-STYLE PROTECTION #5: Prevent All Interactions
+  // Prevent All Interactions
   useEffect(() => {
     const preventAll = (e) => {
       e.preventDefault();
@@ -377,7 +329,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     document.addEventListener('selectstart', preventAll);
     document.addEventListener('dragstart', preventAll);
     
-    // Prevent text selection
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
     document.body.style.webkitTouchCallout = 'none';
@@ -413,8 +364,8 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
             <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32} />
           </div>
           <p className="text-white text-xl font-bold">Loading Protected Document</p>
-          <p className="text-red-400 text-sm mt-2">🔒 Initializing Netflix-Style Protection...</p>
-          <p className="text-gray-500 text-xs mt-1">Screenshot Protection • Recording Detection • Forensic Watermarking</p>
+          <p className="text-red-400 text-sm mt-2">🔒 Initializing Security Features...</p>
+          <p className="text-gray-500 text-xs mt-1">Screenshot Protection • Forensic Watermarking • Activity Logging</p>
         </div>
       </div>
     );
@@ -449,7 +400,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       )}
 
       <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
-        {/* 🎬 NETFLIX-STYLE BLOCKING OVERLAY */}
+        {/* BLOCKING OVERLAY */}
         {isBlocked && (
           <div className="absolute inset-0 bg-black flex items-center justify-center z-[60] animate-fade-in">
             <div className="text-center max-w-lg p-8">
@@ -539,16 +490,11 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
               ⏱️ {remaining}m
             </div>
             <div className="text-red-400 text-xs font-bold bg-red-900/30 px-3 py-1 rounded border border-red-600 animate-pulse">
-              🔒 ULTRA PROTECTED
+              🔒 PROTECTED
             </div>
             {violations > 0 && (
               <div className="text-orange-400 text-xs font-bold bg-orange-900/30 px-3 py-1 rounded border border-orange-600 animate-pulse">
                 ⚠️ {violations}/{MAX_VIOLATIONS}
-              </div>
-            )}
-            {screenRecording && (
-              <div className="text-red-500 text-xs font-bold bg-red-900/50 px-3 py-1 rounded border border-red-500 animate-pulse">
-                🎥 RECORDING BLOCKED
               </div>
             )}
           </div>
@@ -557,7 +503,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         {/* Bottom Warning Bar */}
         <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-600 px-4 py-2 text-center">
           <p className="text-white text-xs font-bold animate-pulse">
-            🚫 PROTECTION ACTIVE • SCREENSHOTS BLOCKED • RECORDING BLOCKED • ALL ACTIONS LOGGED • IP: {userIP} • {remaining}min LEFT
+            🚫 PROTECTION ACTIVE • SCREENSHOTS BLOCKED • ALL ACTIONS LOGGED • IP: {userIP} • {remaining}min LEFT
           </p>
         </div>
       </div>
