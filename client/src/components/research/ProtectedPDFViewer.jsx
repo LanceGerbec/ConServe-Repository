@@ -1,9 +1,8 @@
 // client/src/components/research/ProtectedPDFViewer.jsx
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, AlertCircle, Maximize2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-// OPTIMIZED: Single worker initialization
 let pdfjsLib = null;
 let workerInitialized = false;
 
@@ -27,12 +26,29 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [scale, setScale] = useState(1.5);
+  const [scale, setScale] = useState(1.3);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
+  const [userIP, setUserIP] = useState('Unknown');
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // Get user IP address
+  useEffect(() => {
+    const fetchIP = async () => {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        setUserIP(data.ip);
+      } catch (err) {
+        console.error('Failed to fetch IP:', err);
+        setUserIP('IP unavailable');
+      }
+    };
+    fetchIP();
+  }, []);
 
   const logViolation = async (type) => {
     setViolations(prev => prev + 1);
@@ -56,7 +72,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Load PDF
   useEffect(() => {
     const loadPDF = async () => {
       try {
@@ -123,7 +138,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     }
   }, [signedPdfUrl, API_BASE]);
 
-  // Render page with watermark
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
 
@@ -133,47 +147,69 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         
         const page = await pdf.getPage(currentPage);
         const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', { alpha: false });
         
         const viewport = page.getViewport({ scale });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        await page.render({
+        // Enhanced rendering for sharper text
+        const renderContext = {
           canvasContext: context,
-          viewport: viewport
-        }).promise;
+          viewport: viewport,
+          enableWebGL: true,
+          renderInteractiveForms: false
+        };
 
-        // OPTIMIZED WATERMARK
+        await page.render(renderContext).promise;
+
+        // IMPROVED WATERMARK - Evenly Distributed Grid
         context.save();
-        context.globalAlpha = 0.2;
-        context.font = 'bold 16px Arial, sans-serif';
-        context.fillStyle = '#ff0000';
-        context.rotate(-35 * Math.PI / 180);
-
+        context.globalAlpha = 0.15;
+        context.font = 'bold 12px Arial, sans-serif';
+        context.fillStyle = '#FF0000';
+        
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
         const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        const watermarkText = `${user?.email || 'PROTECTED'} | ID: ${user?.studentId || 'N/A'} | ${dateStr} ${timeStr}`;
+        
+        // THREE LINES OF WATERMARK
+        const line1 = `${user?.email || 'PROTECTED'} | ID: ${user?.studentId || 'N/A'}`;
+        const line2 = `IP: ${userIP} | ${dateStr}`;
+        const line3 = `${timeStr} | ConServe Protected`;
 
-        const cols = Math.ceil(canvas.width / 400) + 3;
-        const rows = Math.ceil(canvas.height / 180) + 3;
+        // Calculate grid spacing for even distribution
+        const textWidth = 320;
+        const textHeight = 70;
+        const cols = Math.ceil(canvas.width / textWidth) + 1;
+        const rows = Math.ceil(canvas.height / textHeight) + 1;
+        
+        const xSpacing = canvas.width / cols;
+        const ySpacing = canvas.height / rows;
+
+        context.rotate(-35 * Math.PI / 180);
 
         for (let row = 0; row < rows; row++) {
           for (let col = 0; col < cols; col++) {
-            context.shadowColor = 'rgba(0, 0, 0, 0.3)';
-            context.shadowBlur = 2;
+            const x = col * xSpacing * 1.5 - 200;
+            const y = row * ySpacing * 1.5;
+            
+            // Text shadow for better visibility
+            context.shadowColor = 'rgba(0, 0, 0, 0.4)';
+            context.shadowBlur = 3;
             context.shadowOffsetX = 1;
             context.shadowOffsetY = 1;
             
-            context.fillText(watermarkText, col * 450 - 300, row * 220 + 50);
+            // Draw three lines
+            context.fillText(line1, x, y);
+            context.fillText(line2, x, y + 16);
+            context.fillText(line3, x, y + 32);
           }
         }
+        
         context.restore();
 
-        console.log(`✅ Page ${currentPage} rendered`);
+        console.log(`✅ Page ${currentPage} rendered with watermark`);
       } catch (err) {
         console.error(`❌ Render error:`, err);
         setError(`Page render failed: ${err.message}`);
@@ -181,9 +217,8 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     };
 
     renderPage();
-  }, [pdf, currentPage, scale, user]);
+  }, [pdf, currentPage, scale, user, userIP]);
 
-  // Protection
   useEffect(() => {
     const preventContext = (e) => {
       e.preventDefault();
@@ -194,8 +229,8 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
 
     const preventKeys = (e) => {
       const blocked = [
-        e.ctrlKey && ['s', 'p'].includes(e.key.toLowerCase()),
-        e.metaKey && ['s', 'p'].includes(e.key.toLowerCase()),
+        e.ctrlKey && ['s', 'p', 'c', 'a'].includes(e.key.toLowerCase()),
+        e.metaKey && ['s', 'p', 'c', 'a'].includes(e.key.toLowerCase()),
         e.key === 'PrintScreen',
         e.key === 'F12',
         e.ctrlKey && e.shiftKey && ['i', 'c', 'j'].includes(e.key.toLowerCase())
@@ -219,6 +254,16 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       document.body.style.userSelect = '';
     };
   }, []);
+
+  // FIT TO WIDTH FUNCTION
+  const fitToWidth = () => {
+    if (!pdf || !containerRef.current || !canvasRef.current) return;
+    
+    const containerWidth = containerRef.current.clientWidth - 48; // padding
+    const pageWidth = canvasRef.current.width / scale;
+    const newScale = containerWidth / pageWidth;
+    setScale(Math.min(newScale, 2.5)); // Max 250%
+  };
 
   if (loading) {
     return (
@@ -266,32 +311,41 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   return (
     <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col select-none">
       {/* Header */}
-      <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-700">
+      <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-700 shadow-lg">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <FileText className="text-white flex-shrink-0" size={20} />
           <div className="min-w-0 flex-1">
             <h3 className="text-white font-semibold text-sm truncate">{paperTitle}</h3>
-            <p className="text-gray-400 text-xs truncate">{user?.email}</p>
+            <p className="text-gray-400 text-xs truncate">{user?.email} | IP: {userIP}</p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setScale(s => Math.max(0.5, s - 0.25))} 
+            onClick={() => setScale(s => Math.max(0.5, s - 0.2))} 
             disabled={scale <= 0.5}
             className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition disabled:opacity-50"
+            title="Zoom Out"
           >
             <ZoomOut size={18} />
           </button>
-          <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono">
+          <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono bg-gray-700 rounded py-1">
             {Math.round(scale * 100)}%
           </span>
           <button 
-            onClick={() => setScale(s => Math.min(3, s + 0.25))} 
+            onClick={() => setScale(s => Math.min(3, s + 0.2))} 
             disabled={scale >= 3}
             className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition disabled:opacity-50"
+            title="Zoom In"
           >
             <ZoomIn size={18} />
+          </button>
+          <button 
+            onClick={fitToWidth}
+            className="p-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition"
+            title="Fit to Width"
+          >
+            <Maximize2 size={18} />
           </button>
           <div className="w-px h-6 bg-gray-600 mx-2"></div>
           <button onClick={onClose} className="p-2 bg-red-600 hover:bg-red-700 rounded text-white transition">
@@ -300,13 +354,29 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         </div>
       </div>
 
-      {/* Canvas */}
-      <div className="flex-1 overflow-auto bg-gray-800 flex items-center justify-center p-4">
-        <canvas ref={canvasRef} className="shadow-2xl max-w-full border-2 border-gray-700 rounded-lg" />
+      {/* Canvas Container - Fixed centering and scrolling */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-auto bg-gray-800 p-6"
+        style={{ 
+          display: 'flex', 
+          alignItems: 'flex-start', 
+          justifyContent: 'center'
+        }}
+      >
+        <canvas 
+          ref={canvasRef} 
+          className="shadow-2xl border-2 border-gray-700 rounded-lg" 
+          style={{ 
+            maxWidth: '100%', 
+            height: 'auto',
+            imageRendering: 'high-quality'
+          }}
+        />
       </div>
 
       {/* Footer */}
-      <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-700">
+      <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-700 shadow-lg">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -315,7 +385,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="text-white text-sm px-4 min-w-[140px] text-center font-mono">
+          <span className="text-white text-sm px-4 min-w-[140px] text-center font-mono bg-gray-700 rounded py-1">
             Page {currentPage} / {totalPages}
           </span>
           <button 
@@ -339,7 +409,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
 
       <div className="bg-red-600 px-4 py-2 text-center">
         <p className="text-white text-xs font-bold">
-          🚫 NO DOWNLOAD • NO PRINT • NO COPY • All actions monitored
+          🚫 NO DOWNLOAD • NO PRINT • NO COPY • All actions monitored • IP: {userIP}
         </p>
       </div>
     </div>
