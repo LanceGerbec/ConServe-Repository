@@ -1,5 +1,5 @@
 // client/src/components/research/ProtectedPDFViewer.jsx
-// ULTRA-SECURE PDF VIEWER - FIXED VERSION
+// ✨ BEAUTIFUL WATERMARK + MOBILE SECURITY
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Lock, AlertCircle, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -76,7 +76,54 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     return () => clearTimeout(sessionTimerRef.current);
   }, []);
 
-  // Screenshot Detection
+  // 📱 MOBILE SCREENSHOT DETECTION
+  useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Detect Android screenshot
+      const detectAndroidScreenshot = () => {
+        if (document.visibilityState === 'hidden') {
+          blockContent('Mobile Screenshot Detected');
+          setTimeout(() => setIsBlocked(false), 3000);
+        }
+      };
+
+      // Detect iOS screenshot (volume up + power button)
+      const detectIOSScreenshot = (e) => {
+        if (e.key === 'VolumeUp' || e.key === 'Power') {
+          blockContent('iOS Screenshot Attempt');
+          setTimeout(() => setIsBlocked(false), 2000);
+        }
+      };
+
+      // Prevent long-press context menu on mobile
+      const preventLongPress = (e) => {
+        e.preventDefault();
+        blockContent('Long Press Blocked');
+        setTimeout(() => setIsBlocked(false), 1500);
+        return false;
+      };
+
+      document.addEventListener('visibilitychange', detectAndroidScreenshot);
+      document.addEventListener('keydown', detectIOSScreenshot);
+      document.addEventListener('contextmenu', preventLongPress);
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 1) {
+          e.preventDefault();
+          blockContent('Multi-Touch Blocked');
+        }
+      });
+
+      return () => {
+        document.removeEventListener('visibilitychange', detectAndroidScreenshot);
+        document.removeEventListener('keydown', detectIOSScreenshot);
+        document.removeEventListener('contextmenu', preventLongPress);
+      };
+    }
+  }, [violations]);
+
+  // Desktop Screenshot Detection
   useEffect(() => {
     let screenshotAttempts = 0;
     
@@ -109,7 +156,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     };
   }, [violations]);
 
-  // Visibility Change Detection
+  // Visibility & Focus Detection
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -219,7 +266,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     else { setError('No PDF URL'); setLoading(false); }
   }, [signedPdfUrl, API_BASE]);
 
-  // Render PDF with Aggressive Watermarks
+  // ✨ RENDER PDF WITH BEAUTIFUL WATERMARK
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
 
@@ -240,51 +287,93 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           renderInteractiveForms: false
         }).promise;
 
-        // Multi-Layer Watermarks
+        // ✨ BEAUTIFUL WATERMARK DESIGN
         const now = new Date();
+        const timestamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const sessionId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const timestamp = `${now.toLocaleTimeString()}`;
         
-        // Layer 1: Dense diagonal grid
-        context.save();
-        context.globalAlpha = 0.15;
-        context.font = 'bold 12px Arial';
-        context.fillStyle = '#FF0000';
-        
-        const line1 = `🔒 ${user?.email?.toUpperCase() || 'PROTECTED'}`;
-        const line2 = `IP: ${userIP} | ${timestamp}`;
-        const line3 = `SESSION: ${sessionId} | PG ${currentPage}`;
+        // Gradient overlay for elegant look
+        const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, 'rgba(30, 58, 138, 0.02)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.02)');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
 
-        context.rotate(-35 * Math.PI / 180);
-        for (let row = 0; row < 30; row++) {
-          for (let col = 0; col < 20; col++) {
-            const x = col * 250 - 200;
-            const y = row * 80;
-            context.shadowColor = 'rgba(0, 0, 0, 0.6)';
-            context.shadowBlur = 4;
-            context.fillText(line1, x, y);
-            context.fillText(line2, x, y + 16);
-            context.fillText(line3, x, y + 32);
-          }
-        }
+        // ✨ DIAGONAL WATERMARK (Elegant & Minimal)
+        context.save();
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.rotate(-25 * Math.PI / 180);
+        
+        // Main watermark text
+        context.globalAlpha = 0.08;
+        context.font = 'bold 28px Inter, system-ui, sans-serif';
+        context.fillStyle = '#1e3a8a';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        
+        const mainText = `🔒 ${user?.firstName || 'Protected'} ${user?.lastName || 'Document'}`;
+        context.fillText(mainText, 0, -30);
+        
+        context.font = '18px Inter, system-ui, sans-serif';
+        context.globalAlpha = 0.06;
+        context.fillText(`${user?.email || 'Confidential'}`, 0, 10);
+        context.fillText(`${date} • ${timestamp}`, 0, 40);
+        
         context.restore();
 
-        // Layer 2: Random position watermarks
-        context.globalAlpha = 0.12;
-        for (let i = 0; i < 15; i++) {
-          const x = Math.random() * canvas.width;
-          const y = Math.random() * canvas.height;
-          context.fillText(`🚫 ${user?.email} | ${timestamp}`, x, y);
-        }
+        // ✨ CORNER BADGES (Minimal & Professional)
+        const drawBadge = (text, x, y, align = 'left') => {
+          context.save();
+          context.globalAlpha = 0.12;
+          context.font = 'bold 9px Inter, system-ui, monospace';
+          context.fillStyle = '#1e3a8a';
+          context.textAlign = align;
+          
+          // Badge background
+          const metrics = context.measureText(text);
+          const padding = 6;
+          const bgX = align === 'right' ? x - metrics.width - padding * 2 : x;
+          
+          context.globalAlpha = 0.08;
+          context.fillStyle = '#eff6ff';
+          context.fillRect(bgX, y - 10, metrics.width + padding * 2, 16);
+          
+          // Badge border
+          context.globalAlpha = 0.15;
+          context.strokeStyle = '#1e3a8a';
+          context.lineWidth = 1;
+          context.strokeRect(bgX, y - 10, metrics.width + padding * 2, 16);
+          
+          // Badge text
+          context.globalAlpha = 0.25;
+          context.fillStyle = '#1e40af';
+          context.fillText(text, x + (align === 'right' ? -padding : padding), y);
+          
+          context.restore();
+        };
 
-        // Layer 3: Corner forensic stamps
-        context.globalAlpha = 0.2;
+        // Top-left: User info
+        drawBadge(`👤 ${user?.email?.substring(0, 20) || 'User'}`, 15, 25);
+        
+        // Top-right: Session ID
+        drawBadge(`#${sessionId}`, canvas.width - 15, 25, 'right');
+        
+        // Bottom-left: IP
+        drawBadge(`📍 ${userIP}`, 15, canvas.height - 15);
+        
+        // Bottom-right: Page & Time
+        drawBadge(`${date} ${timestamp} • Pg${currentPage}`, canvas.width - 15, canvas.height - 15, 'right');
+
+        // ✨ CENTER FORENSIC WATERMARK (Ultra-Subtle)
+        context.save();
+        context.globalAlpha = 0.04;
+        context.font = 'bold 12px monospace';
         context.fillStyle = '#000000';
-        context.font = 'bold 10px monospace';
-        const forensic = `${user?.id}-${Date.now()}-${currentPage}`;
-        context.fillText(forensic, 10, canvas.height - 10);
-        context.fillText(forensic, canvas.width - 250, 20);
-        context.fillText(forensic, canvas.width / 2 - 100, canvas.height / 2);
+        context.textAlign = 'center';
+        const forensic = `${user?.id?.substring(0, 8) || 'USER'}-${sessionId}-P${currentPage}`;
+        context.fillText(forensic, canvas.width / 2, canvas.height / 2);
+        context.restore();
 
       } catch (err) {
         setError(`Render failed: ${err.message}`);
@@ -360,11 +449,11 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-red-500 mb-4 mx-auto"></div>
+            <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
             <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32} />
           </div>
           <p className="text-white text-xl font-bold">Loading Protected Document</p>
-          <p className="text-red-400 text-sm mt-2">🔒 Initializing Security Features...</p>
+          <p className="text-blue-400 text-sm mt-2">🔒 Initializing Security Features...</p>
           <p className="text-gray-500 text-xs mt-1">Screenshot Protection • Forensic Watermarking • Activity Logging</p>
         </div>
       </div>
@@ -426,30 +515,30 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         )}
 
         {/* Header */}
-        <div className="bg-black/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b-2 border-red-600 shadow-lg">
+        <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between border-b border-blue-400/20 shadow-lg">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Shield className="text-red-500 flex-shrink-0 animate-pulse" size={22} />
+            <Shield className="text-blue-300 flex-shrink-0" size={20} />
             <div className="min-w-0 flex-1">
               <h3 className="text-white font-bold text-sm truncate">🔒 {paperTitle}</h3>
-              <p className="text-gray-400 text-xs truncate">{user?.email} | IP: {userIP}</p>
+              <p className="text-blue-200 text-xs truncate">{user?.email} | IP: {userIP}</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} disabled={scale <= 0.5} className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-white disabled:opacity-50 transition">
+            <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} disabled={scale <= 0.5} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50 transition">
               <ZoomOut size={18} />
             </button>
-            <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono bg-gray-800 rounded py-1.5 font-bold">
+            <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono bg-white/10 rounded py-1.5 font-bold">
               {Math.round(scale * 100)}%
             </span>
-            <button onClick={() => setScale(s => Math.min(3, s + 0.2))} disabled={scale >= 3} className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-white disabled:opacity-50 transition">
+            <button onClick={() => setScale(s => Math.min(3, s + 0.2))} disabled={scale >= 3} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50 transition">
               <ZoomIn size={18} />
             </button>
-            <button onClick={fitToWidth} className="p-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition">
+            <button onClick={fitToWidth} className="p-2 bg-blue-500 hover:bg-blue-600 rounded text-white transition">
               <Maximize2 size={18} />
             </button>
-            <div className="w-px h-6 bg-gray-700 mx-1"></div>
-            <button onClick={onClose} className="p-2 bg-red-600 hover:bg-red-700 rounded text-white transition">
+            <div className="w-px h-6 bg-blue-400/30 mx-1"></div>
+            <button onClick={onClose} className="p-2 bg-red-500 hover:bg-red-600 rounded text-white transition">
               <X size={18} />
             </button>
           </div>
@@ -459,7 +548,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-6 relative" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
           <canvas 
             ref={canvasRef} 
-            className="shadow-2xl border-2 border-red-600 rounded-lg transition-all duration-300" 
+            className="shadow-2xl border border-blue-500/30 rounded-lg transition-all duration-300" 
             style={{ 
               maxWidth: '100%', 
               height: 'auto', 
@@ -471,40 +560,33 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         </div>
 
         {/* Footer Navigation */}
-        <div className="bg-black/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-t-2 border-red-600 shadow-lg">
+        <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between border-t border-blue-400/20 shadow-lg">
           <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-white disabled:opacity-50 transition">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50 transition">
               <ChevronLeft size={18} />
             </button>
-            <span className="text-white text-sm px-4 min-w-[140px] text-center font-mono bg-gray-800 rounded py-1.5 font-bold">
+            <span className="text-white text-sm px-4 min-w-[140px] text-center font-mono bg-white/10 rounded py-1.5 font-bold">
               Page {currentPage} / {totalPages}
             </span>
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-white disabled:opacity-50 transition">
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50 transition">
               <ChevronRight size={18} />
             </button>
           </div>
 
           {/* Status Indicators */}
           <div className="flex items-center gap-3">
-            <div className="text-yellow-400 text-xs font-bold bg-yellow-900/30 px-3 py-1 rounded border border-yellow-600">
+            <div className="text-white text-xs font-bold bg-white/10 px-3 py-1 rounded border border-white/20">
               ⏱️ {remaining}m
             </div>
-            <div className="text-red-400 text-xs font-bold bg-red-900/30 px-3 py-1 rounded border border-red-600 animate-pulse">
+            <div className="text-white text-xs font-bold bg-blue-500/30 px-3 py-1 rounded border border-blue-400/50">
               🔒 PROTECTED
             </div>
             {violations > 0 && (
-              <div className="text-orange-400 text-xs font-bold bg-orange-900/30 px-3 py-1 rounded border border-orange-600 animate-pulse">
+              <div className="text-white text-xs font-bold bg-orange-500/30 px-3 py-1 rounded border border-orange-400/50 animate-pulse">
                 ⚠️ {violations}/{MAX_VIOLATIONS}
               </div>
             )}
           </div>
-        </div>
-
-        {/* Bottom Warning Bar */}
-        <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-600 px-4 py-2 text-center">
-          <p className="text-white text-xs font-bold animate-pulse">
-            🚫 PROTECTION ACTIVE • SCREENSHOTS BLOCKED • ALL ACTIONS LOGGED • IP: {userIP} • {remaining}min LEFT
-          </p>
         </div>
       </div>
     </>
