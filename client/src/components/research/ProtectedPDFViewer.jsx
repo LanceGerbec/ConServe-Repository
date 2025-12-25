@@ -1,7 +1,7 @@
 // client/src/components/research/ProtectedPDFViewer.jsx
-// ENHANCED SECURITY VERSION with Canvas Fingerprinting, Blur-on-Focus, Enhanced Watermarks, Session Limits
+// ENHANCED SECURITY VERSION with Canvas Fingerprinting, Multi-Layer Watermarks, Screen Recording Detection
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, AlertCircle, Maximize2, Lock } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
 
@@ -37,34 +37,52 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const containerRef = useRef(null);
   const sessionTimerRef = useRef(null);
   const startTimeRef = useRef(Date.now());
+  const recordingCheckRef = useRef(null);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+  const SESSION_DURATION = 30 * 60 * 1000;
 
-  const showToast = (msg, type = 'warning') => {
-    setToast({ show: true, message: msg, type });
-  };
+  const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
 
-  // Get user IP
+  // Get IP
   useEffect(() => {
     fetch('https://api.ipify.org?format=json')
       .then(r => r.json())
       .then(d => setUserIP(d.ip))
-      .catch(() => setUserIP('IP unavailable'));
+      .catch(() => setUserIP('Protected'));
   }, []);
 
-  // SESSION TIME LIMIT (Enhancement #4)
+  // Session timer
   useEffect(() => {
     sessionTimerRef.current = setTimeout(() => {
       setSessionExpired(true);
-      showToast('⏰ Session expired for security. Please re-open the document.', 'error');
+      showToast('⏰ Session expired (30min limit)', 'error');
       setTimeout(onClose, 3000);
     }, SESSION_DURATION);
-
     return () => clearTimeout(sessionTimerRef.current);
   }, []);
 
-  // BLUR ON FOCUS LOSS (Enhancement #3)
+  // ENHANCEMENT #2: Screen Recording Detection
+  useEffect(() => {
+    const detectRecording = async () => {
+      try {
+        const devices = await navigator.mediaDevices?.enumerateDevices();
+        const hasRecording = devices?.some(d => d.kind === 'videoinput' && d.label.toLowerCase().includes('screen'));
+        if (hasRecording) {
+          logViolation('screen_recording_detected');
+          showToast('🎥 Screen recording detected - Closing', 'error');
+          setTimeout(onClose, 2000);
+        }
+      } catch (e) {
+        // Silent fail - some browsers block this
+      }
+    };
+
+    recordingCheckRef.current = setInterval(detectRecording, 5000);
+    return () => clearInterval(recordingCheckRef.current);
+  }, []);
+
+  // Blur on focus loss
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -73,15 +91,11 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         showToast('🔒 Document blurred for security', 'warning');
       }
     };
-
     const handleBlur = () => {
       setIsBlurred(true);
       logViolation('focus_loss');
     };
-
-    const handleFocus = () => {
-      setTimeout(() => setIsBlurred(false), 500);
-    };
+    const handleFocus = () => setTimeout(() => setIsBlurred(false), 500);
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
@@ -98,8 +112,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     setViolations(prev => prev + 1);
     try {
       const token = localStorage.getItem('token');
-      const urlParts = signedPdfUrl?.split('/') || [];
-      const researchId = urlParts[2];
+      const researchId = signedPdfUrl?.split('/')[2];
       if (researchId) {
         await fetch(`${API_BASE}/research/log-violation`, {
           method: 'POST',
@@ -108,7 +121,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         });
       }
     } catch (err) {
-      console.error('⚠️ Log violation error:', err);
+      console.error('⚠️ Log error:', err);
     }
   };
 
@@ -126,11 +139,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           mode: 'cors'
         });
 
-        if (!response.ok) {
-          if (response.status === 401) throw new Error('Session expired');
-          if (response.status === 404) throw new Error('PDF not found');
-          throw new Error(`Server error (${response.status})`);
-        }
+        if (!response.ok) throw new Error(response.status === 401 ? 'Session expired' : `Error ${response.status}`);
 
         const blob = await response.blob();
         if (blob.size === 0) throw new Error('Empty file');
@@ -152,7 +161,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     else { setError('No PDF URL'); setLoading(false); }
   }, [signedPdfUrl, API_BASE]);
 
-  // ENHANCED RENDERING with Canvas Fingerprinting (Enhancement #1)
+  // ENHANCED RENDERING with ALL 3 Security Features
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
 
@@ -173,12 +182,13 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           renderInteractiveForms: false
         }).promise;
 
-        // CANVAS FINGERPRINTING PROTECTION (Enhancement #1)
-        // Add imperceptible noise to prevent pixel-perfect copying
+        // ==========================================
+        // ENHANCEMENT #1: Canvas Fingerprinting
+        // ==========================================
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         const pixels = imageData.data;
         for (let i = 0; i < pixels.length; i += 4) {
-          if (Math.random() > 0.995) { // 0.5% of pixels
+          if (Math.random() > 0.998) { // 0.2% of pixels
             const noise = Math.floor(Math.random() * 3) - 1;
             pixels[i] = Math.max(0, Math.min(255, pixels[i] + noise));
             pixels[i+1] = Math.max(0, Math.min(255, pixels[i+1] + noise));
@@ -187,15 +197,18 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         }
         context.putImageData(imageData, 0, 0);
 
-        // ENHANCED DYNAMIC WATERMARKING (Enhancement #4)
+        // ==========================================
+        // ENHANCEMENT #3: Multi-Layer Watermarks
+        // ==========================================
+        const now = new Date();
+        const sessionId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const timestamp = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+        
+        // Layer 1: Diagonal grid watermarks
         context.save();
         context.globalAlpha = 0.12;
         context.font = 'bold 11px Arial';
         context.fillStyle = '#FF0000';
-        
-        const now = new Date();
-        const sessionId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const timestamp = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
         
         const line1 = `${user?.email || 'PROTECTED'} | ID: ${user?.studentId || 'N/A'}`;
         const line2 = `IP: ${userIP} | Session: ${sessionId}`;
@@ -205,37 +218,44 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         const textHeight = 65;
         const cols = Math.ceil(canvas.width / textWidth) + 1;
         const rows = Math.ceil(canvas.height / textHeight) + 1;
-        
-        // Add random offset for each render (makes removal harder)
         const offsetX = Math.random() * 50;
         const offsetY = Math.random() * 50;
 
         context.rotate(-35 * Math.PI / 180);
-
         for (let row = 0; row < rows; row++) {
           for (let col = 0; col < cols; col++) {
             const x = col * textWidth * 1.5 - 200 + offsetX;
             const y = row * textHeight * 1.5 + offsetY;
-            
             context.shadowColor = 'rgba(0, 0, 0, 0.4)';
             context.shadowBlur = 3;
             context.shadowOffsetX = 1;
             context.shadowOffsetY = 1;
-            
             context.fillText(line1, x, y);
             context.fillText(line2, x, y + 14);
             context.fillText(line3, x, y + 28);
           }
         }
-        
         context.restore();
 
-        // Add invisible forensic watermark in corner (steganography-style)
+        // Layer 2: Corner stamps
+        context.globalAlpha = 0.15;
+        context.fillStyle = '#FF0000';
+        context.font = 'bold 9px monospace';
+        const corners = [
+          [15, 25], [canvas.width - 220, 25],
+          [15, canvas.height - 15], [canvas.width - 220, canvas.height - 15]
+        ];
+        corners.forEach(([x, y]) => {
+          context.fillText(`${user?.email} | ${timestamp}`, x, y);
+        });
+
+        // Layer 3: Invisible forensic watermark (steganography)
         context.globalAlpha = 0.01;
         context.fillStyle = '#000000';
         context.font = '8px monospace';
-        const forensicId = `${user?.id}-${Date.now()}-${currentPage}`;
+        const forensicId = `${user?.id}-${Date.now()}-${currentPage}-${sessionId}`;
         context.fillText(forensicId, 10, canvas.height - 10);
+        context.fillText(forensicId, canvas.width - 200, 20);
 
       } catch (err) {
         setError(`Render failed: ${err.message}`);
@@ -245,12 +265,12 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     renderPage();
   }, [pdf, currentPage, scale, user, userIP]);
 
-  // ENHANCED SECURITY LISTENERS with Toast Notifications
+  // Security listeners
   useEffect(() => {
     const preventContext = (e) => {
       e.preventDefault();
       logViolation('right_click');
-      showToast('🚫 Right-click is disabled for security', 'warning');
+      showToast('🚫 Right-click disabled', 'warning');
       return false;
     };
 
@@ -266,15 +286,14 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       if (blocked.some(Boolean)) {
         e.preventDefault();
         logViolation('keyboard_shortcut');
-        showToast('🚫 This action is blocked for security', 'warning');
+        showToast('🚫 Action blocked', 'warning');
         return false;
       }
     };
 
-    // Screenshot detection attempt
     const detectScreenshot = () => {
       logViolation('screenshot_attempt');
-      showToast('📸 Screenshot detected - All activity is logged', 'error');
+      showToast('📸 Screenshot detected - Logged', 'error');
     };
 
     document.addEventListener('contextmenu', preventContext);
@@ -307,7 +326,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white mb-4 mx-auto"></div>
           <p className="text-white text-xl font-semibold">Loading Protected Document...</p>
-          <p className="text-gray-400 text-sm mt-2">Initializing security layers...</p>
+          <p className="text-gray-400 text-sm mt-2">🔒 Initializing security layers...</p>
         </div>
       </div>
     );
@@ -319,25 +338,18 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         <div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
           <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
           <h3 className="text-white text-2xl font-bold mb-3">
-            {sessionExpired ? 'Session Expired' : 'Failed to Load PDF'}
+            {sessionExpired ? 'Session Expired' : 'Failed to Load'}
           </h3>
-          <p className="text-gray-300 mb-6 text-sm leading-relaxed">
-            {sessionExpired ? 'For security, viewing sessions expire after 30 minutes.' : error}
+          <p className="text-gray-300 mb-6 text-sm">
+            {sessionExpired ? 'Viewing sessions expire after 30 minutes for security.' : error}
           </p>
-          
           <div className="space-y-3">
             {!sessionExpired && (
-              <button 
-                onClick={() => window.location.reload()} 
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
-              >
+              <button onClick={() => window.location.reload()} className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
                 🔄 Retry
               </button>
             )}
-            <button 
-              onClick={onClose} 
-              className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
-            >
+            <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
               ✕ Close
             </button>
           </div>
@@ -352,12 +364,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   return (
     <>
       {toast.show && (
-        <Toast 
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
-          duration={3000}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />
       )}
 
       <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col select-none">
@@ -372,52 +379,29 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           </div>
           
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setScale(s => Math.max(0.5, s - 0.2))} 
-              disabled={scale <= 0.5}
-              className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition disabled:opacity-50"
-            >
+            <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} disabled={scale <= 0.5} className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50">
               <ZoomOut size={18} />
             </button>
             <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono bg-gray-700 rounded py-1">
               {Math.round(scale * 100)}%
             </span>
-            <button 
-              onClick={() => setScale(s => Math.min(3, s + 0.2))} 
-              disabled={scale >= 3}
-              className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition disabled:opacity-50"
-            >
+            <button onClick={() => setScale(s => Math.min(3, s + 0.2))} disabled={scale >= 3} className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50">
               <ZoomIn size={18} />
             </button>
-            <button 
-              onClick={fitToWidth}
-              className="p-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition"
-            >
+            <button onClick={fitToWidth} className="p-2 bg-blue-600 hover:bg-blue-700 rounded text-white">
               <Maximize2 size={18} />
             </button>
             <div className="w-px h-6 bg-gray-600 mx-2"></div>
-            <button onClick={onClose} className="p-2 bg-red-600 hover:bg-red-700 rounded text-white transition">
+            <button onClick={onClose} className="p-2 bg-red-600 hover:bg-red-700 rounded text-white">
               <X size={18} />
             </button>
           </div>
         </div>
 
-        {/* Canvas with Blur Effect */}
-        <div 
-          ref={containerRef}
-          className="flex-1 overflow-auto bg-gray-800 p-6 relative"
-          style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}
-        >
-          <canvas 
-            ref={canvasRef} 
-            className="shadow-2xl border-2 border-gray-700 rounded-lg transition-all duration-300" 
-            style={{ 
-              maxWidth: '100%', 
-              height: 'auto',
-              imageRendering: 'high-quality',
-              filter: isBlurred ? 'blur(20px)' : 'none',
-              pointerEvents: isBlurred ? 'none' : 'auto'
-            }}
+        {/* Canvas */}
+        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-800 p-6 relative" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+          <canvas ref={canvasRef} className="shadow-2xl border-2 border-gray-700 rounded-lg transition-all duration-300" 
+            style={{ maxWidth: '100%', height: 'auto', imageRendering: 'high-quality', filter: isBlurred ? 'blur(20px)' : 'none', pointerEvents: isBlurred ? 'none' : 'auto' }} 
           />
           
           {isBlurred && (
@@ -425,14 +409,8 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
               <div className="bg-gray-900 rounded-2xl p-8 text-center border-2 border-red-500 max-w-md">
                 <Lock className="mx-auto text-red-500 mb-4" size={64} />
                 <h3 className="text-white text-xl font-bold mb-2">Document Locked</h3>
-                <p className="text-gray-400 text-sm mb-4">Click here to resume viewing</p>
-                <button
-                  onClick={() => {
-                    setIsBlurred(false);
-                    window.focus();
-                  }}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
-                >
+                <p className="text-gray-400 text-sm mb-4">Click to resume viewing</p>
+                <button onClick={() => { setIsBlurred(false); window.focus(); }} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
                   Resume Viewing
                 </button>
               </div>
@@ -443,41 +421,29 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         {/* Footer */}
         <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-700 shadow-lg">
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50 transition"
-            >
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50">
               <ChevronLeft size={18} />
             </button>
             <span className="text-white text-sm px-4 min-w-[140px] text-center font-mono bg-gray-700 rounded py-1">
               Page {currentPage} / {totalPages}
             </span>
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50 transition"
-            >
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50">
               <ChevronRight size={18} />
             </button>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="text-yellow-400 text-xs font-bold">
-              ⏱️ {remaining}m remaining
-            </div>
+            <div className="text-yellow-400 text-xs font-bold">⏱️ {remaining}m</div>
             <div className="text-red-400 text-xs font-bold">🔒 PROTECTED</div>
             {violations > 0 && (
-              <div className="text-orange-400 text-xs font-bold animate-pulse">
-                ⚠️ {violations} Violation{violations > 1 ? 's' : ''}
-              </div>
+              <div className="text-orange-400 text-xs font-bold animate-pulse">⚠️ {violations} Violation{violations > 1 ? 's' : ''}</div>
             )}
           </div>
         </div>
 
         <div className="bg-red-600 px-4 py-2 text-center">
           <p className="text-white text-xs font-bold">
-            🚫 NO DOWNLOAD • NO PRINT • NO COPY • SCREENSHOTS LOGGED • Session expires: {remaining}min • IP: {userIP}
+            🚫 NO DOWNLOAD • NO PRINT • NO COPY • SCREENSHOTS LOGGED • {remaining}min LEFT • IP: {userIP}
           </p>
         </div>
       </div>
