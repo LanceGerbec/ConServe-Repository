@@ -13,64 +13,28 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [touched, setTouched] = useState({ title: false, subjectArea: false, abstract: false });
-
   const [formData, setFormData] = useState({
-    title: '',
-    authors: [user?.firstName + ' ' + user?.lastName || ''],
-    coAuthors: [],
-    abstract: '',
-    keywords: [],
-    category: 'Completed',
-    subjectArea: '',
-    yearCompleted: new Date().getFullYear()
+    title: '', authors: [user?.firstName + ' ' + user?.lastName || ''], coAuthors: [], abstract: '',
+    keywords: [], category: 'Completed', subjectArea: '', customSubjectArea: '', yearCompleted: new Date().getFullYear()
   });
-
   const [currentKeyword, setCurrentKeyword] = useState('');
   const [currentCoAuthor, setCurrentCoAuthor] = useState('');
 
-  const subjectAreas = [
-    'Pediatric Nursing',
-    'Adult Health Nursing',
-    'Maternal and Child Nursing',
-    'Community Health Nursing',
-    'Mental Health Nursing',
-    'Nursing Informatics',
-    'Geriatric Nursing',
-    'Critical Care Nursing',
-    'Oncology Nursing',
-    'Surgical Nursing',
-    'Emergency Nursing',
-    'Public Health Nursing',
-    'Other'
-  ];
-
+  const subjectAreas = ['Pediatric Nursing', 'Adult Health Nursing', 'Maternal and Child Nursing', 'Community Health Nursing',
+    'Mental Health Nursing', 'Nursing Informatics', 'Geriatric Nursing', 'Critical Care Nursing', 'Oncology Nursing',
+    'Surgical Nursing', 'Emergency Nursing', 'Public Health Nursing', 'Other'];
   const years = Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - i);
   const progress = (step / 3) * 100;
 
   const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(e.type === 'dragenter' || e.type === 'dragover');
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files?.[0]) handleFile(e.target.files[0]);
-  };
-
+  const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); setDragActive(e.type === 'dragenter' || e.type === 'dragover'); };
+  const handleDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); };
+  const handleFileChange = (e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); };
   const handleFile = (f) => {
     if (f.type !== 'application/pdf') return setError('Only PDF files allowed');
     if (f.size > 10 * 1024 * 1024) return setError('File must be under 10MB');
-    setFile(f);
-    setError('');
+    setFile(f); setError('');
   };
 
   const addKeyword = () => {
@@ -79,27 +43,24 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       setCurrentKeyword('');
     }
   };
-
   const removeKeyword = (k) => setFormData({ ...formData, keywords: formData.keywords.filter(x => x !== k) });
-
   const addCoAuthor = () => {
     if (currentCoAuthor.trim()) {
       setFormData({ ...formData, coAuthors: [...formData.coAuthors, currentCoAuthor.trim()] });
       setCurrentCoAuthor('');
     }
   };
-
   const removeCoAuthor = (i) => setFormData({ ...formData, coAuthors: formData.coAuthors.filter((_, idx) => idx !== i) });
 
   const validateStep1 = () => {
-    if (!formData.title.trim() || !formData.subjectArea) {
+    const subject = formData.subjectArea === 'Other' ? formData.customSubjectArea.trim() : formData.subjectArea;
+    if (!formData.title.trim() || !subject) {
       setError('Title and subject area required');
       setTouched({ title: true, subjectArea: true, abstract: false });
       return false;
     }
     return true;
   };
-
   const validateStep2 = () => {
     if (formData.abstract.trim().length < 100) {
       setError('Abstract must be at least 100 characters');
@@ -130,31 +91,32 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       data.append('abstract', formData.abstract);
       data.append('keywords', JSON.stringify(formData.keywords));
       data.append('category', formData.category);
-      data.append('subjectArea', formData.subjectArea);
+      data.append('subjectArea', formData.subjectArea === 'Other' ? formData.customSubjectArea : formData.subjectArea);
       data.append('yearCompleted', formData.yearCompleted);
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/research`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: data
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: data
       });
 
       if (res.ok) {
         localStorage.removeItem('research-draft');
         showToast('🎉 Research submitted successfully!', 'success');
-        setTimeout(() => {
-          onSuccess?.();
-          onClose();
-        }, 3000);
-      } else {
-        setError('Submission failed');
-      }
-    } catch {
-      setError('Connection error');
-    } finally {
-      setLoading(false);
-    }
+        setTimeout(() => { onSuccess?.(); onClose(); }, 3000);
+      } else setError('Submission failed');
+    } catch { setError('Connection error'); }
+    finally { setLoading(false); }
   };
+
+  const InfoTooltip = ({ text }) => (
+    <div className="group relative inline-block">
+      <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
+        <Info size={14} className="text-blue-600 dark:text-blue-400" />
+      </button>
+      <div className="absolute left-0 top-full mt-1 w-64 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+        {text}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -162,13 +124,8 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
 
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-          
-          {/* DRAFT MANAGER */}
-          <div className="px-6 pt-6">
-            <DraftManager draftKey="research-draft" data={formData} onRestore={setFormData} />
-          </div>
+          <div className="px-6 pt-6"><DraftManager draftKey="research-draft" data={formData} onRestore={setFormData} /></div>
 
-          {/* HEADER */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-navy rounded-xl flex items-center justify-center">
@@ -184,14 +141,12 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             </button>
           </div>
 
-          {/* PROGRESS BAR */}
           <div className="px-6 py-4">
             <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div className="h-2 bg-navy transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
           </div>
 
-          {/* ERROR */}
           {error && (
             <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded flex items-start gap-2">
               <AlertTriangle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
@@ -199,136 +154,70 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* FORM */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* STEP 1 */}
             {step === 1 && (
               <>
-                {/* TITLE */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Research Title *
-                    <div className="group relative">
-                      <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                        <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                      </button>
-                      <div className="absolute left-0 top-full mt-1 w-64 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                        Enter the full title of your research paper
-                      </div>
-                    </div>
+                    Research Title * <InfoTooltip text="Enter the full title of your research paper" />
                   </label>
-                  <input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none ${
-                      touched.title && !formData.title.trim()
-                        ? 'border-red-500'
-                        : 'border-gray-300 dark:border-gray-600 focus:border-navy'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                    placeholder="e.g., Effects of Music Therapy on Post-Operative Pain Management"
-                  />
+                  <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none ${touched.title && !formData.title.trim() ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-navy'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                    placeholder="e.g., Effects of Music Therapy on Post-Operative Pain Management" />
                 </div>
 
-                {/* CATEGORY & YEAR */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Category *
-                      <div className="group relative">
-                        <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                          <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                        </button>
-                        <div className="absolute left-0 top-full mt-1 w-48 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                          Select research category
-                        </div>
-                      </div>
+                      Category * <InfoTooltip text="Select research category" />
                     </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
+                    <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                       <option>Completed</option>
                       <option>Published</option>
                     </select>
                   </div>
-
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Year Completed *
-                      <div className="group relative">
-                        <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                          <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                        </button>
-                        <div className="absolute left-0 top-full mt-1 w-48 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                          Year your research was completed
-                        </div>
-                      </div>
+                      Year Completed * <InfoTooltip text="Year your research was completed" />
                     </label>
-                    <select
-                      value={formData.yearCompleted}
-                      onChange={(e) => setFormData({ ...formData, yearCompleted: parseInt(e.target.value) })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
+                    <select value={formData.yearCompleted} onChange={(e) => setFormData({ ...formData, yearCompleted: parseInt(e.target.value) })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                       {years.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
                 </div>
 
-                {/* SUBJECT AREA */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Subject Area *
-                    <div className="group relative">
-                      <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                        <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                      </button>
-                      <div className="absolute left-0 top-full mt-1 w-52 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                        Primary nursing specialty area
-                      </div>
-                    </div>
+                    Subject Area * <InfoTooltip text="Primary nursing specialty area" />
                   </label>
-                  <select
-                    value={formData.subjectArea}
-                    onChange={(e) => setFormData({ ...formData, subjectArea: e.target.value })}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none ${
-                      touched.subjectArea && !formData.subjectArea
-                        ? 'border-red-500'
-                        : 'border-gray-300 dark:border-gray-600 focus:border-navy'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                  >
+                  <select value={formData.subjectArea} onChange={(e) => setFormData({ ...formData, subjectArea: e.target.value, customSubjectArea: '' })}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none ${touched.subjectArea && !formData.subjectArea ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-navy'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}>
                     <option value="">Select subject area</option>
                     {subjectAreas.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
+                  {formData.subjectArea === 'Other' && (
+                    <input type="text" value={formData.customSubjectArea} onChange={(e) => setFormData({ ...formData, customSubjectArea: e.target.value })}
+                      placeholder="Please specify the subject area" 
+                      className="mt-3 w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                  )}
                 </div>
 
-                {/* CO-AUTHORS */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                    Co-Authors (Optional)
-                  </label>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Co-Authors (Optional)</label>
                   <div className="flex gap-2 mb-3">
-                    <input
-                      value={currentCoAuthor}
-                      onChange={(e) => setCurrentCoAuthor(e.target.value)}
+                    <input value={currentCoAuthor} onChange={(e) => setCurrentCoAuthor(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCoAuthor())}
                       placeholder="Enter co-author name"
-                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={addCoAuthor}
-                      className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition"
-                    >
+                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    <button type="button" onClick={addCoAuthor} className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition">
                       <Plus size={18} />
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.coAuthors.map((a, i) => (
-                      <span
-                        key={i}
-                        className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                      >
+                      <span key={i} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-2">
                         {a}
                         <button type="button" onClick={() => removeCoAuthor(i)} className="hover:text-red-600 transition">
                           <Trash2 size={14} />
@@ -340,73 +229,34 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
               </>
             )}
 
-            {/* STEP 2 */}
             {step === 2 && (
               <>
-                {/* ABSTRACT */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Abstract *
-                    <div className="group relative">
-                      <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                        <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                      </button>
-                      <div className="absolute left-0 top-full mt-1 w-72 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                        Minimum 100 characters. Summarize your research objectives, methods, results, and conclusions.
-                      </div>
-                    </div>
+                    Abstract * <InfoTooltip text="Minimum 100 characters. Summarize your research objectives, methods, results, and conclusions." />
                   </label>
-                  <textarea
-                    rows={8}
-                    value={formData.abstract}
-                    onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none resize-none ${
-                      touched.abstract && formData.abstract.length < 100
-                        ? 'border-red-500'
-                        : 'border-gray-300 dark:border-gray-600 focus:border-navy'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                    placeholder="Provide a comprehensive summary of your research..."
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {formData.abstract.length}/100 characters minimum
-                  </p>
+                  <textarea rows={8} value={formData.abstract} onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none resize-none ${touched.abstract && formData.abstract.length < 100 ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-navy'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                    placeholder="Provide a comprehensive summary of your research..." />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formData.abstract.length}/100 characters minimum</p>
                 </div>
 
-                {/* KEYWORDS */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Keywords
-                    <div className="group relative">
-                      <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                        <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                      </button>
-                      <div className="absolute left-0 top-full mt-1 w-64 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                        Add 3-8 keywords to help others discover your research
-                      </div>
-                    </div>
+                    Keywords <InfoTooltip text="Add 3-8 keywords to help others discover your research" />
                   </label>
                   <div className="flex gap-2 mb-3">
-                    <input
-                      value={currentKeyword}
-                      onChange={(e) => setCurrentKeyword(e.target.value)}
+                    <input value={currentKeyword} onChange={(e) => setCurrentKeyword(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
                       placeholder="Enter keyword"
-                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={addKeyword}
-                      className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition"
-                    >
+                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    <button type="button" onClick={addKeyword} className="px-4 py-2 bg-navy text-white rounded-xl hover:bg-navy-800 transition">
                       <Plus size={18} />
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.keywords.map((k, i) => (
-                      <span
-                        key={i}
-                        className="bg-navy/10 text-navy dark:bg-navy/20 dark:text-accent px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                      >
+                      <span key={i} className="bg-navy/10 text-navy dark:bg-navy/20 dark:text-accent px-3 py-1 rounded-full text-sm flex items-center gap-2">
                         {k}
                         <button type="button" onClick={() => removeKeyword(k)} className="hover:text-red-600 transition">
                           <X size={14} />
@@ -418,36 +268,14 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
               </>
             )}
 
-            {/* STEP 3 */}
             {step === 3 && (
               <div>
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Upload PDF *
-                  <div className="group relative">
-                    <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                      <Info size={14} className="text-blue-600 dark:text-blue-400" />
-                    </button>
-                    <div className="absolute left-0 top-full mt-1 w-80 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                      PDF only, max 10MB. Must be in IMRaD format (Introduction, Methods, Results, and Discussion)
-                    </div>
-                  </div>
+                  Upload PDF * <InfoTooltip text="PDF only, max 10MB. Must be in IMRaD format (Introduction, Methods, Results, and Discussion)" />
                 </label>
-
-                <div
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center transition ${
-                    dragActive
-                      ? 'border-navy bg-navy/5 dark:bg-navy/10'
-                      : file
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/10'
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                >
+                <div onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition ${dragActive ? 'border-navy bg-navy/5 dark:bg-navy/10' : file ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 dark:border-gray-600'}`}>
                   <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" id="pdf-upload" />
-
                   {file ? (
                     <div className="flex items-center justify-between gap-3">
                       <FileText className="text-green-600 dark:text-green-400 flex-shrink-0" size={32} />
@@ -455,20 +283,14 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                         <p className="font-semibold text-sm truncate text-gray-900 dark:text-white">{file.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{(file.size / 1024).toFixed(2)} KB</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setFile(null)}
-                        className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600 transition flex-shrink-0"
-                      >
+                      <button type="button" onClick={() => setFile(null)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600 transition flex-shrink-0">
                         <X size={20} />
                       </button>
                     </div>
                   ) : (
                     <label htmlFor="pdf-upload" className="cursor-pointer block">
                       <Upload className="mx-auto text-gray-400 mb-3" size={48} />
-                      <p className="font-semibold text-gray-900 dark:text-white mb-2">
-                        {dragActive ? 'Drop here!' : 'Drag & drop PDF or click to browse'}
-                      </p>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-2">{dragActive ? 'Drop here!' : 'Drag & drop PDF or click to browse'}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Max 10MB, PDF only</p>
                     </label>
                   )}
@@ -476,41 +298,18 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
               </div>
             )}
 
-            {/* NAVIGATION BUTTONS */}
             <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => (step === 1 ? onClose() : setStep(step - 1))}
-                className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold transition text-gray-700 dark:text-gray-300"
-              >
+              <button type="button" onClick={() => (step === 1 ? onClose() : setStep(step - 1))}
+                className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold transition text-gray-700 dark:text-gray-300">
                 {step === 1 ? 'Cancel' : 'Back'}
               </button>
-
               {step < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-8 py-3 bg-navy text-white rounded-xl hover:bg-navy-800 font-semibold shadow-lg transition"
-                >
+                <button type="button" onClick={handleNext} className="px-8 py-3 bg-navy text-white rounded-xl hover:bg-navy-800 font-semibold shadow-lg transition">
                   Next →
                 </button>
               ) : (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold disabled:opacity-50 flex items-center gap-2 shadow-lg transition"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="animate-spin" size={18} />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={18} />
-                      Submit Research
-                    </>
-                  )}
+                <button type="submit" disabled={loading} className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold disabled:opacity-50 flex items-center gap-2 shadow-lg transition">
+                  {loading ? (<><Loader2 className="animate-spin" size={18} />Submitting...</>) : (<><CheckCircle size={18} />Submit Research</>)}
                 </button>
               )}
             </div>
