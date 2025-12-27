@@ -4,11 +4,28 @@ import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Award, Lock, Zap }
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import SubmitResearch from '../components/research/SubmitResearch';
+// Import the OnboardingModal
+import OnboardingModal from '../components/onboarding/OnboardingModal';
 
 const Home = () => {
   const { user } = useAuth();
   const [currentHighlight, setCurrentHighlight] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if user has seen onboarding (Logic from Step 2)
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  // Handle closing the onboarding modal
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setShowOnboarding(false);
+  };
 
   const features = [
     { icon: BookOpen, title: 'Research Archive', desc: 'Access published nursing research papers', color: 'from-blue-500 to-blue-600' },
@@ -53,6 +70,14 @@ const Home = () => {
 
   return (
     <div className="space-y-20">
+      {/* Onboarding Modal Render */}
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingComplete}
+        />
+      )}
+
       {/* Hero Section with Nursing-themed Background */}
       <section className="relative text-center py-20 animate-fade-in overflow-hidden">
         {/* Subtle Nursing-themed Background Pattern */}

@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { Upload, FileText, X, CheckCircle, Loader2, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
+import InfoIcon from '../common/InfoIcon';
+import Tooltip from '../common/Tooltip';
+import DraftManager from '../common/DraftManager'; // Added DraftManager Import
 
 const SubmitResearch = ({ onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -192,6 +195,10 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       if (res.ok) {
         showToast('🎉 Research submitted successfully! Your paper is now pending admin review. You will receive a notification once it has been reviewed.', 'success');
         
+        // Clear draft on successful submission if DraftManager has a clear function, 
+        // otherwise simply closing will likely not clear it unless handled internally.
+        // Assuming DraftManager might listen to onSuccess or we manually clear localStorage if needed.
+        
         setTimeout(() => {
           onSuccess?.();
           onClose();
@@ -235,6 +242,13 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Step {step} of 3</p>
           </div>
 
+          {/* Integrated DraftManager */}
+          <DraftManager
+            draftKey="research-draft"
+            data={formData}
+            onRestore={setFormData}
+          />
+
           {error && (
             <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded flex items-start">
               <AlertTriangle className="text-red-500 mr-3 flex-shrink-0 mt-0.5" size={20} />
@@ -246,8 +260,10 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             {step === 1 && (
               <div className="space-y-4 animate-fade-in">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  {/* Updated Label with InfoIcon */}
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Research Title <span className="text-red-500">*</span>
+                    <InfoIcon content="Enter the full title of your research paper" />
                   </label>
                   <input
                     type="text"
