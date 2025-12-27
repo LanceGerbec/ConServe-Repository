@@ -7,14 +7,15 @@ const ResearchList = () => {
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [customSubject, setCustomSubject] = useState('');
   const [filters, setFilters] = useState({ 
     category: '', 
     status: 'approved',
     yearCompleted: '',
     subjectArea: '',
-    author: '' // NEW: Author filter
+    author: ''
   });
-  const [showFilters, setShowFilters] = useState(false);
 
   const subjectAreas = [
     'Pediatric Nursing',
@@ -37,28 +38,25 @@ const ResearchList = () => {
 
   useEffect(() => {
     fetchPapers();
-  }, [filters]);
+  }, []);
 
   const fetchPapers = async () => {
     try {
       const token = localStorage.getItem('token');
-      
       let statusFilter = filters.status;
-      if (user?.role !== 'admin') {
-        statusFilter = 'approved';
-      }
+      if (user?.role !== 'admin') statusFilter = 'approved';
       
       const params = new URLSearchParams({ 
         search, 
         category: filters.category,
         status: statusFilter,
         yearCompleted: filters.yearCompleted,
-        subjectArea: filters.subjectArea,
-        author: filters.author // NEW: Pass author filter
+        subjectArea: filters.subjectArea === 'Other' ? customSubject : filters.subjectArea,
+        author: filters.author
       }).toString();
       
       const res = await fetch(`${import.meta.env.VITE_API_URL}/research?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       const data = await res.json();
@@ -76,14 +74,15 @@ const ResearchList = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ 
-      category: '', 
-      status: 'approved',
-      yearCompleted: '',
-      subjectArea: '',
-      author: '' // Reset author filter
-    });
+    setFilters({ category: '', status: 'approved', yearCompleted: '', subjectArea: '', author: '' });
+    setCustomSubject('');
     setSearch('');
+  };
+
+  const handleSubjectChange = (e) => {
+    const value = e.target.value;
+    setFilters({ ...filters, subjectArea: value });
+    if (value !== 'Other') setCustomSubject('');
   };
 
   if (loading) {
@@ -169,7 +168,7 @@ const ResearchList = () => {
               </label>
               <select
                 value={filters.subjectArea}
-                onChange={(e) => setFilters({ ...filters, subjectArea: e.target.value })}
+                onChange={handleSubjectChange}
                 className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
               >
                 <option value="">All Subject Areas</option>
@@ -177,9 +176,17 @@ const ResearchList = () => {
                   <option key={area} value={area}>{area}</option>
                 ))}
               </select>
+              {filters.subjectArea === 'Other' && (
+                <input
+                  type="text"
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  placeholder="Specify subject area"
+                  className="w-full px-4 py-2 mt-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              )}
             </div>
 
-            {/* NEW: AUTHOR FILTER */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Author
@@ -262,7 +269,6 @@ const ResearchList = () => {
                 {paper.title}
               </h3>
 
-              {/* ALL AUTHORS */}
               <div className="mb-3">
                 <div className="flex items-start gap-2">
                   <User size={14} className="text-gray-500 mt-0.5 flex-shrink-0" />
@@ -278,7 +284,6 @@ const ResearchList = () => {
                 {paper.abstract}
               </p>
 
-              {/* SUBJECT AREA */}
               {paper.subjectArea && (
                 <div className="mb-3">
                   <span className="text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 px-2 py-1 rounded">
@@ -300,7 +305,6 @@ const ResearchList = () => {
                 </div>
               )}
 
-              {/* YEAR COMPLETED */}
               <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2">
                   <Calendar size={14} />
