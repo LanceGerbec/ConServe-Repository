@@ -17,41 +17,69 @@ import validStudentIdRoutes from './src/routes/validStudentId.routes.js';
 import validFacultyIdRoutes from './src/routes/validFacultyId.routes.js';
 import teamRoutes from './src/routes/team.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
-import { apiLimiter } from './src/middleware/rateLimiter.js';
 import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
+import { apiLimiter } from './src/middleware/rateLimiter.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CRITICAL: Trust proxy FIRST (before any middleware)
+// CRITICAL: Trust proxy FIRST
 app.set('trust proxy', 1);
 
 connectDB();
 initGridFS();
 
-// CORS
+// CORS - Allow your Vercel frontend
+const allowedOrigins = [
+  'https://conserve-repository.onrender.com',
+  'https://conserve-repository.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: '*',
-  credentials: false,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // For now, allow all origins
+    }
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: '*',
-  exposedHeaders: '*'
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
+// Security headers
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  frameguard: false
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginEmbedderPolicy: false
 }));
 
+// Additional CORS headers
 app.use((req, res, next) => {
-  res.removeHeader('X-Frame-Options');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
   next();
 });
 
@@ -62,11 +90,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ message: 'ConServe API', status: 'running', timestamp: new Date().toISOString() });
+  res.json({ 
+    message: 'ConServe API', 
+    status: 'running', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV 
+  });
 });
 
 // API Routes
-console.log('📝 Registering API routes...');
 app.use('/api/auth', authRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/users', userRoutes);
@@ -80,27 +112,24 @@ app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bulk-upload', bulkUploadRoutes);
 
-// Apply rate limiter to all API routes
+// Rate limiter
 app.use('/api', apiLimiter);
-
-console.log('✅ All routes registered');
 
 // 404 handler
 app.use((req, res) => {
-  console.log('❌ 404:', req.method, req.originalUrl);
   res.status(404).json({ error: 'Route not found', path: req.originalUrl });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('❌ Server Error:', err);
+  console.error('Server Error:', err);
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server: http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📍 API: http://localhost:${PORT}/api`);
-  console.log(`📄 PDF Stream: http://localhost:${PORT}/api/research/view/:fileId\n`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
 });
 
 export default app;
