@@ -1,5 +1,6 @@
+// client/src/pages/Home.jsx
 import { Link } from 'react-router-dom';
-import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Award, Lock, Zap, FileText, CheckCircle, Star, Activity } from 'lucide-react';
+import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Award, Lock, Zap, FileText, CheckCircle, Star, Activity, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import SubmitResearch from '../components/research/SubmitResearch';
@@ -10,9 +11,11 @@ const Home = () => {
   const [activeFeature, setActiveFeature] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [stats, setStats] = useState({ papers: 0, users: 0, views: 0, loading: true });
 
   useEffect(() => {
     if (!localStorage.getItem('hasSeenOnboarding')) setShowOnboarding(true);
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -20,16 +23,59 @@ const Home = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      // Fetch both research and user stats
+      const [researchRes, userRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/research/stats`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/users/stats`, { headers })
+      ]);
+
+      const researchData = await researchRes.json();
+      const userData = await userRes.json();
+
+      // Fetch all approved research to calculate total views
+      const approvedRes = await fetch(`${import.meta.env.VITE_API_URL}/research?status=approved`, { headers });
+      const approvedData = await approvedRes.json();
+      const totalViews = approvedData.papers?.reduce((sum, paper) => sum + (paper.views || 0), 0) || 0;
+
+      setStats({
+        papers: researchData.approved || 0,
+        users: userData.activeUsers || 0,
+        views: totalViews,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+      setStats({ papers: 0, users: 0, views: 0, loading: false });
+    }
+  };
+
   const features = [
     { icon: BookOpen, title: 'Smart Repository', desc: 'Advanced search across thousands of nursing research papers' },
     { icon: Shield, title: 'Institutional Security', desc: 'Watermarked documents with comprehensive academic protection' },
     { icon: Users, title: 'Collaborative Network', desc: 'Connect with researchers and share knowledge seamlessly' }
   ];
 
-  const stats = [
-    { icon: FileText, value: '2,500+', label: 'Research Papers' },
-    { icon: Users, value: '800+', label: 'Active Researchers' },
-    { icon: Award, value: '98%', label: 'Satisfaction Rate' }
+  const displayStats = [
+    { 
+      icon: FileText, 
+      value: stats.loading ? '...' : `${stats.papers}+`, 
+      label: 'Research Papers' 
+    },
+    { 
+      icon: Users, 
+      value: stats.loading ? '...' : `${stats.users}+`, 
+      label: 'Active Researchers' 
+    },
+    { 
+      icon: TrendingUp, 
+      value: stats.loading ? '...' : `${stats.views.toLocaleString()}+`, 
+      label: 'Total Views' 
+    }
   ];
 
   const benefits = [
@@ -45,59 +91,39 @@ const Home = () => {
 
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center -mt-8">
-        {/* Nursing-themed Background */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-navy-950 dark:to-gray-900"></div>
-          
-          {/* Subtle Nursing Symbols - Optimized */}
           <svg className="absolute w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
-            {/* Stethoscope */}
             <path d="M50 100 Q 60 80, 70 100" stroke="#1e3a8a" strokeWidth="2" fill="none"/>
             <circle cx="50" cy="95" r="8" fill="#1e3a8a"/>
             <circle cx="70" cy="95" r="8" fill="#1e3a8a"/>
-            
-            {/* Medical Cross */}
             <g transform="translate(200, 100)">
               <rect x="-5" y="-15" width="10" height="30" fill="#1e3a8a"/>
               <rect x="-15" y="-5" width="30" height="10" fill="#1e3a8a"/>
             </g>
-            
-            {/* Heartbeat */}
             <path d="M300 120 L310 120 L315 110 L320 130 L325 120 L335 120" stroke="#1e3a8a" strokeWidth="2" fill="none"/>
-            
-            {/* Repeat Pattern */}
-            <use href="#pattern" x="400"/>
-            <use href="#pattern" x="800"/>
-            <use href="#pattern" y="200"/>
-            <use href="#pattern" x="400" y="200"/>
           </svg>
-
-          {/* Animated Orbs */}
           <div className="absolute top-20 left-10 w-72 h-72 bg-navy/10 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
 
         <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
-          {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg mb-8 border border-navy/20">
             <Star className="text-yellow-500" size={18} />
             <span className="text-sm font-bold text-navy dark:text-blue-400">NEUST College of Nursing Excellence Hub</span>
           </div>
 
-          {/* Main Headline */}
           <h1 className="text-6xl md:text-8xl font-black mb-6 leading-[1.1] tracking-tight text-navy dark:text-white">
             ConServe
           </h1>
 
-          {/* Subheading */}
           <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-4 max-w-3xl mx-auto font-medium">
-            The most advanced research repository platform for nursing academia
+            Where Knowledge Flows and Nursing Grows.
           </p>
           <p className="text-base text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
-            Discover 2,500+ peer-reviewed papers • Secure watermarked viewing • AI-powered search
+            Discover {stats.papers}+ peer-reviewed papers • Secure watermarked viewing • AI-powered search
           </p>
 
-          {/* CTA Buttons */}
           <div className="flex flex-wrap gap-4 justify-center mb-8">
             {user ? (
               <>
@@ -125,11 +151,16 @@ const Home = () => {
             )}
           </div>
 
-          {/* Stats Bar - Compact */}
+          {/* Live Stats */}
           <div className="inline-flex items-center gap-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-8 py-4 rounded-2xl shadow-xl border border-navy/20">
-            {stats.map((stat, i) => (
+            {displayStats.map((stat, i) => (
               <div key={i} className="text-center">
-                <div className="text-2xl font-black text-navy dark:text-blue-400">{stat.value}</div>
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <stat.icon size={20} className="text-navy dark:text-blue-400" />
+                  <div className="text-2xl font-black text-navy dark:text-blue-400">
+                    {stat.value}
+                  </div>
+                </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
               </div>
             ))}
@@ -191,7 +222,7 @@ const Home = () => {
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
             <div className="relative z-10">
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Ready to Transform Your Research?</h2>
-              <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">Join 800+ researchers advancing nursing science</p>
+              <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">Join {stats.users}+ researchers advancing nursing science</p>
               <Link to="/register" className="inline-flex items-center gap-2 px-10 py-4 bg-white text-navy rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all">
                 Get Started Free
                 <ArrowRight size={20} />
