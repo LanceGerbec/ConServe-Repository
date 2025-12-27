@@ -110,7 +110,7 @@ const Home = () => {
         <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg mb-8 border border-navy/20">
             <Star className="text-yellow-500" size={18} />
-            <span className="text-sm font-bold text-navy dark:text-blue-400">NEUST College of Nursing Excellence Hub</span>
+            <span className="text-sm font-bold text-navy dark:text-blue-400">NEUST College of Nursing Research Repository</span>
           </div>
 
           <h1 className="text-6xl md:text-8xl font-black mb-6 leading-[1.1] tracking-tight text-navy dark:text-white">

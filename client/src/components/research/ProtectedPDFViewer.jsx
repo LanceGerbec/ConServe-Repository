@@ -70,7 +70,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     
     if (!isMobile) return;
 
-    // CRITICAL: Detect visibility changes (screenshot trigger on mobile)
     const detectVisibilityChange = () => {
       const now = Date.now();
       const timeSinceLastChange = now - lastVisibilityChange.current;
@@ -78,7 +77,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       if (document.hidden) {
         visibilityCount.current++;
         
-        // If hidden within 500ms, likely a screenshot
         if (timeSinceLastChange < 500 && visibilityCount.current > 0) {
           blockContent('📱 Screenshot Detected - Document Protected');
           setTimeout(() => setIsBlocked(false), 3000);
@@ -86,12 +84,10 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         
         lastVisibilityChange.current = now;
       } else {
-        // Reset counter when visible again
         setTimeout(() => { visibilityCount.current = 0; }, 1000);
       }
     };
 
-    // ANDROID: Power + Volume Down detection
     if (isAndroid) {
       let powerPressed = false;
       let volumePressed = false;
@@ -131,7 +127,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       };
     }
 
-    // iOS: Power + Volume Up detection
     if (isIOS) {
       let volumeUp = false;
       let power = false;
@@ -171,7 +166,6 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
       };
     }
 
-    // UNIVERSAL MOBILE PROTECTIONS
     const preventContext = (e) => { 
       e.preventDefault(); 
       blockContent('📱 Context Menu Blocked'); 
@@ -323,7 +317,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     }
   }, [signedPdfUrl, API_BASE]);
 
-  // RENDER PDF WITH CLEAN CENTERED WATERMARK + CORNER INFO
+  // RENDER PDF WITH WATERMARK INCLUDING ID NUMBER
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
     const render = async () => {
@@ -346,7 +340,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
         
-        // CLEAN CENTER DIAGONAL WATERMARK
+        // CLEAN CENTER DIAGONAL WATERMARK WITH ID NUMBER
         ctx.save();
         ctx.translate(canvas.width/2, canvas.height/2);
         ctx.rotate(-35 * Math.PI/180);
@@ -358,8 +352,12 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         ctx.font = 'bold 42px Inter, sans-serif';
         ctx.globalAlpha = 0.10;
         ctx.fillText(`${user?.email || 'Confidential'}`, 0, 20);
+        ctx.font = 'bold 36px Inter, sans-serif';
+        ctx.globalAlpha = 0.12;
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, 70);
         ctx.font = '32px Inter, sans-serif';
-        ctx.fillText(`${date} • ${time}`, 0, 70);
+        ctx.globalAlpha = 0.10;
+        ctx.fillText(`${date} • ${time}`, 0, 115);
         ctx.restore();
 
         // CORNER INFO BADGES
@@ -489,6 +487,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
                 <p className="font-mono">🚨 Logged</p>
                 <p className="font-mono mt-1">📍 {userIP}</p>
                 <p className="font-mono mt-1">👤 {user?.email}</p>
+                <p className="font-mono mt-1">🆔 {user?.studentId}</p>
               </div>
             </div>
           </div>
@@ -499,7 +498,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
             <Shield className="text-blue-300" size={20}/>
             <div className="min-w-0 flex-1">
               <h3 className="text-white font-bold text-sm truncate">🔒 {paperTitle}</h3>
-              <p className="text-blue-200 text-xs truncate">{user?.email} | {userIP}</p>
+              <p className="text-blue-200 text-xs truncate">{user?.email} | ID: {user?.studentId} | {userIP}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
