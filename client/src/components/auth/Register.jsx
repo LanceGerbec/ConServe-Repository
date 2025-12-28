@@ -17,18 +17,26 @@ const Register = () => {
   const [studentInfo, setStudentInfo] = useState(null);
   const [checkingId, setCheckingId] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [logo, setLogo] = useState(null);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (formData.studentId) {
-      checkStudentId(formData.studentId);
-    }
+    fetchLogo();
+    if (formData.studentId) checkStudentId(formData.studentId);
   }, [formData.role]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
+  const fetchLogo = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`);
+      const data = await res.json();
+      if (data.settings?.logos?.conserve?.url) setLogo(data.settings.logos.conserve.url);
+    } catch (error) {
+      console.error('Failed to fetch logo:', error);
+    }
   };
+
+  const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 
   const getPasswordStrength = (password) => {
     let strength = 0;
@@ -52,10 +60,7 @@ const Register = () => {
 
     setCheckingId(true);
     try {
-      const endpoint = formData.role === 'faculty' 
-        ? `valid-faculty-ids/check/${id}` 
-        : `valid-student-ids/check/${id}`;
-      
+      const endpoint = formData.role === 'faculty' ? `valid-faculty-ids/check/${id}` : `valid-student-ids/check/${id}`;
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
       const data = await res.json();
       
@@ -106,11 +111,7 @@ const Register = () => {
     
     if (result.success) {
       showToast('🎉 Account created successfully! Please wait for admin approval. You will receive an email notification once your account is approved.', 'success');
-      
-      // Redirect to login after 5 seconds
-      setTimeout(() => {
-        navigate('/login');
-      }, 5000);
+      setTimeout(() => navigate('/login'), 5000);
     } else {
       setError(result.error || 'Registration failed');
     }
@@ -119,42 +120,39 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
-      {/* Toast Notification */}
-      {toast.show && (
-        <Toast 
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
-        />
-      )}
+      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
 
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl p-10 border border-gray-200 dark:border-gray-800 my-8 animate-scale-in relative">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl p-8 border border-gray-200 dark:border-gray-800 my-8 animate-scale-in relative">
         <div className="absolute top-4 right-4 flex space-x-2">
-          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group" title="Back to Home">
+          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
             <Home size={20} className="text-gray-600 dark:text-gray-400 group-hover:text-navy" />
           </Link>
-          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group" title="Close">
+          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
             <X size={20} className="text-gray-600 dark:text-gray-400 group-hover:text-red-500" />
           </Link>
         </div>
 
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-navy rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-white font-bold text-2xl">C</span>
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-navy rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
+            {logo ? (
+              <img src={logo} alt="ConServe" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white font-bold text-2xl">C</span>
+            )}
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Account</h1>
           <p className="text-gray-600 dark:text-gray-400">Join ConServe Research Hub</p>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-4 rounded-lg mb-6 flex items-start space-x-3">
-          <Info size={20} className="text-navy flex-shrink-0 mt-0.5" />
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-3 rounded-lg mb-4 flex items-start space-x-2">
+          <Info size={18} className="text-navy flex-shrink-0 mt-0.5" />
           <p className="text-sm text-gray-700 dark:text-gray-300">
             <strong>Note:</strong> Your account will need admin approval before you can access the system. You'll receive an email once approved.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
@@ -165,27 +163,17 @@ const Register = () => {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 First Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                required
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Juan"
-              />
+              <input type="text" required value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="Juan" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Last Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                required
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Dela Cruz"
-              />
+              <input type="text" required value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="Dela Cruz" />
             </div>
           </div>
 
@@ -193,31 +181,18 @@ const Register = () => {
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Email <span className="text-red-500">*</span>
             </label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              placeholder="juan.delacruz@neust.edu.ph"
-            />
-            <p className="mt-1 text-xs text-gray-500">Use your official NEUST email address</p>
+            <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              placeholder="juan.delacruz@neust.edu.ph" />
+            <p className="mt-1 text-xs text-gray-500">Use your official email address</p>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Role <span className="text-red-500">*</span>
             </label>
-            <select
-              value={formData.role}
-              onChange={(e) => {
-                setFormData({ ...formData, role: e.target.value });
-                setStudentIdValid(null);
-                setStudentInfo(null);
-                setError('');
-              }}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
+            <select value={formData.role} onChange={(e) => { setFormData({ ...formData, role: e.target.value }); setStudentIdValid(null); setStudentInfo(null); setError(''); }}
+              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
             </select>
@@ -228,37 +203,17 @@ const Register = () => {
               {formData.role === 'faculty' ? 'Faculty ID' : 'Student ID'} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <input
-                type="text"
-                required
-                value={formData.studentId}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase();
-                  setFormData({ ...formData, studentId: value });
-                  checkStudentId(value);
-                }}
-                className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:outline-none ${
-                  studentIdValid === true ? 'border-green-500' :
-                  studentIdValid === false ? 'border-red-500' :
-                  'border-gray-300 dark:border-gray-700'
-                } focus:border-navy bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
-                placeholder={formData.role === 'faculty' ? 'FAC-12345' : '2021-12345'}
-              />
-              {checkingId && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
-                </div>
-              )}
-              {!checkingId && studentIdValid === true && (
-                <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" size={20} />
-              )}
-              {!checkingId && studentIdValid === false && (
-                <X className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
-              )}
+              <input type="text" required value={formData.studentId}
+                onChange={(e) => { const value = e.target.value.toUpperCase(); setFormData({ ...formData, studentId: value }); checkStudentId(value); }}
+                className={`w-full px-4 py-2.5 pr-12 border-2 rounded-xl focus:outline-none ${studentIdValid === true ? 'border-green-500' : studentIdValid === false ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'} focus:border-navy bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
+                placeholder={formData.role === 'faculty' ? 'FAC-12345' : '2021-12345'} />
+              {checkingId && <div className="absolute right-4 top-1/2 -translate-y-1/2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div></div>}
+              {!checkingId && studentIdValid === true && <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" size={20} />}
+              {!checkingId && studentIdValid === false && <X className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />}
             </div>
             {studentInfo && (
-              <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <p className="text-sm text-green-700 dark:text-green-400">
+              <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-xs text-green-700 dark:text-green-400">
                   ✓ Valid ID: <strong>{studentInfo.fullName}</strong>
                   {studentInfo.course && ` - ${studentInfo.course}`}
                   {studentInfo.department && ` - ${studentInfo.department}`}
@@ -274,37 +229,23 @@ const Register = () => {
               Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={formData.password}
+              <input type={showPassword ? 'text' : 'password'} required value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 pr-12 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Min. 12 characters"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-              >
+                className="w-full px-4 py-2.5 pr-12 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="Min. 12 characters" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {formData.password && (
               <div className="mt-2">
-                <div className="flex gap-1 mb-1">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className={`h-1 flex-1 rounded ${i < strength ? strengthColors[strength - 1] : 'bg-gray-300 dark:bg-gray-700'}`} />
-                  ))}
+                <div className="flex gap-1">
+                  {[0, 1, 2, 3].map((i) => <div key={i} className={`h-1 flex-1 rounded ${i < strength ? strengthColors[strength - 1] : 'bg-gray-300 dark:bg-gray-700'}`} />)}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {strength > 0 && `Strength: ${strengthLabels[strength - 1]}`}
-                </p>
+                {strength > 0 && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Strength: {strengthLabels[strength - 1]}</p>}
               </div>
             )}
-            <p className="mt-1 text-xs text-gray-500">
-              Must include: uppercase, lowercase, number, and special character
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Must include: uppercase, lowercase, number, and special character</p>
           </div>
 
           <div>
@@ -312,19 +253,11 @@ const Register = () => {
               Confirm Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <input
-                type={showConfirm ? 'text' : 'password'}
-                required
-                value={formData.confirmPassword}
+              <input type={showConfirm ? 'text' : 'password'} required value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full px-4 py-3 pr-12 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Re-enter your password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-              >
+                className="w-full px-4 py-2.5 pr-12 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="Re-enter your password" />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                 {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
               {formData.confirmPassword && formData.password === formData.confirmPassword && (
@@ -333,42 +266,27 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700">
             <label className="flex items-start space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="w-5 h-5 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 cursor-pointer"
-                required
-              />
+              <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="w-5 h-5 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 cursor-pointer" required />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                I agree to the{' '}
-                <Link to="/terms" target="_blank" className="text-navy hover:underline font-semibold">
-                  Terms & Conditions
-                </Link>
-                {' '}and{' '}
-                <Link to="/privacy" target="_blank" className="text-navy hover:underline font-semibold">
-                  Privacy Policy
-                </Link>
+                I agree to the <Link to="/terms" target="_blank" className="text-navy hover:underline font-semibold">Terms & Conditions</Link>
+                {' '}and <Link to="/privacy" target="_blank" className="text-navy hover:underline font-semibold">Privacy Policy</Link>
                 <span className="text-red-500 ml-1">*</span>
               </span>
             </label>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || !agreedToTerms || studentIdValid !== true}
-            className="w-full bg-navy hover:bg-navy-800 text-white font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-          >
+          <button type="submit" disabled={loading || !agreedToTerms || studentIdValid !== true}
+            className="w-full bg-navy hover:bg-navy-800 text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
             {loading ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
             <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
           </button>
         </form>
 
-        <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
-          Already have an account?{' '}
-          <Link to="/login" className="text-navy hover:text-navy-700 font-semibold">Sign in</Link>
+        <p className="text-center text-gray-600 dark:text-gray-400 mt-4 text-sm">
+          Already have an account? <Link to="/login" className="text-navy hover:text-navy-700 font-semibold">Sign in</Link>
         </p>
       </div>
     </div>
