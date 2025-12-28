@@ -26,9 +26,13 @@ export default defineConfig({
           pdfjs: ['pdfjs-dist']
         }
       }
-    }
+    },
+    // Ensure public assets are copied
+    assetsDir: 'assets',
+    copyPublicDir: true
   },
   optimizeDeps: {
     include: ['pdfjs-dist']
-  }
+  },
+  publicDir: 'public'
 })
