@@ -16,7 +16,12 @@ resend.emails.send({
 })
 .then((result) => {
   console.log('✅ SUCCESS! Email sent!');
-  console.log('📬 Message ID:', result.data.id);
+  console.log('📬 Full result:', result);
+  if (result?.data?.id) {
+    console.log('📬 Message ID:', result.data.id);
+  } else if (result?.id) {
+    console.log('📬 Message ID:', result.id);
+  }
   process.exit(0);
 })
 .catch((error) => {
