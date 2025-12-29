@@ -1,11 +1,17 @@
-// server/src/utils/emailService.js
+// server/src/utils/emailService.js - FIXED VERSION
 import brevo from '@getbrevo/brevo';
 
 const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(
-  brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY
-);
+
+// Initialize API key
+if (process.env.BREVO_API_KEY) {
+  apiInstance.setApiKey(
+    brevo.TransactionalEmailsApiApiKeys.apiKey,
+    process.env.BREVO_API_KEY
+  );
+} else {
+  console.error('❌ BREVO_API_KEY not found in environment variables');
+}
 
 const SENDER_EMAIL = process.env.EMAIL_FROM || 'conserve2025@gmail.com';
 const SENDER_NAME = 'ConServe NEUST';
@@ -14,18 +20,42 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 export const sendEmail = async ({ to, subject, html }) => {
   try {
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY not configured');
+    }
+
     const sendSmtpEmail = new brevo.SendSmtpEmail();
     sendSmtpEmail.sender = { email: SENDER_EMAIL, name: SENDER_NAME };
     sendSmtpEmail.to = [{ email: to }];
     sendSmtpEmail.subject = subject;
     sendSmtpEmail.htmlContent = html;
 
+    console.log('📧 Attempting to send email to:', to);
+    
     const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log('✅ Email sent to', to, ':', result.response?.body?.messageId);
-    return { success: true, messageId: result.response?.body?.messageId };
+    
+    // FIXED: Handle different response formats
+    const messageId = result?.messageId || 
+                      result?.response?.body?.messageId || 
+                      result?.data?.messageId ||
+                      'sent';
+    
+    console.log('✅ Email sent successfully to', to);
+    console.log('📬 Message ID:', messageId);
+    
+    return { success: true, messageId };
   } catch (error) {
-    console.error('❌ Email failed:', error.message);
-    throw new Error(error.message || 'Email send failed');
+    console.error('❌ Email send failed:');
+    console.error('   To:', to);
+    console.error('   Error:', error.message);
+    console.error('   Full error:', error);
+    
+    // Don't throw - return error info
+    return { 
+      success: false, 
+      error: error.message,
+      details: error.response?.body || error.response?.text
+    };
   }
 };
 
@@ -34,19 +64,37 @@ export const testEmailConnection = async () => {
     if (!process.env.BREVO_API_KEY) {
       return { success: false, error: 'BREVO_API_KEY not configured' };
     }
+    
     const accountApi = new brevo.AccountApi();
-    accountApi.setApiKey(brevo.AccountApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-    await accountApi.getAccount();
-    console.log('✅ Brevo email service connected');
-    return { success: true, provider: 'Brevo', from: SENDER_EMAIL };
+    accountApi.setApiKey(
+      brevo.AccountApiApiKeys.apiKey, 
+      process.env.BREVO_API_KEY
+    );
+    
+    const account = await accountApi.getAccount();
+    console.log('✅ Brevo connected:', account.email);
+    
+    return { 
+      success: true, 
+      provider: 'Brevo',
+      email: account.email,
+      plan: account.plan
+    };
   } catch (error) {
+    console.error('❌ Brevo connection failed:', error.message);
     return { success: false, error: error.message };
   }
 };
 
 export const sendApprovalEmail = async (user) => {
-  if (!user?.email) throw new Error('User email required');
-  return await sendEmail({
+  if (!user?.email) {
+    console.error('❌ User email is required');
+    return { success: false, error: 'User email required' };
+  }
+  
+  console.log('📧 Sending approval email to:', user.email);
+  
+  const result = await sendEmail({
     to: user.email,
     subject: '✅ ConServe Account Approved!',
     html: `
@@ -68,6 +116,7 @@ export const sendApprovalEmail = async (user) => {
             <div style="text-align:center;margin:35px 0">
               <a href="${CLIENT_URL}/login" style="display:inline-block;padding:16px 48px;background:#1e3a8a;color:white;text-decoration:none;border-radius:10px;font-weight:bold;font-size:18px">Login to ConServe</a>
             </div>
+            <p style="font-size:14px;color:#6b7280;margin-top:30px">If you have questions, contact us at ${ADMIN_EMAIL}</p>
           </div>
           <div style="background:#f9fafb;padding:20px;text-align:center;border-top:1px solid #e5e7eb">
             <p style="font-size:12px;color:#9ca3af">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
@@ -77,11 +126,23 @@ export const sendApprovalEmail = async (user) => {
       </html>
     `,
   });
+  
+  if (!result.success) {
+    console.error('❌ Approval email failed:', result.error);
+  }
+  
+  return result;
 };
 
 export const sendWelcomeEmail = async (user) => {
-  if (!user?.email) throw new Error('User email required');
-  return await sendEmail({
+  if (!user?.email) {
+    console.error('❌ User email is required');
+    return { success: false, error: 'User email required' };
+  }
+  
+  console.log('📧 Sending welcome email to:', user.email);
+  
+  const result = await sendEmail({
     to: user.email,
     subject: '🎉 Welcome to ConServe',
     html: `
@@ -114,10 +175,18 @@ export const sendWelcomeEmail = async (user) => {
       </html>
     `,
   });
+  
+  if (!result.success) {
+    console.error('❌ Welcome email failed:', result.error);
+  }
+  
+  return result;
 };
 
 export const sendAdminNewUserNotification = async (user) => {
-  return await sendEmail({
+  console.log('📧 Sending admin notification for:', user.email);
+  
+  const result = await sendEmail({
     to: ADMIN_EMAIL,
     subject: '🔔 New User Registration',
     html: `
@@ -148,4 +217,10 @@ export const sendAdminNewUserNotification = async (user) => {
       </html>
     `,
   });
+  
+  if (!result.success) {
+    console.error('❌ Admin notification failed:', result.error);
+  }
+  
+  return result;
 };
