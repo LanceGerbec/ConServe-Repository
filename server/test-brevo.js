@@ -1,48 +1,74 @@
-// server/test-brevo.js
+// server/test-brevo-http.js - DIRECT HTTP VERSION
 import dotenv from 'dotenv';
-import brevo from '@getbrevo/brevo';
+import https from 'https';
 
 dotenv.config();
 
-console.log('🧪 Testing Brevo Email Service...\n');
+console.log('🧪 Testing Brevo with HTTP API...\n');
+console.log('🔑 API Key:', process.env.BREVO_API_KEY ? 'Found ✅' : 'Missing ❌');
 
-const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(
-  brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY
-);
+if (!process.env.BREVO_API_KEY) {
+  console.error('❌ BREVO_API_KEY not found in .env');
+  process.exit(1);
+}
 
-const sendSmtpEmail = new brevo.SendSmtpEmail();
-
-sendSmtpEmail.sender = { 
-  email: 'conserve2025@gmail.com', 
-  name: 'ConServe Test' 
-};
-sendSmtpEmail.to = [{ email: 'conserve2025@gmail.com' }];
-sendSmtpEmail.subject = '✅ Brevo Test - ConServe';
-sendSmtpEmail.htmlContent = `
-  <div style="font-family:Arial;padding:20px;max-width:600px;margin:0 auto">
-    <h1 style="color:#10b981">✅ Success!</h1>
-    <p>Your Brevo email service is working perfectly!</p>
-    <div style="background:#f3f4f6;padding:15px;border-radius:8px;margin:20px 0">
-      <p><strong>Provider:</strong> Brevo (Sendinblue)</p>
+const emailData = JSON.stringify({
+  sender: { email: 'conserve2025@gmail.com', name: 'ConServe Test' },
+  to: [{ email: 'conserve2025@gmail.com' }],
+  subject: '✅ Brevo HTTP Test - ConServe',
+  htmlContent: `
+    <div style="font-family:Arial;padding:20px">
+      <h1 style="color:#10b981">✅ Success!</h1>
+      <p>Brevo email service is working via HTTP API!</p>
       <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-      <p><strong>Status:</strong> Email service operational ✓</p>
-      <p><strong>Daily Limit:</strong> 300 emails/day FREE</p>
     </div>
-    <p style="color:#6b7280">You can now send emails to ANY email address!</p>
-  </div>
-`;
+  `
+});
 
-apiInstance.sendTransacEmail(sendSmtpEmail)
-  .then((result) => {
-    console.log('✅ SUCCESS! Email sent via Brevo!');
-    console.log('📬 Message ID:', result.response?.body?.messageId);
-    console.log('\n🎉 Brevo is ready for production!');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('❌ FAILED:', error);
-    console.error('\n💡 Fix: Check your BREVO_API_KEY in .env');
-    process.exit(1);
+const options = {
+  hostname: 'api.brevo.com',
+  port: 443,
+  path: '/v3/smtp/email',
+  method: 'POST',
+  headers: {
+    'accept': 'application/json',
+    'api-key': process.env.BREVO_API_KEY,
+    'content-type': 'application/json',
+    'Content-Length': Buffer.byteLength(emailData)
+  }
+};
+
+console.log('📧 Sending test email...\n');
+
+const req = https.request(options, (res) => {
+  let responseData = '';
+
+  res.on('data', (chunk) => {
+    responseData += chunk;
   });
+
+  res.on('end', () => {
+    console.log('📬 Response Status:', res.statusCode);
+    console.log('📨 Response Body:', responseData);
+
+    if (res.statusCode === 201) {
+      const result = JSON.parse(responseData);
+      console.log('\n✅ SUCCESS! Email sent!');
+      console.log('📬 Message ID:', result.messageId);
+      process.exit(0);
+    } else {
+      console.error('\n❌ FAILED!');
+      console.error('Status:', res.statusCode);
+      console.error('Error:', responseData);
+      process.exit(1);
+    }
+  });
+});
+
+req.on('error', (error) => {
+  console.error('❌ Request failed:', error.message);
+  process.exit(1);
+});
+
+req.write(emailData);
+req.end();
