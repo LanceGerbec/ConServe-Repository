@@ -1,6 +1,5 @@
-// client/src/components/admin/ValidIdsManagement.jsx
 import { useState, useEffect } from 'react';
-import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, AlertCircle, X, AlertTriangle, User } from 'lucide-react';
+import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
 import Toast from '../common/Toast';
 
@@ -74,11 +73,6 @@ const ValidIdsManagement = () => {
     }
   };
 
-  const openDeleteModal = (item) => {
-    setDeleteTarget(item);
-    setShowDeleteModal(true);
-  };
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
 
@@ -122,7 +116,7 @@ const ValidIdsManagement = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon size={24} /> Valid IDs Management
+              <Icon size={24} /> Valid IDs
             </h2>
             <div className="flex gap-2">
               <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 text-sm font-semibold">
@@ -153,25 +147,25 @@ const ValidIdsManagement = () => {
           <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
             <Icon size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400 mb-4">No {activeTab} IDs found</p>
-            <button onClick={() => setShowBulkModal(true)} className="text-navy dark:text-accent hover:underline font-semibold text-sm">Upload IDs to get started</button>
+            <button onClick={() => setShowBulkModal(true)} className="text-navy dark:text-accent hover:underline font-semibold text-sm">Upload IDs</button>
           </div>
         ) : (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">{activeTab === 'student' ? 'Student ID' : 'Faculty ID'}</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Full Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Used</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold">{activeTab === 'student' ? 'Student ID' : 'Faculty ID'}</th>
+                  <th className="px-4 py-3 text-left font-semibold">Full Name</th>
+                  <th className="px-4 py-3 text-left font-semibold">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold">Used</th>
+                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {currentData.map((item) => (
                   <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                    <td className="px-4 py-3 font-mono font-semibold text-gray-900 dark:text-white">{item[idField]}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{item.fullName}</td>
+                    <td className="px-4 py-3 font-mono font-semibold">{item[idField]}</td>
+                    <td className="px-4 py-3">{item.fullName}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
                     </td>
@@ -179,7 +173,7 @@ const ValidIdsManagement = () => {
                       {item.isUsed ? <CheckCircle size={16} className="text-green-600" /> : <span className="text-gray-400 text-xs">No</span>}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openDeleteModal(item)} className="text-red-600 hover:text-red-700 p-1" title="Delete">
+                      <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -196,85 +190,55 @@ const ValidIdsManagement = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add {activeTab === 'student' ? 'Student' : 'Faculty'} ID</h3>
+              <h3 className="text-lg font-bold">Add {activeTab === 'student' ? 'Student' : 'Faculty'} ID</h3>
               <button onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleAdd} className="space-y-4">
-              <input type="text" placeholder={`${activeTab === 'student' ? 'Student' : 'Faculty'} ID *`} required value={formData.id} onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
-              <input type="text" placeholder="Full Name *" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
+              <input type="text" placeholder={`${activeTab === 'student' ? 'Student' : 'Faculty'} ID *`} required value={formData.id} onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })} className="w-full px-4 py-2 border rounded-lg focus:border-navy focus:outline-none text-sm" />
+              <input type="text" placeholder="Full Name *" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:border-navy focus:outline-none text-sm" />
               <div className="flex gap-2">
-                <button type="button" onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm font-semibold hover:bg-navy-800">Add ID</button>
+                <button type="button" onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm font-semibold hover:bg-gray-50">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm font-semibold hover:bg-navy-800">Add</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Enhanced Delete Confirmation Modal */}
+      {/* Delete Confirmation */}
       {showDeleteModal && deleteTarget && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full border-2 border-red-500 shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full border-2 border-red-500">
             <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 rounded-t-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                   <AlertTriangle size={24} className="text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Delete {activeTab === 'student' ? 'Student' : 'Faculty'} ID?</h3>
+                <h3 className="text-xl font-bold text-white">Delete ID?</h3>
               </div>
             </div>
 
             <div className="p-6 space-y-4">
               <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
-                <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">
-                  ⚠️ You are about to delete:
-                </p>
+                <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">⚠️ Deleting:</p>
                 <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold">{deleteTarget[idField]}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User size={14} />
-                    <span className="font-semibold">{deleteTarget.fullName}</span>
-                  </div>
+                  <div className="font-mono font-bold">{deleteTarget[idField]}</div>
+                  <div className="flex items-center gap-2"><User size={14} /> {deleteTarget.fullName}</div>
                 </div>
               </div>
 
-              {deleteTarget.isUsed && deleteTarget.registeredUser && (
+              {deleteTarget.isUsed && (
                 <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded">
-                  <p className="text-sm font-semibold text-orange-800 dark:text-orange-300 mb-2">
-                    🔗 Currently Used By:
-                  </p>
-                  <div className="space-y-1 text-sm text-orange-700 dark:text-orange-400">
-                    <p className="font-semibold">
-                      {deleteTarget.registeredUser.firstName} {deleteTarget.registeredUser.lastName}
-                    </p>
-                    <p className="font-mono text-xs">{deleteTarget.registeredUser.email}</p>
-                  </div>
+                  <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">🔗 Currently Used</p>
                 </div>
               )}
 
-              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {deleteTarget.isUsed ? (
-                    <>
-                      <strong>Warning:</strong> Deleting this ID will affect the registered user. The ID will be reverted to unused status, but the user account will remain.
-                    </>
-                  ) : (
-                    <>This ID has not been used yet and can be safely deleted.</>
-                  )}
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
-                  Cancel
-                </button>
-                <button onClick={handleDelete} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2">
-                  <Trash2 size={18} />
-                  Delete ID
+              <div className="flex gap-3">
+                <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="flex-1 px-4 py-3 border-2 rounded-xl font-semibold hover:bg-gray-50">Cancel</button>
+                <button onClick={handleDelete} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2">
+                  <Trash2 size={18} /> Delete
                 </button>
               </div>
             </div>
