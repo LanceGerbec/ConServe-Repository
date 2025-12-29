@@ -4,7 +4,6 @@ import { getGridFSBucket } from '../config/gridfs.js';
 import { Readable } from 'stream';
 import { generateCitation } from '../utils/citationGenerator.js';
 import { generateSignedPdfUrl, verifySignedUrl } from '../utils/signedUrl.js';
-import { sendAdminNewResearchNotification } from '../utils/emailService.js';
 import mongoose from 'mongoose';
 import { notifyNewResearchSubmitted, notifyViewMilestone } from '../utils/notificationService.js';
 
@@ -24,10 +23,7 @@ export const submitResearch = async (req, res) => {
     });
 
     await new Promise((resolve, reject) => {
-      Readable.from(req.file.buffer)
-        .pipe(uploadStream)
-        .on('finish', resolve)
-        .on('error', reject);
+      Readable.from(req.file.buffer).pipe(uploadStream).on('finish', resolve).on('error', reject);
     });
 
     const paper = await Research.create({
@@ -55,15 +51,12 @@ export const submitResearch = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    const populatedPaper = await Research.findById(paper._id)
-      .populate('submittedBy', 'firstName lastName email');
-    
-    await notifyNewResearchSubmitted(populatedPaper);
+    const populatedPaper = await Research.findById(paper._id).populate('submittedBy', 'firstName lastName email');
     
     try {
-      await sendAdminNewResearchNotification(populatedPaper);
-    } catch (emailError) {
-      console.error('⚠️ Email failed:', emailError);
+      await notifyNewResearchSubmitted(populatedPaper);
+    } catch (notifError) {
+      console.error('⚠️ Notification failed:', notifError);
     }
 
     console.log('✅ Research uploaded:', uploadStream.id);
@@ -85,10 +78,7 @@ export const getAllResearch = async (req, res) => {
     if (category) query.category = category;
     if (yearCompleted) query.yearCompleted = parseInt(yearCompleted);
     if (subjectArea) query.subjectArea = { $regex: subjectArea, $options: 'i' };
-    
-    if (author) {
-      query.authors = { $regex: author, $options: 'i' };
-    }
+    if (author) query.authors = { $regex: author, $options: 'i' };
     
     if (search) {
       query.$or = [
@@ -98,10 +88,7 @@ export const getAllResearch = async (req, res) => {
       ];
     }
 
-    const papers = await Research.find(query)
-      .populate('submittedBy', 'firstName lastName')
-      .sort({ createdAt: -1 });
-
+    const papers = await Research.find(query).populate('submittedBy', 'firstName lastName').sort({ createdAt: -1 });
     res.json({ papers, count: papers.length });
   } catch (error) {
     res.status(500).json({ error: 'Fetch failed' });
@@ -113,9 +100,7 @@ export const streamPDFWithToken = async (req, res) => {
     const { fileId } = req.params;
     const { token } = req.query;
 
-    if (!token) {
-      return res.status(401).json({ error: 'Token required' });
-    }
+    if (!token) return res.status(401).json({ error: 'Token required' });
 
     let decoded;
     try {
@@ -124,17 +109,13 @@ export const streamPDFWithToken = async (req, res) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    if (decoded.fileId !== fileId) {
-      return res.status(403).json({ error: 'Token does not match file' });
-    }
+    if (decoded.fileId !== fileId) return res.status(403).json({ error: 'Token does not match file' });
 
     const bucket = getGridFSBucket();
     const objectId = new mongoose.Types.ObjectId(fileId);
 
     const files = await bucket.find({ _id: objectId }).toArray();
-    if (!files || files.length === 0) {
-      return res.status(404).json({ error: 'File not found' });
-    }
+    if (!files || files.length === 0) return res.status(404).json({ error: 'File not found' });
 
     const file = files[0];
     res.set({
@@ -146,30 +127,22 @@ export const streamPDFWithToken = async (req, res) => {
       'Access-Control-Allow-Origin': '*'
     });
 
-    const downloadStream = bucket.openDownloadStream(objectId);
-    downloadStream.pipe(res);
+    bucket.openDownloadStream(objectId).pipe(res);
   } catch (error) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: error.message });
-    }
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 };
 
 export const getResearchById = async (req, res) => {
   try {
-    const paper = await Research.findById(req.params.id)
-      .populate('submittedBy', 'firstName lastName email');
-
+    const paper = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName email');
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
-      return res.status(403).json({ 
-        error: 'This research is not available.',
-        status: paper.status
-      });
+      return res.status(403).json({ error: 'This research is not available.', status: paper.status });
     }
 
     const signedPdfUrl = generateSignedPdfUrl(paper.gridfsId.toString(), req.user._id.toString());
@@ -177,10 +150,11 @@ export const getResearchById = async (req, res) => {
     paperObj.signedPdfUrl = signedPdfUrl;
 
     if (paper.status === 'approved') {
-      const previousViews = paper.views;
       paper.views += 1;
       await paper.save();
-      await notifyViewMilestone(paper, paper.views);
+      try {
+        await notifyViewMilestone(paper, paper.views);
+      } catch (e) { }
     }
 
     res.json({ paper: paperObj });
@@ -192,9 +166,7 @@ export const getResearchById = async (req, res) => {
 export const updateResearchStatus = async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
-    const paper = await Research.findById(req.params.id)
-      .populate('submittedBy', 'firstName lastName email');
-      
+    const paper = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName email');
     if (!paper) return res.status(404).json({ error: 'Not found' });
 
     paper.status = status;
@@ -203,10 +175,11 @@ export const updateResearchStatus = async (req, res) => {
     await paper.save();
 
     const { notifyResearchStatusChange, notifyFacultyOfApprovedPaper } = await import('../utils/notificationService.js');
-    await notifyResearchStatusChange(paper, status, revisionNotes || '');
-
-    if (status === 'approved') {
-      await notifyFacultyOfApprovedPaper(paper);
+    try {
+      await notifyResearchStatusChange(paper, status, revisionNotes || '');
+      if (status === 'approved') await notifyFacultyOfApprovedPaper(paper);
+    } catch (e) {
+      console.error('Notification error:', e);
     }
 
     res.json({ message: `Research ${status}`, paper });
@@ -284,30 +257,19 @@ export const getTrendingPapers = async (req, res) => {
 export const logViolation = async (req, res) => {
   try {
     const { researchId, violationType } = req.body;
-    
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!req.user || !researchId || !violationType) return res.status(400).json({ error: 'Missing required fields' });
 
-    if (!researchId || !violationType) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const logEntry = await AuditLog.create({
+    await AuditLog.create({
       user: req.user._id,
       action: `VIOLATION_${violationType.toUpperCase()}`,
       resource: 'Research',
       resourceId: researchId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      details: { 
-        violationType, 
-        timestamp: new Date(),
-        userEmail: req.user.email || 'unknown'
-      }
+      details: { violationType, timestamp: new Date(), userEmail: req.user.email || 'unknown' }
     });
 
-    res.json({ message: 'Logged', violationId: logEntry._id });
+    res.json({ message: 'Logged' });
   } catch (error) {
     res.status(200).json({ message: 'Logged with error', error: error.message });
   }
