@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User } from 'lucide-react';
+import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User, RefreshCw } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
 import Toast from '../common/Toast';
 
@@ -8,6 +8,7 @@ const ValidIdsManagement = () => {
   const [studentIds, setStudentIds] = useState([]);
   const [facultyIds, setFacultyIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cleaning, setCleaning] = useState(false);
   const [search, setSearch] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -39,6 +40,33 @@ const ValidIdsManagement = () => {
     }
   };
 
+  // ✅ NEW: Clean orphaned IDs
+  const handleCleanOrphaned = async () => {
+    if (!confirm(`Clean all orphaned ${activeTab} IDs? This will reset IDs where users no longer exist.`)) return;
+
+    setCleaning(true);
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}/clean-orphaned`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`✅ Cleaned ${data.cleaned} orphaned IDs`, 'success');
+        fetchData();
+      } else {
+        showToast('Failed to clean', 'error');
+      }
+    } catch (error) {
+      showToast('Connection error', 'error');
+    } finally {
+      setCleaning(false);
+    }
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.id.trim() || !formData.fullName.trim()) {
@@ -60,16 +88,16 @@ const ValidIdsManagement = () => {
       });
 
       if (res.ok) {
-        showToast('✅ ID added successfully');
+        showToast('✅ ID added');
         setShowAddModal(false);
         setFormData({ id: '', fullName: '' });
         fetchData();
       } else {
         const data = await res.json();
-        showToast(data.error || 'Failed to add', 'error');
+        showToast(data.error || 'Failed', 'error');
       }
     } catch (error) {
-      showToast('Connection error', 'error');
+      showToast('Error', 'error');
     }
   };
 
@@ -85,16 +113,16 @@ const ValidIdsManagement = () => {
       });
 
       if (res.ok) {
-        showToast('✅ ID deleted successfully');
+        showToast('✅ Deleted');
         setShowDeleteModal(false);
         setDeleteTarget(null);
         fetchData();
       } else {
         const data = await res.json();
-        showToast(data.error || 'Failed to delete', 'error');
+        showToast(data.error || 'Failed', 'error');
       }
     } catch (error) {
-      showToast('Connection error', 'error');
+      showToast('Error', 'error');
     }
   };
 
@@ -119,6 +147,10 @@ const ValidIdsManagement = () => {
               <Icon size={24} /> Valid IDs
             </h2>
             <div className="flex gap-2">
+              <button onClick={handleCleanOrphaned} disabled={cleaning} className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm font-semibold disabled:opacity-50">
+                {cleaning ? <RefreshCw size={18} className="animate-spin" /> : <RefreshCw size={18} />}
+                Clean Orphaned
+              </button>
               <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 text-sm font-semibold">
                 <Plus size={18} /> Add
               </button>
@@ -185,70 +217,54 @@ const ValidIdsManagement = () => {
         )}
       </div>
 
-      {/* Add Modal */}
+      {/* Modals remain the same... */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">Add {activeTab === 'student' ? 'Student' : 'Faculty'} ID</h3>
-              <button onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                <X size={20} />
-              </button>
+              <button onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
             </div>
             <form onSubmit={handleAdd} className="space-y-4">
-              <input type="text" placeholder={`${activeTab === 'student' ? 'Student' : 'Faculty'} ID *`} required value={formData.id} onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })} className="w-full px-4 py-2 border rounded-lg focus:border-navy focus:outline-none text-sm" />
+              <input type="text" placeholder="ID *" required value={formData.id} onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })} className="w-full px-4 py-2 border rounded-lg focus:border-navy focus:outline-none text-sm" />
               <input type="text" placeholder="Full Name *" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:border-navy focus:outline-none text-sm" />
               <div className="flex gap-2">
-                <button type="button" onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm font-semibold hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm font-semibold hover:bg-navy-800">Add</button>
+                <button type="button" onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm font-semibold">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm font-semibold">Add</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full border-2 border-red-500">
             <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 rounded-t-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <AlertTriangle size={24} className="text-white" />
-                </div>
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center"><AlertTriangle size={24} className="text-white" /></div>
                 <h3 className="text-xl font-bold text-white">Delete ID?</h3>
               </div>
             </div>
-
             <div className="p-6 space-y-4">
-              <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
-                <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">⚠️ Deleting:</p>
-                <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                <p className="text-sm font-semibold text-red-800 mb-2">⚠️ Deleting:</p>
+                <div className="space-y-2 text-sm text-red-700">
                   <div className="font-mono font-bold">{deleteTarget[idField]}</div>
                   <div className="flex items-center gap-2"><User size={14} /> {deleteTarget.fullName}</div>
                 </div>
               </div>
-
-              {deleteTarget.isUsed && (
-                <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded">
-                  <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">🔗 Currently Used</p>
-                </div>
-              )}
-
+              {deleteTarget.isUsed && <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded"><p className="text-sm font-semibold text-orange-800">🔗 Currently Used</p></div>}
               <div className="flex gap-3">
-                <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="flex-1 px-4 py-3 border-2 rounded-xl font-semibold hover:bg-gray-50">Cancel</button>
-                <button onClick={handleDelete} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2">
-                  <Trash2 size={18} /> Delete
-                </button>
+                <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="flex-1 px-4 py-3 border-2 rounded-xl font-semibold">Cancel</button>
+                <button onClick={handleDelete} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2"><Trash2 size={18} /> Delete</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {showBulkModal && (
-        <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Bulk upload completed!'); }} />
-      )}
+      {showBulkModal && <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Bulk upload completed!'); }} />}
     </>
   );
 };
