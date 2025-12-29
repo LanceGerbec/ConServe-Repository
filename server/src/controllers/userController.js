@@ -1,6 +1,6 @@
 // ============================================
 // FILE: server/src/controllers/userController.js
-// COMPLETE VERSION WITH AUTO-REVERT IDS
+// COMPLETE VERSION - AUTO-REVERT VALID IDs
 // ============================================
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
@@ -126,12 +126,13 @@ export const approveUser = async (req, res) => {
   }
 };
 
-// Reject/Delete user - AUTO-REVERTS VALID ID
+// ✅ REJECT/DELETE USER - AUTO-REVERTS VALID ID TO UNUSED
 export const rejectUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     
     if (!user) {
+      console.error('❌ User not found:', req.params.id);
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -142,25 +143,32 @@ export const rejectUser = async (req, res) => {
     const userEmail = user.email;
     const studentId = user.studentId;
     const userRole = user.role;
+    const userId = user._id;
+
+    console.log(`🗑️ Deleting user: ${userEmail} (ID: ${studentId}, Role: ${userRole})`);
 
     // DELETE USER FIRST
     await user.deleteOne();
     console.log(`✅ User deleted: ${userEmail}`);
 
-    // AUTO-REVERT VALID ID BACK TO UNUSED
+    // ✅ AUTO-REVERT VALID ID BACK TO UNUSED
+    let idReverted = false;
     try {
       if (userRole === 'faculty') {
         const revertedId = await ValidFacultyId.findOneAndUpdate(
           { facultyId: studentId.toUpperCase() },
           { 
-            isUsed: false, 
-            registeredUser: null 
+            $set: { 
+              isUsed: false, 
+              registeredUser: null 
+            }
           },
           { new: true }
         );
         
         if (revertedId) {
-          console.log(`✅ Faculty ID ${studentId} reverted to unused`);
+          idReverted = true;
+          console.log(`✅ Faculty ID ${studentId} reverted to UNUSED`);
         } else {
           console.warn(`⚠️ Faculty ID ${studentId} not found in valid IDs`);
         }
@@ -168,14 +176,17 @@ export const rejectUser = async (req, res) => {
         const revertedId = await ValidStudentId.findOneAndUpdate(
           { studentId: studentId.toUpperCase() },
           { 
-            isUsed: false, 
-            registeredUser: null 
+            $set: { 
+              isUsed: false, 
+              registeredUser: null 
+            }
           },
           { new: true }
         );
         
         if (revertedId) {
-          console.log(`✅ Student ID ${studentId} reverted to unused`);
+          idReverted = true;
+          console.log(`✅ Student ID ${studentId} reverted to UNUSED`);
         } else {
           console.warn(`⚠️ Student ID ${studentId} not found in valid IDs`);
         }
@@ -185,28 +196,30 @@ export const rejectUser = async (req, res) => {
       // Continue anyway since user is already deleted
     }
 
-    // Log action
+    // Log action with revert status
     await AuditLog.create({
       user: req.user._id,
-      action: 'USER_REJECTED',
+      action: 'USER_DELETED',
       resource: 'User',
-      resourceId: user._id,
+      resourceId: userId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       details: { 
         email: userEmail, 
         studentId: studentId,
         role: userRole,
-        idReverted: true 
+        idReverted: idReverted
       }
     });
 
     res.json({ 
-      message: 'User deleted and ID reverted to unused successfully',
-      revertedId: studentId
+      message: idReverted 
+        ? `User deleted and ${userRole === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} reverted to unused` 
+        : 'User deleted successfully',
+      revertedId: idReverted ? studentId : null
     });
   } catch (error) {
-    console.error('Reject user error:', error);
+    console.error('❌ Reject user error:', error);
     res.status(500).json({ error: 'Failed to reject user' });
   }
 };
