@@ -1,5 +1,6 @@
+// client/src/components/admin/ValidIdsManagement.jsx
 import { useState, useEffect } from 'react';
-import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, AlertCircle, X, AlertTriangle, User } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
 import Toast from '../common/Toast';
 
@@ -11,25 +12,23 @@ const ValidIdsManagement = () => {
   const [search, setSearch] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [formData, setFormData] = useState({ id: '', fullName: '' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab, search]);
+  useEffect(() => { fetchData(); }, [activeTab, search]);
 
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
       const params = search ? `?search=${search}` : '';
       const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
-      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       if (res.ok) {
         const data = await res.json();
         activeTab === 'student' ? setStudentIds(data.validIds || []) : setFacultyIds(data.validIds || []);
@@ -57,10 +56,7 @@ const ValidIdsManagement = () => {
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
 
@@ -78,19 +74,26 @@ const ValidIdsManagement = () => {
     }
   };
 
-  const handleDelete = async (id, idNumber) => {
-    if (!confirm(`Delete "${idNumber}"? This action cannot be undone.`)) return;
-    
+  const openDeleteModal = (item) => {
+    setDeleteTarget(item);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+
     try {
       const token = localStorage.getItem('token');
       const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}/${deleteTarget._id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.ok) {
-        showToast('✅ Deleted successfully');
+        showToast('✅ ID deleted successfully');
+        setShowDeleteModal(false);
+        setDeleteTarget(null);
         fetchData();
       } else {
         const data = await res.json();
@@ -101,10 +104,15 @@ const ValidIdsManagement = () => {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div></div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
+    </div>
+  );
 
   const currentData = activeTab === 'student' ? studentIds : facultyIds;
   const Icon = activeTab === 'student' ? UserCheck : Users;
+  const idField = activeTab === 'student' ? 'studentId' : 'facultyId';
 
   return (
     <>
@@ -118,17 +126,17 @@ const ValidIdsManagement = () => {
             </h2>
             <div className="flex gap-2">
               <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 text-sm font-semibold">
-                <Plus size={18} /> Add ID
+                <Plus size={18} /> Add
               </button>
               <button onClick={() => setShowBulkModal(true)} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-semibold">
-                <Upload size={18} /> Bulk Upload
+                <Upload size={18} /> Bulk
               </button>
             </div>
           </div>
 
           <div className="flex gap-2 mb-4">
             {['student', 'faculty'].map(type => (
-              <button key={type} onClick={() => setActiveTab(type)} className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+              <button key={type} onClick={() => setActiveTab(type)} className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
                 {type === 'student' ? <UserCheck size={16} className="inline mr-2" /> : <Users size={16} className="inline mr-2" />}
                 {type.charAt(0).toUpperCase() + type.slice(1)} ({type === 'student' ? studentIds.length : facultyIds.length})
               </button>
@@ -162,12 +170,16 @@ const ValidIdsManagement = () => {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {currentData.map((item) => (
                   <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                    <td className="px-4 py-3 font-mono font-semibold text-gray-900 dark:text-white">{activeTab === 'student' ? item.studentId : item.facultyId}</td>
+                    <td className="px-4 py-3 font-mono font-semibold text-gray-900 dark:text-white">{item[idField]}</td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{item.fullName}</td>
-                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span></td>
-                    <td className="px-4 py-3">{item.isUsed ? <CheckCircle size={16} className="text-green-600" /> : <span className="text-gray-400 text-xs">No</span>}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {item.isUsed ? <CheckCircle size={16} className="text-green-600" /> : <span className="text-gray-400 text-xs">No</span>}
+                    </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => handleDelete(item._id, activeTab === 'student' ? item.studentId : item.facultyId)} disabled={item.isUsed} className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1" title={item.isUsed ? 'Cannot delete: Already used' : 'Delete'}>
+                      <button onClick={() => openDeleteModal(item)} className="text-red-600 hover:text-red-700 p-1" title="Delete">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -197,6 +209,75 @@ const ValidIdsManagement = () => {
                 <button type="submit" className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm font-semibold hover:bg-navy-800">Add ID</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Delete Confirmation Modal */}
+      {showDeleteModal && deleteTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full border-2 border-red-500 shadow-2xl">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <AlertTriangle size={24} className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Delete {activeTab === 'student' ? 'Student' : 'Faculty'} ID?</h3>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
+                <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">
+                  ⚠️ You are about to delete:
+                </p>
+                <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold">{deleteTarget[idField]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User size={14} />
+                    <span className="font-semibold">{deleteTarget.fullName}</span>
+                  </div>
+                </div>
+              </div>
+
+              {deleteTarget.isUsed && deleteTarget.registeredUser && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded">
+                  <p className="text-sm font-semibold text-orange-800 dark:text-orange-300 mb-2">
+                    🔗 Currently Used By:
+                  </p>
+                  <div className="space-y-1 text-sm text-orange-700 dark:text-orange-400">
+                    <p className="font-semibold">
+                      {deleteTarget.registeredUser.firstName} {deleteTarget.registeredUser.lastName}
+                    </p>
+                    <p className="font-mono text-xs">{deleteTarget.registeredUser.email}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {deleteTarget.isUsed ? (
+                    <>
+                      <strong>Warning:</strong> Deleting this ID will affect the registered user. The ID will be reverted to unused status, but the user account will remain.
+                    </>
+                  ) : (
+                    <>This ID has not been used yet and can be safely deleted.</>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  Cancel
+                </button>
+                <button onClick={handleDelete} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2">
+                  <Trash2 size={18} />
+                  Delete ID
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
