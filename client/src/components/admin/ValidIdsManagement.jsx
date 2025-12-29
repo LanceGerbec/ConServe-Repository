@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserCheck, Users, Plus, Search, Trash2, Upload } from 'lucide-react';
+import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, AlertCircle, X } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
 import Toast from '../common/Toast';
 
@@ -10,6 +10,8 @@ const ValidIdsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({ id: '', fullName: '' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
@@ -39,8 +41,45 @@ const ValidIdsManagement = () => {
     }
   };
 
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!formData.id.trim() || !formData.fullName.trim()) {
+      showToast('ID and Full Name required', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
+      const body = activeTab === 'student' 
+        ? { studentId: formData.id, fullName: formData.fullName }
+        : { facultyId: formData.id, fullName: formData.fullName };
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        showToast('✅ ID added successfully');
+        setShowAddModal(false);
+        setFormData({ id: '', fullName: '' });
+        fetchData();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Failed to add', 'error');
+      }
+    } catch (error) {
+      showToast('Connection error', 'error');
+    }
+  };
+
   const handleDelete = async (id, idNumber) => {
-    if (!confirm(`Delete "${idNumber}"?`)) return;
+    if (!confirm(`Delete "${idNumber}"? This action cannot be undone.`)) return;
     
     try {
       const token = localStorage.getItem('token');
@@ -51,7 +90,7 @@ const ValidIdsManagement = () => {
       });
 
       if (res.ok) {
-        showToast('✓ Deleted successfully');
+        showToast('✅ Deleted successfully');
         fetchData();
       } else {
         const data = await res.json();
@@ -62,166 +101,108 @@ const ValidIdsManagement = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div></div>;
 
   const currentData = activeTab === 'student' ? studentIds : facultyIds;
   const Icon = activeTab === 'student' ? UserCheck : Users;
 
   return (
     <>
-      {toast.show && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
-      )}
+      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
 
-      <div className="space-y-6">
-        {/* HEADER */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon size={28} />
-              Valid IDs Management
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Icon size={24} /> Valid IDs Management
             </h2>
-            <button
-              onClick={() => setShowBulkModal(true)}
-              className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition shadow-lg font-semibold"
-            >
-              <Upload size={20} />
-              Bulk Upload
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 text-sm font-semibold">
+                <Plus size={18} /> Add ID
+              </button>
+              <button onClick={() => setShowBulkModal(true)} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-semibold">
+                <Upload size={18} /> Bulk Upload
+              </button>
+            </div>
           </div>
 
-          {/* TABS */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('student')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition ${
-                activeTab === 'student'
-                  ? 'bg-navy text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <UserCheck size={18} className="inline mr-2" />
-              Student IDs ({studentIds.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('faculty')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition ${
-                activeTab === 'faculty'
-                  ? 'bg-navy text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <Users size={18} className="inline mr-2" />
-              Faculty IDs ({facultyIds.length})
-            </button>
+          <div className="flex gap-2 mb-4">
+            {['student', 'faculty'].map(type => (
+              <button key={type} onClick={() => setActiveTab(type)} className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+                {type === 'student' ? <UserCheck size={16} className="inline mr-2" /> : <Users size={16} className="inline mr-2" />}
+                {type.charAt(0).toUpperCase() + type.slice(1)} ({type === 'student' ? studentIds.length : facultyIds.length})
+              </button>
+            ))}
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${activeTab} ID or name...`} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-sm" />
           </div>
         </div>
 
-        {/* SEARCH */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={`Search ${activeTab} ID or name...`}
-            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800"
-          />
-        </div>
-
-        {/* TABLE */}
         {currentData.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-            <Icon size={64} className="mx-auto text-gray-400 mb-4" />
+            <Icon size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400 mb-4">No {activeTab} IDs found</p>
-            <button
-              onClick={() => setShowBulkModal(true)}
-              className="text-navy dark:text-accent hover:underline font-semibold"
-            >
-              Upload IDs to get started
-            </button>
+            <button onClick={() => setShowBulkModal(true)} className="text-navy dark:text-accent hover:underline font-semibold text-sm">Upload IDs to get started</button>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
-                      {activeTab === 'student' ? 'Student ID' : 'Faculty ID'}
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Full Name</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Used</th>
-                    <th className="px-6 py-3 text-right font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">{activeTab === 'student' ? 'Student ID' : 'Faculty ID'}</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Full Name</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Used</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {currentData.map((item) => (
+                  <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
+                    <td className="px-4 py-3 font-mono font-semibold text-gray-900 dark:text-white">{activeTab === 'student' ? item.studentId : item.facultyId}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{item.fullName}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span></td>
+                    <td className="px-4 py-3">{item.isUsed ? <CheckCircle size={16} className="text-green-600" /> : <span className="text-gray-400 text-xs">No</span>}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button onClick={() => handleDelete(item._id, activeTab === 'student' ? item.studentId : item.facultyId)} disabled={item.isUsed} className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1" title={item.isUsed ? 'Cannot delete: Already used' : 'Delete'}>
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {currentData.map((item) => (
-                    <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                      <td className="px-6 py-4 font-mono font-semibold text-gray-900 dark:text-white">
-                        {activeTab === 'student' ? item.studentId : item.facultyId}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 dark:text-gray-300">{item.fullName}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            item.status === 'active'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.isUsed ? (
-                          <span className="text-green-600 font-semibold">✓ Yes</span>
-                        ) : (
-                          <span className="text-gray-400">No</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() =>
-                            handleDelete(
-                              item._id,
-                              activeTab === 'student' ? item.studentId : item.facultyId
-                            )
-                          }
-                          disabled={item.isUsed}
-                          className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                          title={item.isUsed ? 'Cannot delete: Already used' : 'Delete'}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
-      {/* BULK UPLOAD MODAL */}
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add {activeTab === 'student' ? 'Student' : 'Faculty'} ID</h3>
+              <button onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAdd} className="space-y-4">
+              <input type="text" placeholder={`${activeTab === 'student' ? 'Student' : 'Faculty'} ID *`} required value={formData.id} onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
+              <input type="text" placeholder="Full Name *" required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setShowAddModal(false); setFormData({ id: '', fullName: '' }); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm font-semibold hover:bg-navy-800">Add ID</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showBulkModal && (
-        <BulkUploadModal
-          type={activeTab}
-          onClose={() => setShowBulkModal(false)}
-          onSuccess={() => {
-            fetchData();
-            setShowBulkModal(false);
-            showToast('✅ Bulk upload completed successfully!');
-          }}
-        />
+        <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Bulk upload completed!'); }} />
       )}
     </>
   );
