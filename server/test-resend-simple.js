@@ -1,20 +1,22 @@
+import dotenv from 'dotenv';
 import { Resend } from 'resend';
 
-const resend = new Resend('re_UHXHd5G6_8nKFR4Xwnqsp6Gs4588kChbs');
+dotenv.config();
 
-console.log('🧪 Testing Resend with new API key...');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+console.log('🧪 Testing Resend API...');
+console.log('📧 Using FROM:', process.env.EMAIL_FROM);
 
 resend.emails.send({
-  from: 'ConServe <onboarding@resend.dev>',
+  from: `ConServe <${process.env.EMAIL_FROM}>`,
   to: 'conserverv2025@gmail.com',
-  subject: '✅ Hello from ConServe!',
-  html: '<h1>Success!</h1><p>Resend is working perfectly!</p>'
+  subject: '✅ Resend Test - ConServe',
+  html: '<h1>✅ Success!</h1><p>Email service is working!</p>'
 })
 .then((result) => {
-  console.log('✅ SUCCESS!');
-  console.log('📨 Email sent!');
-  console.log('📬 Result:', result);
-  console.log('🎉 Check your inbox: conserverv2025@gmail.com');
+  console.log('✅ SUCCESS! Email sent!');
+  console.log('📬 Message ID:', result.data.id);
   process.exit(0);
 })
 .catch((error) => {
