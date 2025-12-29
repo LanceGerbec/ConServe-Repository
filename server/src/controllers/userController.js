@@ -1,10 +1,12 @@
 // ============================================
 // FILE: server/src/controllers/userController.js
-// FIXED VERSION - COPY THIS ENTIRE FILE
+// COMPLETE VERSION WITH AUTO-REVERT IDS
 // ============================================
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
-import { sendApprovalEmail } from '../utils/emailService.js'; // ✅ DIRECT IMPORT
+import ValidStudentId from '../models/ValidStudentId.js';
+import ValidFacultyId from '../models/ValidFacultyId.js';
+import { sendApprovalEmail } from '../utils/emailService.js';
 import { notifyAccountApproved } from '../utils/notificationService.js';
 
 // Get all users (Admin only)
@@ -45,7 +47,7 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// ✅ APPROVE USER - FIXED VERSION
+// Approve user
 export const approveUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -60,14 +62,12 @@ export const approveUser = async (req, res) => {
       return res.status(400).json({ error: 'User is already approved' });
     }
 
-    // Update user status
     user.isApproved = true;
     user.updatedAt = new Date();
     await user.save();
 
     console.log('✅ User approved in database:', user.email);
 
-    // Log the action
     await AuditLog.create({
       user: req.user._id,
       action: 'USER_APPROVED',
@@ -78,7 +78,6 @@ export const approveUser = async (req, res) => {
       details: { email: user.email }
     });
 
-    // Send in-app notification
     try {
       await notifyAccountApproved(user._id);
       console.log('✅ In-app notification sent');
@@ -86,7 +85,6 @@ export const approveUser = async (req, res) => {
       console.error('⚠️ In-app notification failed:', notifError.message);
     }
 
-    // ✅ SEND APPROVAL EMAIL - IMPROVED ERROR HANDLING
     let emailSent = false;
     let emailError = null;
 
@@ -109,7 +107,6 @@ export const approveUser = async (req, res) => {
       });
     }
 
-    // Return response with email status
     res.json({ 
       message: 'User approved successfully', 
       user: {
@@ -129,7 +126,7 @@ export const approveUser = async (req, res) => {
   }
 };
 
-// Reject/Delete user
+// Reject/Delete user - AUTO-REVERTS VALID ID
 export const rejectUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -138,13 +135,55 @@ export const rejectUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Prevent deleting admins
     if (user.role === 'admin') {
       return res.status(403).json({ error: 'Cannot delete admin users' });
     }
 
     const userEmail = user.email;
+    const studentId = user.studentId;
+    const userRole = user.role;
+
+    // DELETE USER FIRST
     await user.deleteOne();
+    console.log(`✅ User deleted: ${userEmail}`);
+
+    // AUTO-REVERT VALID ID BACK TO UNUSED
+    try {
+      if (userRole === 'faculty') {
+        const revertedId = await ValidFacultyId.findOneAndUpdate(
+          { facultyId: studentId.toUpperCase() },
+          { 
+            isUsed: false, 
+            registeredUser: null 
+          },
+          { new: true }
+        );
+        
+        if (revertedId) {
+          console.log(`✅ Faculty ID ${studentId} reverted to unused`);
+        } else {
+          console.warn(`⚠️ Faculty ID ${studentId} not found in valid IDs`);
+        }
+      } else {
+        const revertedId = await ValidStudentId.findOneAndUpdate(
+          { studentId: studentId.toUpperCase() },
+          { 
+            isUsed: false, 
+            registeredUser: null 
+          },
+          { new: true }
+        );
+        
+        if (revertedId) {
+          console.log(`✅ Student ID ${studentId} reverted to unused`);
+        } else {
+          console.warn(`⚠️ Student ID ${studentId} not found in valid IDs`);
+        }
+      }
+    } catch (idError) {
+      console.error('⚠️ Failed to revert ID:', idError.message);
+      // Continue anyway since user is already deleted
+    }
 
     // Log action
     await AuditLog.create({
@@ -154,10 +193,18 @@ export const rejectUser = async (req, res) => {
       resourceId: user._id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      details: { email: userEmail }
+      details: { 
+        email: userEmail, 
+        studentId: studentId,
+        role: userRole,
+        idReverted: true 
+      }
     });
 
-    res.json({ message: 'User rejected and removed successfully' });
+    res.json({ 
+      message: 'User deleted and ID reverted to unused successfully',
+      revertedId: studentId
+    });
   } catch (error) {
     console.error('Reject user error:', error);
     res.status(500).json({ error: 'Failed to reject user' });
@@ -182,7 +229,6 @@ export const updateUserRole = async (req, res) => {
     user.updatedAt = new Date();
     await user.save();
 
-    // Log action
     await AuditLog.create({
       user: req.user._id,
       action: 'USER_ROLE_UPDATED',
@@ -217,7 +263,6 @@ export const toggleUserStatus = async (req, res) => {
     user.updatedAt = new Date();
     await user.save();
 
-    // Log action
     await AuditLog.create({
       user: req.user._id,
       action: user.isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
