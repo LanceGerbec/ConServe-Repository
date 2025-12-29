@@ -1,9 +1,11 @@
 // ============================================
 // FILE: server/src/controllers/userController.js
+// FIXED VERSION - COPY THIS ENTIRE FILE
 // ============================================
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
-import { sendApprovalEmail } from '../utils/emailService.js';
+import { sendApprovalEmail } from '../utils/emailService.js'; // ✅ DIRECT IMPORT
+import { notifyAccountApproved } from '../utils/notificationService.js';
 
 // Get all users (Admin only)
 export const getAllUsers = async (req, res) => {
@@ -43,23 +45,29 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// Approve user
+// ✅ APPROVE USER - FIXED VERSION
 export const approveUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     
     if (!user) {
+      console.error('❌ User not found:', req.params.id);
       return res.status(404).json({ error: 'User not found' });
     }
 
     if (user.isApproved) {
+      console.warn('⚠️ User already approved:', user.email);
       return res.status(400).json({ error: 'User is already approved' });
     }
 
+    // Update user status
     user.isApproved = true;
     user.updatedAt = new Date();
     await user.save();
 
+    console.log('✅ User approved in database:', user.email);
+
+    // Log the action
     await AuditLog.create({
       user: req.user._id,
       action: 'USER_APPROVED',
@@ -70,18 +78,38 @@ export const approveUser = async (req, res) => {
       details: { email: user.email }
     });
 
-    // ADDED: Send in-app notification
-    const { notifyAccountApproved } = await import('../utils/notificationService.js');
-    await notifyAccountApproved(user._id);
-
-    // Send approval email
+    // Send in-app notification
     try {
-      const { sendApprovalEmail } = await import('../utils/emailService.js');
-      await sendApprovalEmail(user);
-    } catch (emailError) {
-      console.error('Email send failed:', emailError);
+      await notifyAccountApproved(user._id);
+      console.log('✅ In-app notification sent');
+    } catch (notifError) {
+      console.error('⚠️ In-app notification failed:', notifError.message);
     }
 
+    // ✅ SEND APPROVAL EMAIL - IMPROVED ERROR HANDLING
+    let emailSent = false;
+    let emailError = null;
+
+    try {
+      console.log('📧 Attempting to send approval email...');
+      const emailResult = await sendApprovalEmail(user);
+      
+      if (emailResult && emailResult.success) {
+        emailSent = true;
+        console.log('✅ Approval email sent successfully:', emailResult.messageId);
+      } else {
+        console.error('❌ Email sending failed - no success flag');
+      }
+    } catch (error) {
+      emailError = error.message;
+      console.error('❌ CRITICAL EMAIL ERROR:', {
+        message: error.message,
+        stack: error.stack,
+        userEmail: user.email
+      });
+    }
+
+    // Return response with email status
     res.json({ 
       message: 'User approved successfully', 
       user: {
@@ -91,10 +119,12 @@ export const approveUser = async (req, res) => {
         email: user.email,
         role: user.role,
         isApproved: user.isApproved
-      }
+      },
+      emailSent,
+      emailError: emailError || undefined
     });
   } catch (error) {
-    console.error('Approve user error:', error);
+    console.error('❌ Approve user error:', error);
     res.status(500).json({ error: 'Failed to approve user' });
   }
 };

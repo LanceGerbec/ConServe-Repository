@@ -19,6 +19,7 @@ import teamRoutes from './src/routes/team.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
 import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
+import { testEmailConnection } from './src/utils/emailService.js';
 
 dotenv.config();
 
@@ -30,6 +31,16 @@ app.set('trust proxy', 1);
 
 connectDB();
 initGridFS();
+
+(async () => {
+  const emailTest = await testEmailConnection();
+  if (emailTest.success) {
+    console.log('✅ Email service ready');
+  } else {
+    console.error('❌ Email service error:', emailTest.error);
+    console.error('⚠️ Check EMAIL_USER and EMAIL_PASS in .env');
+  }
+})();
 
 // CORS - Allow your Vercel frontend
 const allowedOrigins = [
