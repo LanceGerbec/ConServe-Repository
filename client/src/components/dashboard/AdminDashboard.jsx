@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Trash2, Eye, Bookmark, Grid, List } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
@@ -18,6 +18,7 @@ const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [viewMode, setViewMode] = useState('grid');
   const [stats, setStats] = useState({
     users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 },
     research: { total: 0, pending: 0, approved: 0, rejected: 0 }
@@ -26,18 +27,14 @@ const AdminDashboard = () => {
   const [allResearch, setAllResearch] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [pendingResearch, setPendingResearch] = useState([]);
+  const [bookmarks, setBookmarks] = useState([]);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  // Modal & Toast States
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null, action: null });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-  };
+  const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -64,7 +61,7 @@ const AdminDashboard = () => {
         setShowReviewModal(true);
       }
     } catch (error) {
-      console.error('❌ Fetch paper error:', error);
+      console.error('Fetch paper error:', error);
     }
   };
 
@@ -72,23 +69,23 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [userStats, researchStats, pendingUsersData, pendingResearchData, allUsersData, allResearchData] = await Promise.all([
+      const [userStats, researchStats, pendingUsersData, pendingResearchData, allUsersData, allResearchData, bookmarksData] = await Promise.all([
         fetch(`${API_URL}/users/stats`, { headers }).then(r => r.json()),
         fetch(`${API_URL}/research/stats`, { headers }).then(r => r.json()),
         fetch(`${API_URL}/users?status=pending`, { headers }).then(r => r.json()),
         fetch(`${API_URL}/research?status=pending`, { headers }).then(r => r.json()),
         activeTab === 'users' ? fetch(`${API_URL}/users`, { headers }).then(r => r.json()) : Promise.resolve({ users: [] }),
-        activeTab === 'research' ? fetch(`${API_URL}/research`, { headers }).then(r => r.json()) : Promise.resolve({ papers: [] })
+        activeTab === 'research' ? fetch(`${API_URL}/research`, { headers }).then(r => r.json()) : Promise.resolve({ papers: [] }),
+        activeTab === 'bookmarks' ? fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }).then(r => r.json()) : Promise.resolve({ bookmarks: [] })
       ]);
       setStats({ users: userStats, research: researchStats });
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
       setAllUsers(allUsersData.users || []);
       setAllResearch(allResearchData.papers || []);
-      setError('');
+      setBookmarks(bookmarksData.bookmarks || []);
     } catch (error) {
-      console.error('❌ Fetch error:', error);
-      setError('Failed to load data');
+      console.error('Fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -102,7 +99,7 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast('✅ User approved successfully', 'success');
+        showToast('User approved successfully', 'success');
         fetchData();
       } else {
         const data = await res.json();
@@ -130,116 +127,30 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast('✅ User deleted successfully', 'success');
+        showToast('User deleted successfully', 'success');
         fetchData();
-      } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to delete user', 'error');
       }
     } catch (error) {
       showToast('Connection error', 'error');
     }
   };
 
-  const handleDeleteResearch = (researchId, title) => {
-    setConfirmModal({
-      isOpen: true,
-      data: { researchId, title },
-      action: 'deleteResearch'
-    });
-  };
-
-  const confirmDeleteResearch = async () => {
-    const { researchId } = confirmModal.data;
+  const handleRemoveBookmark = async (bookmarkId, researchId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/research/${researchId}`, {
-        method: 'DELETE',
+      await fetch(`${API_URL}/bookmarks/toggle/${researchId}`, {
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
-        showToast('✅ Research deleted successfully', 'success');
-        fetchData();
-      } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to delete', 'error');
-      }
+      setBookmarks(prev => prev.filter(b => b._id !== bookmarkId));
+      showToast('Bookmark removed', 'success');
     } catch (error) {
-      showToast('Connection error', 'error');
-    }
-  };
-
-  const handleReviewPaper = (paper) => {
-    setSelectedPaper(paper);
-    setShowReviewModal(true);
-  };
-
-  const handleQuickApprove = async (researchId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/research/${researchId}/status`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'approved', revisionNotes: 'Quick approval' })
-      });
-      if (res.ok) {
-        showToast('✅ Research approved successfully', 'success');
-        fetchData();
-      } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to approve', 'error');
-      }
-    } catch (error) {
-      showToast('Connection error', 'error');
-    }
-  };
-
-  const handleQuickReject = (researchId) => {
-    setConfirmModal({
-      isOpen: true,
-      data: { researchId },
-      action: 'rejectResearch'
-    });
-  };
-
-  const confirmRejectResearch = async () => {
-    const { researchId } = confirmModal.data;
-    const notes = prompt('Rejection reason:');
-    if (!notes) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/research/${researchId}/status`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'rejected', revisionNotes: notes })
-      });
-      if (res.ok) {
-        showToast('✅ Research rejected successfully', 'success');
-        fetchData();
-      } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to reject', 'error');
-      }
-    } catch (error) {
-      showToast('Connection error', 'error');
+      showToast('Failed to remove bookmark', 'error');
     }
   };
 
   const handleConfirmAction = () => {
-    switch (confirmModal.action) {
-      case 'deleteUser':
-        confirmDeleteUser();
-        break;
-      case 'deleteResearch':
-        confirmDeleteResearch();
-        break;
-      case 'rejectResearch':
-        confirmRejectResearch();
-        break;
-      default:
-        break;
-    }
+    if (confirmModal.action === 'deleteUser') confirmDeleteUser();
   };
 
   if (loading) {
@@ -258,229 +169,144 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Toast Notification */}
-      {toast.show && (
-        <Toast 
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
-        />
-      )}
+    <>
+      {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
-      {/* Confirm Modal */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
         onConfirm={handleConfirmAction}
-        title={
-          confirmModal.action === 'deleteUser' 
-            ? 'Delete User?' 
-            : confirmModal.action === 'deleteResearch'
-            ? 'Delete Research Paper?'
-            : 'Reject Research?'
-        }
-        message={
-          confirmModal.action === 'deleteUser'
-            ? `Are you sure you want to delete "${confirmModal.data?.userName}"? This action cannot be undone.`
-            : confirmModal.action === 'deleteResearch'
-            ? `Are you sure you want to permanently delete "${confirmModal.data?.title}"? This action cannot be undone.`
-            : 'This will reject the research paper. You will be prompted for a reason in the next step.'
-        }
-        confirmText={confirmModal.action === 'rejectResearch' ? 'Continue' : 'Delete'}
-        type={confirmModal.action === 'rejectResearch' ? 'warning' : 'danger'}
+        title="Delete User?"
+        message={`Are you sure you want to delete "${confirmModal.data?.userName}"?`}
+        confirmText="Delete"
+        type="danger"
       />
 
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
-          <p className="text-red-700 dark:text-red-400">{error}</p>
+      <div className="space-y-4 animate-fade-in">
+        <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-6 shadow-lg">
+          <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-blue-100">Welcome, {user?.firstName}</p>
         </div>
-      )}
 
-      <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-8 shadow-lg">
-        <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-        <p className="text-blue-100">Welcome, {user?.firstName}</p>
-      </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
+          {['overview', 'users', 'research', 'bookmarks', 'valid-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+              {tab === 'valid-ids' ? 'Valid IDs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
-      {['overview', 'users', 'research', 'valid-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
-  <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-    {tab === 'valid-ids' ? 'Valid IDs' : tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
-  </button>
-))}
-      </div>
-
-      {activeTab === 'overview' && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {adminStats.map((stat, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <stat.icon className="text-white" size={24} />
+        {activeTab === 'overview' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {adminStats.map((stat, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
+                  <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
+                    <stat.icon className="text-white" size={24} />
+                  </div>
+                  <div className="text-3xl font-bold text-navy dark:text-accent mb-2">{stat.value}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
                 </div>
-                <div className="text-3xl font-bold text-navy dark:text-accent mb-2">{stat.value}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Users</h2>
-              {pendingUsers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No pending users</div>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pendingUsers.map((u) => (
-                    <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
-                      <p className="text-xs text-gray-500 mt-1">{u.role} | {u.studentId}</p>
-                      <div className="flex gap-2 mt-3">
-                        <button onClick={() => handleApproveUser(u._id)} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">
-                          <CheckCircle size={16} className="inline mr-1" /> Approve
-                        </button>
-                        <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm">
-                          <XCircle size={16} className="inline mr-1" /> Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Research</h2>
-              {pendingResearch.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No pending research</div>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pendingResearch.map((paper) => (
-                    <div key={paper._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                      <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2">{paper.title}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => handleReviewPaper(paper)} className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Users</h2>
+                {pendingUsers.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No pending users</div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {pendingUsers.map((u) => (
+                      <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
+                        <div className="flex gap-2 mt-3">
+                          <button onClick={() => handleApproveUser(u._id)} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">
+                            <CheckCircle size={16} className="inline mr-1" /> Approve
+                          </button>
+                          <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm">
+                            <XCircle size={16} className="inline mr-1" /> Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Research</h2>
+                {pendingResearch.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No pending research</div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {pendingResearch.map((paper) => (
+                      <div key={paper._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2">{paper.title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
+                        <button onClick={() => window.location.href = `/research/${paper._id}`} className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">
                           <Eye size={14} className="inline mr-1" /> Review
                         </button>
-                        <button onClick={() => handleQuickApprove(paper._id)} className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm">
-                          <CheckCircle size={14} className="inline mr-1" /> Approve
-                        </button>
-                        <button onClick={() => handleQuickReject(paper._id)} className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm">
-                          <XCircle size={14} className="inline mr-1" /> Reject
-                        </button>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'bookmarks' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Bookmark size={20} className="text-purple-600" />
+                My Bookmarks ({bookmarks.length})
+              </h2>
+              <div className="flex gap-2">
+                <button onClick={() => setViewMode('grid')} className={`p-2 rounded ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><Grid size={16} /></button>
+                <button onClick={() => setViewMode('list')} className={`p-2 rounded ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><List size={16} /></button>
+              </div>
+            </div>
+            <div className="p-4">
+              {bookmarks.length === 0 ? (
+                <div className="text-center py-12">
+                  <Bookmark size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">No bookmarks yet</p>
+                </div>
+              ) : (
+                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
+                  {bookmarks.map(b => (
+                    <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => window.location.href = `/research/${b.research._id}`}>
+                        {b.research.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
+                      <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-semibold">Remove</button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {activeTab === 'users' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Users ({allUsers.length})</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Status</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {allUsers.map((u) => (
-                  <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{u.firstName} {u.lastName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{u.email}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-red-100 text-red-700' : u.role === 'faculty' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{u.role}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.isApproved && u.isActive ? 'bg-green-100 text-green-700' : !u.isApproved ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {u.isApproved && u.isActive ? 'Active' : !u.isApproved ? 'Pending' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {u.role !== 'admin' && (
-                        <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="text-red-600 hover:text-red-700">
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+        {activeTab === 'valid-ids' && <ValidIdsManagement />}
+        {activeTab === 'team' && <TeamManagement />}
+        {activeTab === 'analytics' && <AnalyticsDashboard />}
+        {activeTab === 'logs' && <ActivityLogs />}
+        {activeTab === 'settings' && <SettingsManagement />}
 
-      {activeTab === 'research' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Research ({allResearch.length})</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Author</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Views</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {allResearch.map((paper) => (
-                  <tr key={paper._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{paper.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${paper.status === 'approved' ? 'bg-green-100 text-green-700' : paper.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{paper.status}</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{paper.views || 0}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleReviewPaper(paper)} className="text-blue-600 hover:text-blue-700">
-                          <Eye size={18} />
-                        </button>
-                        <button onClick={() => handleDeleteResearch(paper._id, paper.title)} className="text-red-600 hover:text-red-700">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'valid-ids' && <ValidIdsManagement />}
-      {activeTab === 'team' && <TeamManagement />}
-      {activeTab === 'analytics' && <AnalyticsDashboard />}
-      {activeTab === 'logs' && <ActivityLogs />}
-      {activeTab === 'settings' && <SettingsManagement />}
-
-      {showReviewModal && selectedPaper && (
-        <AdminReviewModal
-          paper={selectedPaper}
-          onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }}
-          onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); }}
-        />
-      )}
-    </div>
+        {showReviewModal && selectedPaper && (
+          <AdminReviewModal
+            paper={selectedPaper}
+            onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }}
+            onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); }}
+          />
+        )}
+      </div>
+    </>
   );
 };
 
