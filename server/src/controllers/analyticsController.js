@@ -1,3 +1,4 @@
+// server/src/controllers/analyticsController.js - UPDATED
 import Research from '../models/Research.js';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
@@ -6,12 +7,7 @@ import Review from '../models/Review.js';
 export const getDashboardStats = async (req, res) => {
   try {
     const [
-      totalPapers,
-      totalUsers,
-      totalViews,
-      recentSubmissions,
-      topPapers,
-      monthlyData
+      totalPapers, totalUsers, totalViews, recentSubmissions, topPapers, monthlyData
     ] = await Promise.all([
       Research.countDocuments({ status: 'approved' }),
       User.countDocuments({ isApproved: true }),
@@ -22,12 +18,8 @@ export const getDashboardStats = async (req, res) => {
     ]);
 
     res.json({
-      totalPapers,
-      totalUsers,
-      totalViews: totalViews[0]?.total || 0,
-      recentSubmissions,
-      topPapers,
-      monthlyData
+      totalPapers, totalUsers, totalViews: totalViews[0]?.total || 0,
+      recentSubmissions, topPapers, monthlyData
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch analytics' });
@@ -52,17 +44,122 @@ const getMonthlySubmissions = async () => {
   return data.map(d => ({ month: d._id, submissions: d.count }));
 };
 
+// ADMIN: Get all activity logs
 export const getActivityLogs = async (req, res) => {
   try {
-    const { limit = 50 } = req.query;
-    const logs = await AuditLog.find()
+    const { limit = 500, action, startDate, endDate } = req.query;
+    let query = {};
+
+    if (action && action !== 'all') {
+      query.action = { $regex: action, $options: 'i' };
+    }
+
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) query.timestamp.$lte = new Date(endDate);
+    }
+
+    const logs = await AuditLog.find(query)
+      .populate('user', 'firstName lastName email role')
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit));
+
+    res.json({ logs, count: logs.length });
+  } catch (error) {
+    console.error('Activity logs error:', error);
+    res.status(500).json({ error: 'Failed to fetch activity logs' });
+  }
+};
+
+// USER: Get own activity logs
+export const getMyActivityLogs = async (req, res) => {
+  try {
+    const { limit = 500 } = req.query;
+
+    const logs = await AuditLog.find({ user: req.user._id })
       .populate('user', 'firstName lastName email')
       .sort({ timestamp: -1 })
       .limit(parseInt(limit));
 
     res.json({ logs, count: logs.length });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch activity logs' });
+    console.error('My logs error:', error);
+    res.status(500).json({ error: 'Failed to fetch your activity logs' });
+  }
+};
+
+// ADMIN: Delete single log
+export const deleteActivityLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const log = await AuditLog.findByIdAndDelete(id);
+    
+    if (!log) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log(`🗑️ Admin ${req.user.email} deleted log: ${log.action}`);
+    
+    res.json({ message: 'Activity log deleted successfully' });
+  } catch (error) {
+    console.error('Delete log error:', error);
+    res.status(500).json({ error: 'Failed to delete log' });
+  }
+};
+
+// ADMIN: Clear all logs
+export const clearAllLogs = async (req, res) => {
+  try {
+    const result = await AuditLog.deleteMany({});
+    
+    console.log(`🗑️ Admin ${req.user.email} cleared ${result.deletedCount} logs`);
+    
+    // Create log of the clear action
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'ALL_LOGS_CLEARED',
+      resource: 'AuditLog',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { deletedCount: result.deletedCount }
+    });
+
+    res.json({ 
+      message: 'All activity logs cleared successfully', 
+      count: result.deletedCount 
+    });
+  } catch (error) {
+    console.error('Clear all logs error:', error);
+    res.status(500).json({ error: 'Failed to clear logs' });
+  }
+};
+
+// USER: Clear own logs
+export const clearMyLogs = async (req, res) => {
+  try {
+    const result = await AuditLog.deleteMany({ user: req.user._id });
+    
+    console.log(`🗑️ User ${req.user.email} cleared ${result.deletedCount} of their logs`);
+    
+    // Create log of the clear action
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'MY_LOGS_CLEARED',
+      resource: 'AuditLog',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { deletedCount: result.deletedCount }
+    });
+
+    res.json({ 
+      message: 'Your activity logs cleared successfully', 
+      count: result.deletedCount 
+    });
+  } catch (error) {
+    console.error('Clear my logs error:', error);
+    res.status(500).json({ error: 'Failed to clear your logs' });
   }
 };
 
