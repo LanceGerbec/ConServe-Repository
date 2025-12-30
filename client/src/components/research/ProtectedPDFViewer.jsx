@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Toast from '../common/Toast';
 
 let pdfjsLib = null;
 
@@ -13,7 +12,7 @@ const initPdfJs = async () => {
   return pdfjsLib;
 };
 
-const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
+const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const { user } = useAuth();
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,17 +22,13 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'warning' });
   
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
-
   const blockContent = (reason) => {
     setIsBlocked(true);
-    showToast(`🚫 ${reason}`, 'error');
     setViolations(prev => prev + 1);
     if (violations >= 4) setTimeout(onClose, 2000);
   };
@@ -41,38 +36,53 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   useEffect(() => {
     const loadPDF = async () => {
       try {
+        console.log('📄 Loading PDF from:', `${API_BASE}${pdfUrl}`);
+        
         const pdfjs = await initPdfJs();
         const token = localStorage.getItem('token');
-        if (!token) throw new Error('Auth required');
         
-        console.log('📄 Loading PDF from:', `${API_BASE}${signedPdfUrl}`);
+        if (!token) {
+          throw new Error('Authentication required');
+        }
         
-        const res = await fetch(`${API_BASE}${signedPdfUrl}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+        const res = await fetch(`${API_BASE}${pdfUrl}`, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/pdf'
+          },
           mode: 'cors',
+          credentials: 'include',
           redirect: 'follow'
         });
         
+        console.log('📄 Response status:', res.status);
+        
         if (!res.ok) {
-          throw new Error(res.status === 404 ? 'PDF not found' : `Error ${res.status}`);
+          if (res.status === 404) throw new Error('PDF not found');
+          if (res.status === 403) throw new Error('Access denied');
+          throw new Error(`Error ${res.status}`);
         }
         
         const blob = await res.blob();
+        console.log('📄 Blob received, size:', blob.size);
+        
         const arr = await blob.arrayBuffer();
         const doc = await pdfjs.getDocument({ data: arr }).promise;
+        
+        console.log('✅ PDF loaded, pages:', doc.numPages);
         
         setPdf(doc);
         setTotalPages(doc.numPages);
         setLoading(false);
       } catch (err) {
         console.error('❌ PDF Load Error:', err);
-        setError(err.message || 'Load failed');
+        setError(err.message || 'Failed to load PDF');
         setLoading(false);
       }
     };
     
-    if (signedPdfUrl) loadPDF();
-  }, [signedPdfUrl, API_BASE]);
+    if (pdfUrl) loadPDF();
+  }, [pdfUrl, API_BASE]);
 
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
@@ -89,7 +99,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         
         await page.render({ canvasContext: ctx, viewport: vp }).promise;
         
-        // Add watermark
+        // Watermark
         ctx.save();
         ctx.translate(canvas.width/2, canvas.height/2);
         ctx.rotate(-35 * Math.PI/180);
@@ -100,6 +110,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         ctx.fillText(user?.email || 'Protected', 0, 0);
         ctx.restore();
       } catch (err) {
+        console.error('Render error:', err);
         setError(`Render failed: ${err.message}`);
       }
     };
@@ -112,7 +123,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     const preventKeys = (e) => {
       if ((e.ctrlKey || e.metaKey) && ['s','p','c'].includes(e.key.toLowerCase())) {
         e.preventDefault();
-        blockContent('⌨️ Shortcut Blocked');
+        blockContent('Shortcut Blocked');
         setTimeout(() => setIsBlocked(false), 1500);
       }
     };
@@ -160,60 +171,56 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
   );
 
   return (
-    <>
-      {toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}
+    <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
+      {isBlocked && (
+        <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
+          <div className="text-center">
+            <Shield size={64} className="text-red-500 mx-auto mb-4 animate-pulse"/>
+            <h2 className="text-white text-2xl font-bold">CONTENT BLOCKED</h2>
+            <p className="text-red-400 mt-2">Violation #{violations} of 5</p>
+          </div>
+        </div>
+      )}
       
-      <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
-        {isBlocked && (
-          <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
-            <div className="text-center">
-              <Shield size={64} className="text-red-500 mx-auto mb-4 animate-pulse"/>
-              <h2 className="text-white text-2xl font-bold">CONTENT BLOCKED</h2>
-              <p className="text-red-400 mt-2">Violation #{violations} of 5</p>
-            </div>
-          </div>
-        )}
-        
-        <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Shield className="text-blue-300" size={20}/>
-            <h3 className="text-white font-bold text-sm truncate">🔒 {paperTitle}</h3>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white">
-              <ZoomOut size={18}/>
-            </button>
-            <span className="text-white text-sm px-3 bg-white/10 rounded py-1.5">{Math.round(scale*100)}%</span>
-            <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white">
-              <ZoomIn size={18}/>
-            </button>
-            <button onClick={fitToWidth} className="p-2 bg-blue-500 hover:bg-blue-600 rounded text-white">
-              <Maximize2 size={18}/>
-            </button>
-            <button onClick={onClose} className="p-2 bg-red-500 hover:bg-red-600 rounded text-white">
-              <X size={18}/>
-            </button>
-          </div>
+      <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Shield className="text-blue-300" size={20}/>
+          <h3 className="text-white font-bold text-sm truncate">🔒 {paperTitle}</h3>
         </div>
-        
-        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-6 flex items-start justify-center">
-          <canvas ref={canvasRef} className="shadow-2xl border border-blue-500/30 rounded-lg" style={{maxWidth:'100%',height:'auto'}}/>
-        </div>
-        
-        <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronLeft size={18}/>
-            </button>
-            <span className="text-white text-sm px-4 bg-white/10 rounded py-1.5">Page {currentPage}/{totalPages}</span>
-            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronRight size={18}/>
-            </button>
-          </div>
-          <div className="text-white text-xs bg-blue-500/30 px-3 py-1 rounded">🔒 PROTECTED</div>
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white">
+            <ZoomOut size={18}/>
+          </button>
+          <span className="text-white text-sm px-3 bg-white/10 rounded py-1.5">{Math.round(scale*100)}%</span>
+          <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white">
+            <ZoomIn size={18}/>
+          </button>
+          <button onClick={fitToWidth} className="p-2 bg-blue-500 hover:bg-blue-600 rounded text-white">
+            <Maximize2 size={18}/>
+          </button>
+          <button onClick={onClose} className="p-2 bg-red-500 hover:bg-red-600 rounded text-white">
+            <X size={18}/>
+          </button>
         </div>
       </div>
-    </>
+      
+      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-6 flex items-start justify-center">
+        <canvas ref={canvasRef} className="shadow-2xl border border-blue-500/30 rounded-lg" style={{maxWidth:'100%',height:'auto'}}/>
+      </div>
+      
+      <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <ChevronLeft size={18}/>
+          </button>
+          <span className="text-white text-sm px-4 bg-white/10 rounded py-1.5">Page {currentPage}/{totalPages}</span>
+          <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <ChevronRight size={18}/>
+          </button>
+        </div>
+        <div className="text-white text-xs bg-blue-500/30 px-3 py-1 rounded">🔒 PROTECTED</div>
+      </div>
+    </div>
   );
 };
 

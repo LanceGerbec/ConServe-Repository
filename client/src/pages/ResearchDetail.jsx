@@ -122,19 +122,19 @@ const ResearchDetail = () => {
     }
   };
 
-  const handleViewPDF = () => {
-    console.log('🔍 Opening PDF viewer...');
-    console.log('📄 Paper object:', paper);
-    console.log('🔗 PDF URL:', paper?.signedPdfUrl);
-    
-    if (!paper?.signedPdfUrl) {
-      console.error('❌ No signed PDF URL found!');
-      showToast('PDF URL not available. Please refresh the page.', 'error');
-      return;
-    }
-    
-    setShowPDF(true);
-  };
+const handleViewPDF = () => {
+  console.log('🔍 Opening PDF viewer...');
+  console.log('📄 PDF URL:', paper?.pdfUrl);
+  
+  if (!paper?.pdfUrl) {
+    console.error('❌ No PDF URL found!');
+    showToast('PDF URL not available. Please refresh the page.', 'error');
+    return;
+  }
+  
+  setShowPDF(true);
+};
+
 
   if (loading) {
     return (
@@ -348,14 +348,13 @@ const ResearchDetail = () => {
 
       {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
 
-      {showPDF && paper.signedPdfUrl && (
-        <ProtectedPDFViewer 
-          signedPdfUrl={paper.signedPdfUrl}
-          paperTitle={paper.title}
-          onClose={() => setShowPDF(false)}
-        />
-      )}
-
+      {showPDF && paper.pdfUrl && (
+  <ProtectedPDFViewer 
+    pdfUrl={paper.pdfUrl}
+    paperTitle={paper.title}
+    onClose={() => setShowPDF(false)}
+  />
+)}
       {showCitation && paper.status === 'approved' && (
         <CitationModal
           paper={paper}
