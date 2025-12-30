@@ -102,8 +102,9 @@ app.get('/', (req, res) => {
   });
 });
 
-app.use('/api/auth', authRoutes);
+// CRITICAL: Route order matters - research must come first for /view/:id to work
 app.use('/api/research', researchRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reviews', reviewRoutes);
@@ -118,18 +119,20 @@ app.use('/api/search', searchRoutes);
 app.use('/api', apiLimiter);
 
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found', path: req.originalUrl });
+  console.log('❌ 404 Route not found:', req.method, req.originalUrl);
+  res.status(404).json({ error: 'Route not found', path: req.originalUrl, method: req.method });
 });
 
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err);
+  console.error('❌ Server Error:', err);
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📍 API: http://localhost:${PORT}/api`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✅ Routes registered:\n   - /api/research (PDF viewing enabled)\n   - /api/auth\n   - /api/users\n   - /api/bookmarks\n   - /api/reviews\n   - /api/analytics\n`);
 });
 
 export default app;

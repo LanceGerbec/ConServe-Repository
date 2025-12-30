@@ -2,15 +2,12 @@ import jwt from 'jsonwebtoken';
 
 export const generateSignedPdfUrl = (fileId, userId) => {
   const payload = {
-    fileId,
-    userId,
+    fileId: fileId.toString(),
+    userId: userId.toString(),
     type: 'pdf-access',
-    exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour
+    exp: Math.floor(Date.now() / 1000) + (60 * 60)
   };
-  
   const token = jwt.sign(payload, process.env.JWT_SECRET);
-  
-  // CRITICAL: Return path without /api prefix
   return `/research/view/${fileId}?token=${token}`;
 };
 
