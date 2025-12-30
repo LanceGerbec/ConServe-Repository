@@ -1,4 +1,3 @@
-// server/src/routes/analytics.routes.js - UPDATED
 import express from 'express';
 import { 
   getDashboardStats, 
@@ -13,13 +12,10 @@ import { auth, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Admin routes
 router.get('/dashboard', auth, authorize('admin'), getDashboardStats);
 router.get('/activity-logs', auth, authorize('admin'), getActivityLogs);
 router.delete('/activity-logs/:id', auth, authorize('admin'), deleteActivityLog);
 router.delete('/activity-logs/clear-all', auth, authorize('admin'), clearAllLogs);
-
-// User routes (students & faculty)
 router.get('/my-logs', auth, getMyActivityLogs);
 router.delete('/my-logs/clear-all', auth, clearMyLogs);
 router.get('/user-analytics', auth, getUserAnalytics);

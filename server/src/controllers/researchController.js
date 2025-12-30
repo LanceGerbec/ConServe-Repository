@@ -251,3 +251,17 @@ export const advancedSearch = async (params) => {
   }
   return papers;
 };
+
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const [total, pending, approved, rejected] = await Promise.all([
+      Research.countDocuments(),
+      Research.countDocuments({ status: 'pending' }),
+      Research.countDocuments({ status: 'approved' }),
+      Research.countDocuments({ status: 'rejected' })
+    ]);
+    res.json({ total, pending, approved, rejected });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch research stats' });
+  }
+});

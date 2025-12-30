@@ -115,7 +115,6 @@ app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bulk-upload', bulkUploadRoutes);
 app.use('/api/search', searchRoutes);
-
 app.use('/api', apiLimiter);
 
 app.use((req, res) => {

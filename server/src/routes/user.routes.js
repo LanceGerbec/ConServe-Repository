@@ -1,6 +1,3 @@
-// ============================================
-// FILE: server/src/routes/user.routes.js
-// ============================================
 import express from 'express';
 import {
   getAllUsers,
@@ -15,7 +12,6 @@ import { auth, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Admin only routes
 router.get('/', auth, authorize('admin'), getAllUsers);
 router.get('/stats', auth, authorize('admin'), getUserStats);
 router.get('/:id', auth, authorize('admin'), getUserById);

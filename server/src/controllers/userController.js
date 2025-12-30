@@ -16,6 +16,7 @@ export const getAllUsers = async (req, res) => {
     const users = await User.find(query).select('-password -passwordHistory').sort({ createdAt: -1 });
     res.json({ users, count: users.length });
   } catch (error) {
+    console.error('Get users error:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 };
@@ -26,6 +27,7 @@ export const getUserById = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ user });
   } catch (error) {
+    console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 };
@@ -41,29 +43,39 @@ export const approveUser = async (req, res) => {
     await user.save();
 
     await AuditLog.create({
-      user: req.user._id, action: 'USER_APPROVED', resource: 'User', resourceId: user._id,
-      ipAddress: req.ip, userAgent: req.get('user-agent'), details: { email: user.email }
+      user: req.user._id,
+      action: 'USER_APPROVED',
+      resource: 'User',
+      resourceId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { email: user.email }
     });
 
-    try { await notifyAccountApproved(user._id); } catch (e) { }
-    
-    let emailSent = false, emailError = null;
     try {
-      const emailResult = await sendApprovalEmail(user);
-      if (emailResult?.success) emailSent = true;
-    } catch (error) { emailError = error.message; }
+      await notifyAccountApproved(user._id);
+      await sendApprovalEmail(user);
+    } catch (e) {
+      console.error('Notification error:', e);
+    }
 
-    res.json({ 
-      message: 'User approved successfully', 
-      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isApproved: user.isApproved },
-      emailSent, emailError: emailError || undefined
+    res.json({
+      message: 'User approved successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved
+      }
     });
   } catch (error) {
+    console.error('Approve user error:', error);
     res.status(500).json({ error: 'Failed to approve user' });
   }
 };
 
-// ✅ FIXED: AUTO-REVERT VALID ID TO UNUSED WHEN USER IS DELETED
 export const rejectUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -71,42 +83,38 @@ export const rejectUser = async (req, res) => {
     if (user.role === 'admin') return res.status(403).json({ error: 'Cannot delete admin' });
 
     const { email, studentId, role, _id } = user;
-
-    // DELETE USER
     await user.deleteOne();
-    console.log(`✅ User deleted: ${email}`);
 
-    // ✅ AUTO-REVERT VALID ID BACK TO UNUSED
     let idReverted = false;
     try {
       const Model = role === 'faculty' ? ValidFacultyId : ValidStudentId;
       const field = role === 'faculty' ? 'facultyId' : 'studentId';
-      
       const revertedId = await Model.findOneAndUpdate(
         { [field]: studentId.toUpperCase() },
         { $set: { isUsed: false, registeredUser: null } },
         { new: true }
       );
-      
-      if (revertedId) {
-        idReverted = true;
-        console.log(`✅ ${role === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} reverted to UNUSED`);
-      }
+      if (revertedId) idReverted = true;
     } catch (idError) {
-      console.error('⚠️ ID revert failed:', idError.message);
+      console.error('ID revert error:', idError);
     }
 
     await AuditLog.create({
-      user: req.user._id, action: 'USER_DELETED', resource: 'User', resourceId: _id,
-      ipAddress: req.ip, userAgent: req.get('user-agent'),
+      user: req.user._id,
+      action: 'USER_DELETED',
+      resource: 'User',
+      resourceId: _id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
       details: { email, studentId, role, idReverted }
     });
 
-    res.json({ 
+    res.json({
       message: idReverted ? `User deleted and ${role === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} reverted to unused` : 'User deleted',
       revertedId: idReverted ? studentId : null
     });
   } catch (error) {
+    console.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user' });
   }
 };
@@ -123,12 +131,18 @@ export const updateUserRole = async (req, res) => {
     await user.save();
 
     await AuditLog.create({
-      user: req.user._id, action: 'USER_ROLE_UPDATED', resource: 'User', resourceId: user._id,
-      ipAddress: req.ip, userAgent: req.get('user-agent'), details: { email: user.email, newRole: role }
+      user: req.user._id,
+      action: 'USER_ROLE_UPDATED',
+      resource: 'User',
+      resourceId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { email: user.email, newRole: role }
     });
 
     res.json({ message: 'Role updated', user });
   } catch (error) {
+    console.error('Update role error:', error);
     res.status(500).json({ error: 'Failed to update role' });
   }
 };
@@ -144,13 +158,18 @@ export const toggleUserStatus = async (req, res) => {
     await user.save();
 
     await AuditLog.create({
-      user: req.user._id, action: user.isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
-      resource: 'User', resourceId: user._id, ipAddress: req.ip, userAgent: req.get('user-agent'),
+      user: req.user._id,
+      action: user.isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+      resource: 'User',
+      resourceId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
       details: { email: user.email }
     });
 
     res.json({ message: `User ${user.isActive ? 'activated' : 'deactivated'}`, user });
   } catch (error) {
+    console.error('Toggle status error:', error);
     res.status(500).json({ error: 'Failed to update status' });
   }
 };
@@ -167,10 +186,13 @@ export const getUserStats = async (req, res) => {
     ]);
 
     res.json({
-      totalUsers, pendingApproval, activeUsers,
+      totalUsers,
+      pendingApproval,
+      activeUsers,
       byRole: { student: studentCount, faculty: facultyCount, admin: adminCount }
     });
   } catch (error) {
+    console.error('User stats error:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 };
