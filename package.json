@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "natural": "^8.1.0",
     "recharts": "^3.5.1",
-    "resend": "^6.6.0"
+    "resend": "^6.6.0",
+    "stopword": "^3.1.5"
   }
 }
