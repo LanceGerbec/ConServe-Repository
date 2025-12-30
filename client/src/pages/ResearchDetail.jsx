@@ -1,3 +1,4 @@
+// client/src/pages/ResearchDetail.jsx - COMPLETE FIXED VERSION
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare } from 'lucide-react';
@@ -50,13 +51,16 @@ const ResearchDetail = () => {
       }
 
       const data = await res.json();
+      console.log('📄 Paper data received:', data.paper);
+      console.log('🔗 Signed PDF URL:', data.paper?.signedPdfUrl);
+      
       setPaper(data.paper);
 
       if (data.paper.status === 'approved') {
         checkBookmark();
       }
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('❌ Fetch error:', error);
       setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
@@ -116,6 +120,20 @@ const ResearchDetail = () => {
         showToast('Failed to share', 'error');
       }
     }
+  };
+
+  const handleViewPDF = () => {
+    console.log('🔍 Opening PDF viewer...');
+    console.log('📄 Paper object:', paper);
+    console.log('🔗 PDF URL:', paper?.signedPdfUrl);
+    
+    if (!paper?.signedPdfUrl) {
+      console.error('❌ No signed PDF URL found!');
+      showToast('PDF URL not available. Please refresh the page.', 'error');
+      return;
+    }
+    
+    setShowPDF(true);
   };
 
   if (loading) {
@@ -236,7 +254,6 @@ const ResearchDetail = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
         {paper.status === 'approved' && (
           <div className="flex gap-3 mb-6">
             <button
@@ -265,7 +282,6 @@ const ResearchDetail = () => {
               Share
             </button>
 
-            {/* FACULTY REVIEW BUTTON - ONLY FOR FACULTY */}
             {isFaculty && (
               <button
                 onClick={() => setShowReviewModal(true)}
@@ -306,7 +322,7 @@ const ResearchDetail = () => {
         )}
       </div>
 
-      {/* PDF Viewer */}
+      {/* PDF Viewer Section */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
         <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-8 text-center border-2 border-dashed border-red-300 dark:border-red-700">
@@ -321,7 +337,7 @@ const ResearchDetail = () => {
           </p>
           
           <button
-            onClick={() => setShowPDF(true)}
+            onClick={handleViewPDF}
             className="inline-flex items-center justify-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-lg"
           >
             <FileText size={20} />
@@ -330,11 +346,9 @@ const ResearchDetail = () => {
         </div>
       </div>
 
-      {/* Similar Papers - Only show for approved papers */}
       {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
 
-      {/* Modals */}
-      {showPDF && (
+      {showPDF && paper.signedPdfUrl && (
         <ProtectedPDFViewer 
           signedPdfUrl={paper.signedPdfUrl}
           paperTitle={paper.title}

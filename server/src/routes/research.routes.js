@@ -1,4 +1,4 @@
-// server/src/routes/research.routes.js - COMPLETE FILE
+// server/src/routes/research.routes.js - COMPLETE FIXED VERSION
 import express from 'express';
 import { auth, authorize } from '../middleware/auth.js';
 import multer from 'multer';
@@ -6,14 +6,97 @@ import Research from '../models/Research.js';
 import cloudinary from '../config/cloudinary.js';
 import { Readable } from 'stream';
 import AuditLog from '../models/AuditLog.js';
-import { getGridFSBucket } from '../config/gridfs.js';
 import { generateSignedPdfUrl } from '../utils/signedUrl.js';
-import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyViewMilestone, notifyFacultyOfApprovedPaper } from '../utils/notificationService.js';
+import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOfApprovedPaper } from '../utils/notificationService.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// GET /api/research/stats - Research statistics
+// GET /api/research/:id - Get single research
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const paper = await Research.findById(req.params.id)
+      .populate('submittedBy', 'firstName lastName email');
+    
+    if (!paper) {
+      console.log('❌ Paper not found:', req.params.id);
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+    
+    const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    
+    if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
+      console.log('❌ Access denied for user:', req.user._id);
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // ✅ CRITICAL FIX: Generate signed PDF URL
+    const signedPdfUrl = generateSignedPdfUrl(paper._id, req.user._id);
+    console.log('✅ Generated signed PDF URL:', signedPdfUrl);
+    
+    // Convert to plain object and add signedPdfUrl
+    const paperObj = paper.toObject();
+    paperObj.signedPdfUrl = signedPdfUrl;
+
+    // Increment views for approved papers
+    if (paper.status === 'approved' && !isAuthor) {
+      await Research.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+      await AuditLog.create({
+        user: req.user._id,
+        action: 'RESEARCH_VIEWED',
+        resource: 'Research',
+        resourceId: paper._id,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+    }
+
+    console.log('📤 Sending paper with signed URL:', paperObj.signedPdfUrl);
+    res.json({ paper: paperObj });
+  } catch (error) {
+    console.error('❌ Get paper error:', error);
+    res.status(500).json({ error: 'Failed to fetch paper' });
+  }
+});
+
+// GET /api/research/view/:id - Serve PDF with signed URL verification
+router.get('/view/:id', auth, async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      console.log('❌ No token provided');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify signed URL token
+    const { verifySignedUrl } = await import('../utils/signedUrl.js');
+    const decoded = verifySignedUrl(token);
+    
+    if (decoded.fileId !== req.params.id) {
+      console.log('❌ Token fileId mismatch');
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+
+    const paper = await Research.findById(req.params.id);
+    
+    if (!paper) {
+      console.log('❌ Paper not found for view:', req.params.id);
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+
+    console.log('✅ Serving PDF:', paper.fileUrl);
+    
+    // Redirect to Cloudinary URL
+    res.redirect(paper.fileUrl);
+  } catch (error) {
+    console.error('❌ View PDF error:', error);
+    res.status(500).json({ error: 'Failed to load PDF' });
+  }
+});
+
+// Other routes...
 router.get('/stats', auth, async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
@@ -28,12 +111,10 @@ router.get('/stats', auth, async (req, res) => {
 
     res.json({ total, pending, approved, rejected });
   } catch (error) {
-    console.error('Stats error:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
-// GET /api/research/my-submissions - Get user's submissions
 router.get('/my-submissions', auth, async (req, res) => {
   try {
     const papers = await Research.find({ submittedBy: req.user._id })
@@ -42,12 +123,10 @@ router.get('/my-submissions', auth, async (req, res) => {
     
     res.json({ papers, count: papers.length });
   } catch (error) {
-    console.error('My submissions error:', error);
     res.status(500).json({ error: 'Failed to fetch submissions' });
   }
 });
 
-// GET /api/research - Get all research (with filters)
 router.get('/', auth, async (req, res) => {
   try {
     const { status, category, yearCompleted, subjectArea, author, search } = req.query;
@@ -76,19 +155,16 @@ router.get('/', auth, async (req, res) => {
 
     res.json({ papers, count: papers.length });
   } catch (error) {
-    console.error('Fetch research error:', error);
     res.status(500).json({ error: 'Failed to fetch research' });
   }
 });
 
-// POST /api/research - Submit new research
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF file required' });
     
     const { title, authors, abstract, keywords, category, subjectArea, yearCompleted } = req.body;
     
-    // Upload to Cloudinary
     const uploadStream = cloudinary.uploader.upload_stream(
       { folder: 'research-papers', resource_type: 'raw', format: 'pdf' },
       async (error, result) => {
@@ -126,50 +202,10 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
     
     Readable.from(req.file.buffer).pipe(uploadStream);
   } catch (error) {
-    console.error('Submit error:', error);
     res.status(500).json({ error: 'Submission failed' });
   }
 });
 
-// GET /api/research/:id - Get single research
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const paper = await Research.findById(req.params.id)
-      .populate('submittedBy', 'firstName lastName email');
-    
-    if (!paper) return res.status(404).json({ error: 'Paper not found' });
-    
-    const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
-    
-    if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    // Generate signed PDF URL
-    paper.signedPdfUrl = generateSignedPdfUrl(paper._id, req.user._id);
-
-    // Increment views for approved papers
-    if (paper.status === 'approved' && !isAuthor) {
-      await Research.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
-      await AuditLog.create({
-        user: req.user._id,
-        action: 'RESEARCH_VIEWED',
-        resource: 'Research',
-        resourceId: paper._id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
-    }
-
-    res.json({ paper });
-  } catch (error) {
-    console.error('Get paper error:', error);
-    res.status(500).json({ error: 'Failed to fetch paper' });
-  }
-});
-
-// PATCH /api/research/:id/status - Update research status (admin only)
 router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
@@ -196,12 +232,10 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
 
     res.json({ message: 'Status updated', research });
   } catch (error) {
-    console.error('Update status error:', error);
     res.status(500).json({ error: 'Failed to update status' });
   }
 });
 
-// GET /api/research/:id/citation - Generate citation
 router.get('/:id/citation', auth, async (req, res) => {
   try {
     const { style = 'APA' } = req.query;
