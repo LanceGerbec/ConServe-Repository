@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null, action: null });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [search, setSearch] = useState('');
 
   const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
 
@@ -153,6 +154,10 @@ const AdminDashboard = () => {
     if (confirmModal.action === 'deleteUser') confirmDeleteUser();
   };
 
+  const filteredBookmarks = bookmarks.filter(b =>
+    b.research?.title?.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -190,8 +195,21 @@ const AdminDashboard = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
           {['overview', 'users', 'research', 'bookmarks', 'valid-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${activeTab === tab ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+            <button 
+              key={tab} 
+              onClick={() => setActiveTab(tab)} 
+              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition whitespace-nowrap ${
+                activeTab === tab 
+                  ? 'bg-navy text-white shadow-md' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
               {tab === 'valid-ids' ? 'Valid IDs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'bookmarks' && bookmarks.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
+                  {bookmarks.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -200,12 +218,12 @@ const AdminDashboard = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {adminStats.map((stat, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
-                  <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-md border border-gray-200 dark:border-gray-700">
+                  <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
                     <stat.icon className="text-white" size={24} />
                   </div>
                   <div className="text-3xl font-bold text-navy dark:text-accent mb-2">{stat.value}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -218,14 +236,14 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {pendingUsers.map((u) => (
-                      <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div key={u._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition">
                         <h3 className="font-semibold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
                         <div className="flex gap-2 mt-3">
-                          <button onClick={() => handleApproveUser(u._id)} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">
+                          <button onClick={() => handleApproveUser(u._id)} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm font-semibold">
                             <CheckCircle size={16} className="inline mr-1" /> Approve
                           </button>
-                          <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm">
+                          <button onClick={() => handleDeleteUser(u._id, `${u.firstName} ${u.lastName}`)} className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm font-semibold">
                             <XCircle size={16} className="inline mr-1" /> Reject
                           </button>
                         </div>
@@ -242,10 +260,10 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {pendingResearch.map((paper) => (
-                      <div key={paper._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div key={paper._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition">
                         <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2">{paper.title}</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
-                        <button onClick={() => window.location.href = `/research/${paper._id}`} className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">
+                        <button onClick={() => window.location.href = `/research/${paper._id}`} className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm font-semibold">
                           <Eye size={14} className="inline mr-1" /> Review
                         </button>
                       </div>
@@ -262,28 +280,63 @@ const AdminDashboard = () => {
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Bookmark size={20} className="text-purple-600" />
-                My Bookmarks ({bookmarks.length})
+                My Bookmarks ({filteredBookmarks.length})
               </h2>
               <div className="flex gap-2">
-                <button onClick={() => setViewMode('grid')} className={`p-2 rounded ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><Grid size={16} /></button>
-                <button onClick={() => setViewMode('list')} className={`p-2 rounded ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><List size={16} /></button>
+                <button 
+                  onClick={() => setViewMode('grid')} 
+                  className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                >
+                  <Grid size={16} />
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')} 
+                  className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                >
+                  <List size={16} />
+                </button>
               </div>
             </div>
             <div className="p-4">
-              {bookmarks.length === 0 ? (
+              <input 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                placeholder="Search bookmarks..." 
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 text-sm focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none dark:bg-gray-700 dark:text-white"
+              />
+              {filteredBookmarks.length === 0 ? (
                 <div className="text-center py-12">
                   <Bookmark size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">No bookmarks yet</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 font-medium">
+                    {search ? 'No bookmarks found' : 'No bookmarks yet'}
+                  </p>
+                  {!search && (
+                    <button
+                      onClick={() => window.location.href = '/browse'}
+                      className="text-navy dark:text-accent hover:underline text-sm font-semibold"
+                    >
+                      Browse Papers
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
-                  {bookmarks.map(b => (
-                    <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                      <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => window.location.href = `/research/${b.research._id}`}>
+                  {filteredBookmarks.map(b => (
+                    <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition">
+                      <h3 
+                        className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy transition" 
+                        onClick={() => window.location.href = `/research/${b.research._id}`}
+                      >
                         {b.research.title}
                       </h3>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
-                      <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-semibold">Remove</button>
+                      <button 
+                        onClick={() => handleRemoveBookmark(b._id, b.research._id)} 
+                        className="text-red-600 hover:text-red-700 text-xs font-bold transition"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
