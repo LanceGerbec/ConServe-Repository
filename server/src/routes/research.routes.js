@@ -11,7 +11,7 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// CRITICAL: View PDF route MUST be before /:id route
+// View PDF - MUST be before /:id
 router.get('/view/:id', auth, async (req, res) => {
   try {
     const { token } = req.query;
@@ -23,7 +23,6 @@ router.get('/view/:id', auth, async (req, res) => {
     const paper = await Research.findById(req.params.id);
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
-    console.log('✅ Redirecting to PDF:', paper.fileUrl);
     res.redirect(paper.fileUrl);
   } catch (error) {
     console.error('❌ PDF view error:', error);
@@ -31,6 +30,75 @@ router.get('/view/:id', auth, async (req, res) => {
   }
 });
 
+// Log violation
+router.post('/log-violation', auth, async (req, res) => {
+  try {
+    const { researchId, violationType } = req.body;
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'PDF_VIOLATION',
+      resource: 'Research',
+      resourceId: researchId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { violationType }
+    });
+    res.json({ message: 'Violation logged' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to log violation' });
+  }
+});
+
+// Stats
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const isAdmin = req.user.role === 'admin';
+    const baseQuery = isAdmin ? {} : { status: 'approved' };
+    const [total, pending, approved, rejected] = await Promise.all([
+      Research.countDocuments(baseQuery),
+      Research.countDocuments({ ...baseQuery, status: 'pending' }),
+      Research.countDocuments({ ...baseQuery, status: 'approved' }),
+      Research.countDocuments({ ...baseQuery, status: 'rejected' })
+    ]);
+    res.json({ total, pending, approved, rejected });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// My submissions
+router.get('/my-submissions', auth, async (req, res) => {
+  try {
+    const papers = await Research.find({ submittedBy: req.user._id })
+      .sort({ createdAt: -1 })
+      .select('title abstract authors status views yearCompleted subjectArea category keywords createdAt');
+    res.json({ papers, count: papers.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch submissions' });
+  }
+});
+
+// Citation
+router.get('/:id/citation', auth, async (req, res) => {
+  try {
+    const { style = 'APA' } = req.query;
+    const paper = await Research.findById(req.params.id);
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
+    const authors = paper.authors.join(', ');
+    const year = paper.yearCompleted || new Date(paper.createdAt).getFullYear();
+    const citations = {
+      APA: `${authors} (${year}). ${paper.title}. NEUST College of Nursing Research Repository.`,
+      MLA: `${authors}. "${paper.title}." NEUST College of Nursing Research Repository, ${year}.`,
+      Chicago: `${authors}. "${paper.title}." NEUST College of Nursing Research Repository (${year}).`,
+      Harvard: `${authors}, ${year}. ${paper.title}. NEUST College of Nursing Research Repository.`
+    };
+    res.json({ citation: citations[style] || citations.APA });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate citation' });
+  }
+});
+
+// Get single research - MUST be after specific routes
 router.get('/:id', auth, async (req, res) => {
   try {
     const paper = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName email');
@@ -61,33 +129,7 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-router.get('/stats', auth, async (req, res) => {
-  try {
-    const isAdmin = req.user.role === 'admin';
-    const baseQuery = isAdmin ? {} : { status: 'approved' };
-    const [total, pending, approved, rejected] = await Promise.all([
-      Research.countDocuments(baseQuery),
-      Research.countDocuments({ ...baseQuery, status: 'pending' }),
-      Research.countDocuments({ ...baseQuery, status: 'approved' }),
-      Research.countDocuments({ ...baseQuery, status: 'rejected' })
-    ]);
-    res.json({ total, pending, approved, rejected });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
-
-router.get('/my-submissions', auth, async (req, res) => {
-  try {
-    const papers = await Research.find({ submittedBy: req.user._id })
-      .sort({ createdAt: -1 })
-      .select('title abstract authors status views yearCompleted subjectArea category keywords createdAt');
-    res.json({ papers, count: papers.length });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch submissions' });
-  }
-});
-
+// List research
 router.get('/', auth, async (req, res) => {
   try {
     const { status, category, yearCompleted, subjectArea, author, search } = req.query;
@@ -113,6 +155,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Submit research
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF file required' });
@@ -141,6 +184,7 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
   }
 });
 
+// Update status
 router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
@@ -159,25 +203,6 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
     res.json({ message: 'Status updated', research });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update status' });
-  }
-});
-
-router.get('/:id/citation', auth, async (req, res) => {
-  try {
-    const { style = 'APA' } = req.query;
-    const paper = await Research.findById(req.params.id);
-    if (!paper) return res.status(404).json({ error: 'Paper not found' });
-    const authors = paper.authors.join(', ');
-    const year = paper.yearCompleted || new Date(paper.createdAt).getFullYear();
-    const citations = {
-      APA: `${authors} (${year}). ${paper.title}. NEUST College of Nursing Research Repository.`,
-      MLA: `${authors}. "${paper.title}." NEUST College of Nursing Research Repository, ${year}.`,
-      Chicago: `${authors}. "${paper.title}." NEUST College of Nursing Research Repository (${year}).`,
-      Harvard: `${authors}, ${year}. ${paper.title}. NEUST College of Nursing Research Repository.`
-    };
-    res.json({ citation: citations[style] || citations.APA });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to generate citation' });
   }
 });
 
