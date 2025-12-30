@@ -1,3 +1,4 @@
+// client/src/components/research/ProtectedPDFViewer.jsx
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -38,14 +39,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       try {
         const API_URL = import.meta.env.VITE_API_URL;
         
-        // Build correct URL
+        // FIX: Proper URL construction
         let url;
         if (pdfUrl.startsWith('http')) {
           url = pdfUrl; // Direct Cloudinary URL
-        } else if (pdfUrl.startsWith('/api')) {
-          url = `${API_URL}${pdfUrl}`; // Already has /api
         } else {
-          url = `${API_URL}/api${pdfUrl}`; // Add /api prefix
+          // Remove any leading slashes and /api prefix from pdfUrl
+          const cleanPath = pdfUrl.replace(/^\/?(api\/)?/, '');
+          url = `${API_URL}/${cleanPath}`;
         }
         
         console.log('📄 Loading PDF from:', url);
@@ -160,7 +161,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
-        <p className="text-white text-xl font-bold">Loading...</p>
+        <p className="text-white text-xl font-bold">Loading PDF...</p>
       </div>
     </div>
   );
@@ -169,9 +170,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
       <div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
         <AlertCircle className="mx-auto text-red-500 mb-4" size={64}/>
-        <h3 className="text-white text-2xl font-bold mb-3">Failed to Load</h3>
+        <h3 className="text-white text-2xl font-bold mb-3">Failed to Load PDF</h3>
         <p className="text-gray-300 mb-6 text-sm">{error}</p>
-        <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
+        <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
           Close
         </button>
       </div>
@@ -190,12 +191,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         </div>
       )}
       
-      <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Shield className="text-blue-300" size={20}/>
+          <Shield className="text-blue-300 flex-shrink-0" size={20}/>
           <h3 className="text-white font-bold text-sm truncate">🔒 {paperTitle}</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white">
             <ZoomOut size={18}/>
           </button>
@@ -212,17 +214,19 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         </div>
       </div>
       
+      {/* PDF Canvas */}
       <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-6 flex items-start justify-center">
         <canvas ref={canvasRef} className="shadow-2xl border border-blue-500/30 rounded-lg" style={{maxWidth:'100%',height:'auto'}}/>
       </div>
       
-      <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between">
+      {/* Footer */}
+      <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+          <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50 disabled:cursor-not-allowed">
             <ChevronLeft size={18}/>
           </button>
           <span className="text-white text-sm px-4 bg-white/10 rounded py-1.5">Page {currentPage}/{totalPages}</span>
-          <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+          <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50 disabled:cursor-not-allowed">
             <ChevronRight size={18}/>
           </button>
         </div>
