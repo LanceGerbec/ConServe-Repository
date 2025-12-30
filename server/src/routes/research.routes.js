@@ -11,8 +11,8 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// View PDF - MUST be before /:id
-router.get('/view/:id', auth, async (req, res) => {
+// PDF Access - MUST be before /:id route
+router.get('/:id/pdf', auth, async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(401).json({ error: 'Token required' });
@@ -23,13 +23,20 @@ router.get('/view/:id', auth, async (req, res) => {
     const paper = await Research.findById(req.params.id);
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
+    const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    
+    if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Redirect to Cloudinary URL
     res.redirect(paper.fileUrl);
   } catch (error) {
-    console.error('❌ PDF view error:', error);
+    console.error('❌ PDF access error:', error);
     res.status(500).json({ error: 'Failed to load PDF' });
   }
 });
-
 // Log violation
 router.post('/log-violation', auth, async (req, res) => {
   try {
