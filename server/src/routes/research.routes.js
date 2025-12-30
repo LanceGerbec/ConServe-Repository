@@ -1,3 +1,4 @@
+// server/src/routes/research.routes.js
 import express from 'express';
 import { auth, authorize } from '../middleware/auth.js';
 import multer from 'multer';
@@ -10,7 +11,7 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// PDF ACCESS ENDPOINT - MUST BE FIRST
+// PDF ACCESS ENDPOINT - MUST BE FIRST (handles both /:id/pdf and /file/:id)
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
     console.log('📄 PDF Request - ID:', req.params.id);
@@ -47,6 +48,13 @@ router.get('/:id/pdf', auth, async (req, res) => {
     console.error('❌ PDF Error:', error);
     return res.status(500).json({ error: 'Failed to load PDF' });
   }
+});
+
+// ADD THIS ROUTE - for backwards compatibility with /file/:id URLs
+router.get('/file/:id', auth, async (req, res) => {
+  console.log('📄 Legacy /file/:id request, redirecting to /:id/pdf');
+  // Redirect to the proper endpoint
+  return res.redirect(`/api/research/${req.params.id}/pdf`);
 });
 
 // STATS
@@ -99,7 +107,7 @@ router.get('/:id/citation', auth, async (req, res) => {
   }
 });
 
-// GET SINGLE RESEARCH
+// GET SINGLE RESEARCH - FIXED pdfUrl generation
 router.get('/:id', auth, async (req, res) => {
   try {
     console.log('🔍 Fetching paper:', req.params.id);
@@ -115,7 +123,8 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     const paperObj = paper.toObject();
-    paperObj.pdfUrl = `/research/${paper._id}/pdf`; // Clean URL without /api prefix
+    // FIXED: Generate correct PDF URL
+    paperObj.pdfUrl = `/api/research/${paper._id}/pdf`; // Full path with /api
 
     console.log('✅ Paper data:', { id: paper._id, pdfUrl: paperObj.pdfUrl });
     

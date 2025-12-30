@@ -36,20 +36,22 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
 
   useEffect(() => {
     const loadPDF = async () => {
-      try {
-        const API_URL = import.meta.env.VITE_API_URL;
-        
-        // FIX: Proper URL construction
-        let url;
-        if (pdfUrl.startsWith('http')) {
-          url = pdfUrl; // Direct Cloudinary URL
-        } else {
-          // Remove any leading slashes and /api prefix from pdfUrl
-          const cleanPath = pdfUrl.replace(/^\/?(api\/)?/, '');
-          url = `${API_URL}/${cleanPath}`;
-        }
-        
-        console.log('📄 Loading PDF from:', url);
+  try {
+    const API_URL = import.meta.env.VITE_API_URL; // e.g., https://backend.com/api
+    
+    let url;
+    if (pdfUrl.startsWith('http')) {
+      url = pdfUrl; // Direct Cloudinary URL
+    } else if (pdfUrl.startsWith('/api/')) {
+      // Already has /api, use base URL without /api
+      const baseURL = API_URL.replace(/\/api$/, '');
+      url = `${baseURL}${pdfUrl}`;
+    } else {
+      // No /api prefix, add it
+      url = `${API_URL}${pdfUrl.startsWith('/') ? '' : '/'}${pdfUrl}`;
+    }
+    
+    console.log('📄 Full URL:', url);
         
         const pdfjs = await initPdfJs();
         const token = localStorage.getItem('token');
