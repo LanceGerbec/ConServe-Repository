@@ -1,4 +1,3 @@
-// client/src/pages/ResearchDetail.jsx - COMPLETE FIXED VERSION
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare } from 'lucide-react';
@@ -51,8 +50,12 @@ const ResearchDetail = () => {
       }
 
       const data = await res.json();
-      console.log('📄 Paper data received:', data.paper);
-      console.log('🔗 Signed PDF URL:', data.paper?.signedPdfUrl);
+      console.log('📄 Paper loaded:', { 
+        id: data.paper._id, 
+        title: data.paper.title,
+        pdfUrl: data.paper.pdfUrl,
+        fileUrl: data.paper.fileUrl 
+      });
       
       setPaper(data.paper);
 
@@ -61,7 +64,7 @@ const ResearchDetail = () => {
       }
     } catch (error) {
       console.error('❌ Fetch error:', error);
-      setError('Connection error. Please try again.');
+      setError('Connection error');
     } finally {
       setLoading(false);
     }
@@ -76,7 +79,7 @@ const ResearchDetail = () => {
       const data = await res.json();
       setBookmarked(data.bookmarked);
     } catch (error) {
-      console.error('Check bookmark error:', error);
+      console.error('Bookmark check error:', error);
     }
   };
 
@@ -94,9 +97,9 @@ const ResearchDetail = () => {
       });
       const data = await res.json();
       setBookmarked(data.bookmarked);
-      showToast(data.bookmarked ? '✓ Added to favorites!' : '✓ Removed from favorites!');
+      showToast(data.bookmarked ? '✓ Bookmarked!' : '✓ Removed!');
     } catch (error) {
-      showToast('Failed to update bookmark', 'error');
+      showToast('Failed to update', 'error');
     }
   };
 
@@ -106,14 +109,13 @@ const ResearchDetail = () => {
       return;
     }
 
-    const shareUrl = window.location.href;
     try {
       if (navigator.share) {
-        await navigator.share({ title: paper.title, url: shareUrl });
-        showToast('✓ Shared successfully!');
+        await navigator.share({ title: paper.title, url: window.location.href });
+        showToast('✓ Shared!');
       } else {
-        await navigator.clipboard.writeText(shareUrl);
-        showToast('✓ Link copied to clipboard!');
+        await navigator.clipboard.writeText(window.location.href);
+        showToast('✓ Link copied!');
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
@@ -122,18 +124,17 @@ const ResearchDetail = () => {
     }
   };
 
-const handleViewPDF = () => {
-  console.log('🔍 Opening PDF');
-  console.log('📄 PDF URL:', paper?.pdfUrl);
-  
-  if (!paper?.pdfUrl) {
-    showToast('PDF URL not available', 'error');
-    return;
-  }
-  
-  setShowPDF(true);
-};
-
+  const handleViewPDF = () => {
+    console.log('🔍 Opening PDF viewer');
+    console.log('📄 PDF URL:', paper?.pdfUrl || paper?.fileUrl);
+    
+    if (!paper?.pdfUrl && !paper?.fileUrl) {
+      showToast('PDF not available', 'error');
+      return;
+    }
+    
+    setShowPDF(true);
+  };
 
   if (loading) {
     return (
@@ -154,21 +155,21 @@ const handleViewPDF = () => {
         icon: XCircle,
         color: 'red',
         title: 'Research Not Available',
-        message: 'This research paper has been rejected and is no longer available for viewing.',
+        message: 'This research paper has been rejected.',
         bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-500'
       },
       pending: {
         icon: AlertTriangle,
         color: 'yellow',
         title: 'Research Under Review',
-        message: 'This research paper is currently under review and not yet available for public viewing.',
+        message: 'This research paper is under review.',
         bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500'
       },
       default: {
         icon: Lock,
         color: 'gray',
         title: 'Access Denied',
-        message: error || 'Only approved research papers can be viewed.',
+        message: error || 'Only approved research can be viewed.',
         bgClass: 'bg-gray-50 dark:bg-gray-900/20 border-gray-500'
       }
     };
@@ -177,7 +178,7 @@ const handleViewPDF = () => {
     const IconComponent = info.icon;
 
     return (
-      <div className="max-w-3xl mx-auto text-center py-16 animate-fade-in">
+      <div className="max-w-3xl mx-auto text-center py-16">
         <div className={`${info.bgClass} rounded-2xl p-12 shadow-xl border-2`}>
           <IconComponent className={`mx-auto text-${info.color}-500 mb-6`} size={80} />
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{info.title}</h2>
@@ -186,12 +187,11 @@ const handleViewPDF = () => {
           <div className="flex gap-4 justify-center">
             <button onClick={() => navigate('/browse')} className="flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg">
               <ArrowLeft size={20} />
-              Browse Approved Papers
+              Browse Papers
             </button>
-            
             {user?.role === 'admin' && (
               <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg">
-                Go to Dashboard
+                Dashboard
               </button>
             )}
           </div>
@@ -201,91 +201,51 @@ const handleViewPDF = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {toast.show && (
-        <div className={`fixed top-24 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-up ${
-          toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'
-        } text-white`}>
+        <div className={`fixed top-24 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white`}>
           <Check size={20} />
           <span>{toast.message}</span>
         </div>
       )}
 
-      <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-6 transition">
+      <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-6">
         <ArrowLeft size={20} className="mr-2" />
         Back
       </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
         {paper.status !== 'approved' && (
-          <div className={`mb-6 p-4 rounded-lg border-l-4 ${
-            paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' :
-            'bg-red-50 dark:bg-red-900/20 border-red-500'
-          }`}>
+          <div className={`mb-6 p-4 rounded-lg border-l-4 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
             <p className="font-bold text-gray-900 dark:text-white">⚠️ {paper.status.toUpperCase()} PAPER</p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-              {isAuthor ? 'This is your submission. Only you and admins can view this.' : 
-               isAdmin ? 'Admin preview - This paper is not publicly visible yet.' : ''}
-            </p>
           </div>
         )}
 
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{paper.title}</h1>
 
         <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
-          <div className="flex items-center">
-            <User size={16} className="mr-2" />
-            <span>{paper.authors.join(', ')}</span>
-          </div>
-          <div className="flex items-center">
-            <Calendar size={16} className="mr-2" />
-            <span>{new Date(paper.createdAt).toLocaleDateString()}</span>
-          </div>
-          {paper.status === 'approved' && (
-            <div className="flex items-center">
-              <Eye size={16} className="mr-2" />
-              <span>{paper.views} views</span>
-            </div>
-          )}
-          <div className="flex items-center">
-            <Tag size={16} className="mr-2" />
-            <span>{paper.category}</span>
-          </div>
+          <div className="flex items-center"><User size={16} className="mr-2" /><span>{paper.authors.join(', ')}</span></div>
+          <div className="flex items-center"><Calendar size={16} className="mr-2" /><span>{new Date(paper.createdAt).toLocaleDateString()}</span></div>
+          {paper.status === 'approved' && <div className="flex items-center"><Eye size={16} className="mr-2" /><span>{paper.views} views</span></div>}
+          <div className="flex items-center"><Tag size={16} className="mr-2" /><span>{paper.category}</span></div>
         </div>
 
         {paper.status === 'approved' && (
           <div className="flex gap-3 mb-6">
-            <button
-              onClick={toggleBookmark}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                bookmarked
-                  ? 'bg-navy text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
+            <button onClick={toggleBookmark} className={`flex items-center gap-2 px-4 py-2 rounded-lg ${bookmarked ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
               <Bookmark size={18} className={bookmarked ? 'fill-current' : ''} />
               {bookmarked ? 'Bookmarked' : 'Bookmark'}
             </button>
-            <button
-              onClick={() => setShowCitation(true)}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
+            <button onClick={() => setShowCitation(true)} className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
               <Quote size={18} />
               Cite
             </button>
-            <button 
-              onClick={handleShare}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
+            <button onClick={handleShare} className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
               <Share2 size={18} />
               Share
             </button>
-
             {isFaculty && (
-              <button
-                onClick={() => setShowReviewModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-              >
+              <button onClick={() => setShowReviewModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                 <MessageSquare size={18} />
                 Review
               </button>
@@ -295,9 +255,7 @@ const handleViewPDF = () => {
 
         <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Abstract</h2>
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-            {paper.abstract}
-          </p>
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{paper.abstract}</p>
         </div>
 
         {paper.keywords?.length > 0 && (
@@ -305,9 +263,7 @@ const handleViewPDF = () => {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Keywords</h2>
             <div className="flex flex-wrap gap-2">
               {paper.keywords.map((keyword, i) => (
-                <span key={i} className="px-3 py-1 bg-navy/10 text-navy rounded-full text-sm">
-                  {keyword}
-                </span>
+                <span key={i} className="px-3 py-1 bg-navy/10 text-navy rounded-full text-sm">{keyword}</span>
               ))}
             </div>
           </div>
@@ -321,55 +277,37 @@ const handleViewPDF = () => {
         )}
       </div>
 
-      {/* PDF Viewer Section */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
         <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-8 text-center border-2 border-dashed border-red-300 dark:border-red-700">
           <FileText className="mx-auto text-red-600 mb-4" size={64} />
-          <p className="text-gray-900 dark:text-white mb-2 font-bold text-lg">
-            🔒 View-Only Protected Document
-          </p>
+          <p className="text-gray-900 dark:text-white mb-2 font-bold text-lg">🔒 View-Only Protected Document</p>
           <p className="text-gray-700 dark:text-gray-300 mb-4 text-sm">
-            {paper.status === 'approved' 
-              ? 'This PDF is strictly for viewing only. All protection measures are active.' 
-              : '⚠️ Preview Mode - This paper is not yet approved for public viewing'}
+            {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : '⚠️ Preview Mode'}
           </p>
-          
-          <button
-            onClick={handleViewPDF}
-            className="inline-flex items-center justify-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 transition shadow-lg"
-          >
+          <button onClick={handleViewPDF} className="inline-flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 shadow-lg">
             <FileText size={20} />
-            Open Viewer (View Only)
+            Open Viewer
           </button>
         </div>
       </div>
 
       {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
 
-{showPDF && paper.pdfUrl && (
-  <ProtectedPDFViewer 
-    pdfUrl={paper.pdfUrl}
-    paperTitle={paper.title}
-    onClose={() => setShowPDF(false)}
-  />
-)}
-      {showCitation && paper.status === 'approved' && (
-        <CitationModal
-          paper={paper}
-          onClose={() => setShowCitation(false)}
+      {showPDF && (paper.pdfUrl || paper.fileUrl) && (
+        <ProtectedPDFViewer 
+          pdfUrl={paper.pdfUrl || paper.fileUrl}
+          paperTitle={paper.title}
+          onClose={() => setShowPDF(false)}
         />
       )}
 
+      {showCitation && paper.status === 'approved' && (
+        <CitationModal paper={paper} onClose={() => setShowCitation(false)} />
+      )}
+
       {showReviewModal && isFaculty && (
-        <ReviewForm
-          paper={paper}
-          onClose={() => setShowReviewModal(false)}
-          onSuccess={() => {
-            setShowReviewModal(false);
-            fetchPaper();
-          }}
-        />
+        <ReviewForm paper={paper} onClose={() => setShowReviewModal(false)} onSuccess={() => { setShowReviewModal(false); fetchPaper(); }} />
       )}
     </div>
   );

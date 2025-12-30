@@ -11,31 +11,22 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// PDF ACCESS ENDPOINT - MUST BE FIRST (handles both /:id/pdf and /file/:id)
+// PDF ACCESS ENDPOINT
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
-    console.log('📄 PDF Request - ID:', req.params.id);
-    
     const paper = await Research.findById(req.params.id).populate('submittedBy');
-    if (!paper) {
-      console.error('❌ Paper not found');
-      return res.status(404).json({ error: 'Paper not found' });
-    }
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
     
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
-      console.error('❌ Access denied');
       return res.status(403).json({ error: 'Access denied' });
     }
 
     if (!paper.fileUrl) {
-      console.error('❌ No file URL in database');
-      return res.status(404).json({ error: 'PDF file not found' });
+      return res.status(404).json({ error: 'PDF not found' });
     }
-
-    console.log('✅ Redirecting to:', paper.fileUrl);
 
     // Log view
     if (paper.status === 'approved' && !isAuthor) {
@@ -45,7 +36,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
     // Redirect to Cloudinary
     return res.redirect(paper.fileUrl);
   } catch (error) {
-    console.error('❌ PDF Error:', error);
+    console.error('PDF Error:', error);
     return res.status(500).json({ error: 'Failed to load PDF' });
   }
 });
