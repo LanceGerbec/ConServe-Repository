@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Upload, X, Calendar, Tag, Eye, Activity, Bookmark, Grid, List, Search, Filter } from 'lucide-react';
+import { BookOpen, Upload, X, Calendar, Eye, Activity, Bookmark, Grid, List, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
 import ActivityLogs from '../analytics/ActivityLogs';
@@ -12,7 +12,7 @@ const StudentDashboard = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
-  const [stats, setStats] = useState({ submissions: 0, bookmarks: 0, views: 0 });
+  const [stats, setStats] = useState({ submissions: 0, views: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -43,7 +43,6 @@ const StudentDashboard = () => {
       const totalViews = submissionsData.papers?.reduce((sum, p) => sum + (p.views || 0), 0) || 0;
       setStats({
         submissions: submissionsData.count || 0,
-        bookmarks: bookmarksData.count || 0,
         views: totalViews
       });
     } catch (error) {
@@ -61,7 +60,6 @@ const StudentDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBookmarks(prev => prev.filter(b => b._id !== bookmarkId));
-      setStats(prev => ({ ...prev, bookmarks: prev.bookmarks - 1 }));
       showToast('Bookmark removed', 'success');
     } catch (error) {
       showToast('Failed to remove bookmark', 'error');
@@ -72,9 +70,9 @@ const StudentDashboard = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: 'bg-yellow-100 text-yellow-700',
-      approved: 'bg-green-100 text-green-700',
-      rejected: 'bg-red-100 text-red-700'
+      pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+      approved: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+      rejected: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
     };
     return badges[status] || 'bg-gray-100 text-gray-700';
   };
@@ -103,34 +101,44 @@ const StudentDashboard = () => {
   );
 
   const PaperCard = ({ paper, onRemove, isBookmark = false }) => (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition ${viewMode === 'list' ? 'flex gap-4' : ''}`}>
-      <div className="flex-1">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 flex-1 cursor-pointer hover:text-navy" onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}>
-            {isBookmark ? paper.research.title : paper.title}
-          </h3>
-          {!isBookmark && (
-            <span className={`ml-3 px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadge(paper.status)}`}>
-              {paper.status?.toUpperCase()}
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition">
+      <div className="flex items-start justify-between mb-2">
+        <h3 
+          className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 flex-1 cursor-pointer hover:text-navy transition" 
+          onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}
+        >
+          {isBookmark ? paper.research.title : paper.title}
+        </h3>
+        {!isBookmark && (
+          <span className={`ml-3 px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusBadge(paper.status)}`}>
+            {paper.status?.toUpperCase()}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+        {isBookmark ? paper.research.abstract : paper.abstract}
+      </p>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1">
+            <Calendar size={12} />
+            {new Date(paper.createdAt).toLocaleDateString()}
+          </span>
+          {!isBookmark && paper.status === 'approved' && (
+            <span className="flex items-center gap-1">
+              <Eye size={12} />
+              {paper.views || 0}
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-          {isBookmark ? paper.research.abstract : paper.abstract}
-        </p>
-        <div className="flex items-center justify-between">
-          <div className="flex gap-3 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><Calendar size={12} />{new Date(paper.createdAt).toLocaleDateString()}</span>
-            {!isBookmark && paper.status === 'approved' && (
-              <span className="flex items-center gap-1"><Eye size={12} />{paper.views || 0}</span>
-            )}
-          </div>
-          {isBookmark && (
-            <button onClick={() => onRemove(paper._id, paper.research._id)} className="text-red-600 hover:text-red-700 text-xs font-semibold">
-              Remove
-            </button>
-          )}
-        </div>
+        {isBookmark && (
+          <button 
+            onClick={() => onRemove(paper._id, paper.research._id)} 
+            className="text-red-600 hover:text-red-700 text-xs font-semibold transition"
+          >
+            Remove
+          </button>
+        )}
       </div>
     </div>
   );
@@ -148,34 +156,64 @@ const StudentDashboard = () => {
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
       <div className="space-y-4 animate-fade-in">
+        {/* Header */}
         <div className="bg-gradient-to-r from-navy to-accent text-white rounded-xl p-6 shadow-lg">
           <h1 className="text-2xl font-bold mb-1">Welcome back, {user?.firstName}! 👋</h1>
           <p className="text-blue-100 text-sm">Student Dashboard</p>
         </div>
 
+        {/* Navigation Tabs */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-1 flex gap-1">
           {[
             { id: 'overview', icon: BookOpen, label: 'Overview' },
-            { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
+            { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', badge: bookmarks.length },
             { id: 'activity', icon: Activity, label: 'Activity' }
           ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${activeTab === tab.id ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveTab(tab.id)} 
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 relative ${
+                activeTab === tab.id 
+                  ? 'bg-navy text-white' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
               <tab.icon size={16} />
               {tab.label}
+              {tab.badge > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
+        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-blue-600" onClick={() => setActiveTab('overview')} />
-              <StatCard icon={Bookmark} label="Bookmarked" value={stats.bookmarks} color="bg-purple-600" onClick={() => setActiveTab('bookmarks')} />
-              <StatCard icon={Eye} label="Total Views" value={stats.views} color="bg-green-600" />
+            {/* Stats Cards - Only 2 cards now */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <StatCard 
+                icon={Upload} 
+                label="My Submissions" 
+                value={stats.submissions} 
+                color="bg-blue-600" 
+              />
+              <StatCard 
+                icon={Eye} 
+                label="Total Views" 
+                value={stats.views} 
+                color="bg-green-600" 
+              />
             </div>
 
+            {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button onClick={() => setShowSubmitModal(true)} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-1 transition text-left group">
+              <button 
+                onClick={() => setShowSubmitModal(true)} 
+                className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-1 transition text-left group"
+              >
                 <div className="w-12 h-12 bg-navy rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition">
                   <Upload className="text-white" size={24} />
                 </div>
@@ -183,7 +221,10 @@ const StudentDashboard = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Upload your research paper</p>
               </button>
 
-              <button onClick={() => window.location.href = '/browse'} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-1 transition text-left group">
+              <button 
+                onClick={() => window.location.href = '/browse'} 
+                className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-1 transition text-left group"
+              >
                 <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition">
                   <BookOpen className="text-white" size={24} />
                 </div>
@@ -192,24 +233,67 @@ const StudentDashboard = () => {
               </button>
             </div>
 
+            {/* My Submissions Section */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">My Submissions ({filteredSubmissions.length})</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  My Submissions ({filteredSubmissions.length})
+                </h2>
                 <div className="flex gap-2">
-                  <button onClick={() => setViewMode('grid')} className={`p-2 rounded ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><Grid size={16} /></button>
-                  <button onClick={() => setViewMode('list')} className={`p-2 rounded ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><List size={16} /></button>
+                  <button 
+                    onClick={() => setViewMode('grid')} 
+                    className={`p-2 rounded transition ${
+                      viewMode === 'grid' 
+                        ? 'bg-navy text-white' 
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Grid size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')} 
+                    className={`p-2 rounded transition ${
+                      viewMode === 'list' 
+                        ? 'bg-navy text-white' 
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <List size={16} />
+                  </button>
                 </div>
               </div>
               <div className="p-4">
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search submissions..." className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 text-sm" />
+                <input 
+                  type="text" 
+                  value={search} 
+                  onChange={(e) => setSearch(e.target.value)} 
+                  placeholder="Search submissions..." 
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 text-sm focus:border-navy focus:outline-none dark:bg-gray-700 dark:text-white"
+                />
                 {filteredSubmissions.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12">
                     <Upload size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">No submissions yet</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                      {search ? 'No submissions found' : 'No submissions yet'}
+                    </p>
+                    {!search && (
+                      <button
+                        onClick={() => setShowSubmitModal(true)}
+                        className="text-navy dark:text-accent hover:underline text-sm font-semibold"
+                      >
+                        Submit Your First Paper
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
-                    {filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} />)}
+                  <div className={`${
+                    viewMode === 'grid' 
+                      ? 'grid grid-cols-1 md:grid-cols-2 gap-3' 
+                      : 'space-y-3'
+                  }`}>
+                    {filteredSubmissions.map(p => (
+                      <PaperCard key={p._id} paper={p} />
+                    ))}
                   </div>
                 )}
               </div>
@@ -217,6 +301,7 @@ const StudentDashboard = () => {
           </>
         )}
 
+        {/* Bookmarks Tab */}
         {activeTab === 'bookmarks' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -225,33 +310,85 @@ const StudentDashboard = () => {
                 Bookmarked Papers ({filteredBookmarks.length})
               </h2>
               <div className="flex gap-2">
-                <button onClick={() => setViewMode('grid')} className={`p-2 rounded ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><Grid size={16} /></button>
-                <button onClick={() => setViewMode('list')} className={`p-2 rounded ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'}`}><List size={16} /></button>
+                <button 
+                  onClick={() => setViewMode('grid')} 
+                  className={`p-2 rounded transition ${
+                    viewMode === 'grid' 
+                      ? 'bg-navy text-white' 
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Grid size={16} />
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')} 
+                  className={`p-2 rounded transition ${
+                    viewMode === 'list' 
+                      ? 'bg-navy text-white' 
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <List size={16} />
+                </button>
               </div>
             </div>
             <div className="p-4">
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 text-sm" />
+              <input 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                placeholder="Search bookmarks..." 
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 text-sm focus:border-navy focus:outline-none dark:bg-gray-700 dark:text-white"
+              />
               {filteredBookmarks.length === 0 ? (
                 <div className="text-center py-12">
                   <Bookmark size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">No bookmarks yet</p>
-                  <button onClick={() => window.location.href = '/browse'} className="mt-3 text-navy hover:underline text-sm font-semibold">
-                    Browse Papers
-                  </button>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                    {search ? 'No bookmarks found' : 'No bookmarks yet'}
+                  </p>
+                  {!search && (
+                    <button
+                      onClick={() => window.location.href = '/browse'}
+                      className="text-navy dark:text-accent hover:underline text-sm font-semibold"
+                    >
+                      Browse Papers
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
-                  {filteredBookmarks.map(b => <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />)}
+                <div className={`${
+                  viewMode === 'grid' 
+                    ? 'grid grid-cols-1 md:grid-cols-2 gap-3' 
+                    : 'space-y-3'
+                }`}>
+                  {filteredBookmarks.map(b => (
+                    <PaperCard 
+                      key={b._id} 
+                      paper={b} 
+                      isBookmark 
+                      onRemove={handleRemoveBookmark} 
+                    />
+                  ))}
                 </div>
               )}
             </div>
           </div>
         )}
 
+        {/* Activity Tab */}
         {activeTab === 'activity' && <ActivityLogs />}
       </div>
 
-      {showSubmitModal && <SubmitResearch onClose={() => setShowSubmitModal(false)} onSuccess={() => { setShowSubmitModal(false); fetchData(); }} />}
+      {/* Submit Modal */}
+      {showSubmitModal && (
+        <SubmitResearch 
+          onClose={() => setShowSubmitModal(false)} 
+          onSuccess={() => { 
+            setShowSubmitModal(false); 
+            fetchData(); 
+          }} 
+        />
+      )}
     </>
   );
 };
