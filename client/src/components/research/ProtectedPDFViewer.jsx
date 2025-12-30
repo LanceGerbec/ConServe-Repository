@@ -25,37 +25,45 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const blockContent = (reason) => {
     setIsBlocked(true);
     setViolations(prev => prev + 1);
+    setTimeout(() => setIsBlocked(false), 1500);
     if (violations >= 4) setTimeout(onClose, 2000);
   };
 
   useEffect(() => {
     const loadPDF = async () => {
       try {
-        console.log('📄 Loading PDF from:', `${API_BASE}${pdfUrl}`);
+        const API_URL = import.meta.env.VITE_API_URL;
+        
+        // Build correct URL
+        let url;
+        if (pdfUrl.startsWith('http')) {
+          url = pdfUrl; // Direct Cloudinary URL
+        } else if (pdfUrl.startsWith('/api')) {
+          url = `${API_URL}${pdfUrl}`; // Already has /api
+        } else {
+          url = `${API_URL}/api${pdfUrl}`; // Add /api prefix
+        }
+        
+        console.log('📄 Loading PDF from:', url);
         
         const pdfjs = await initPdfJs();
         const token = localStorage.getItem('token');
         
-        if (!token) {
-          throw new Error('Authentication required');
-        }
+        if (!token) throw new Error('Auth required');
         
-        const res = await fetch(`${API_BASE}${pdfUrl}`, {
+        const res = await fetch(url, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/pdf'
           },
-          mode: 'cors',
-          credentials: 'include',
           redirect: 'follow'
         });
         
-        console.log('📄 Response status:', res.status);
+        console.log('📄 Response:', res.status, res.statusText);
         
         if (!res.ok) {
           if (res.status === 404) throw new Error('PDF not found');
@@ -64,7 +72,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         }
         
         const blob = await res.blob();
-        console.log('📄 Blob received, size:', blob.size);
+        console.log('📄 Blob size:', blob.size);
+        
+        if (blob.size < 100) throw new Error('Invalid PDF file');
         
         const arr = await blob.arrayBuffer();
         const doc = await pdfjs.getDocument({ data: arr }).promise;
@@ -75,14 +85,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setTotalPages(doc.numPages);
         setLoading(false);
       } catch (err) {
-        console.error('❌ PDF Load Error:', err);
-        setError(err.message || 'Failed to load PDF');
+        console.error('❌ PDF Error:', err);
+        setError(err.message || 'Failed to load');
         setLoading(false);
       }
     };
     
     if (pdfUrl) loadPDF();
-  }, [pdfUrl, API_BASE]);
+  }, [pdfUrl]);
 
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
@@ -111,7 +121,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.restore();
       } catch (err) {
         console.error('Render error:', err);
-        setError(`Render failed: ${err.message}`);
       }
     };
     
@@ -119,12 +128,11 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   }, [pdf, currentPage, scale, user]);
 
   useEffect(() => {
-    const prevent = (e) => { e.preventDefault(); blockContent('Blocked'); return false; };
+    const prevent = (e) => { e.preventDefault(); blockContent('Blocked'); };
     const preventKeys = (e) => {
       if ((e.ctrlKey || e.metaKey) && ['s','p','c'].includes(e.key.toLowerCase())) {
         e.preventDefault();
         blockContent('Shortcut Blocked');
-        setTimeout(() => setIsBlocked(false), 1500);
       }
     };
     
@@ -152,7 +160,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
-        <p className="text-white text-xl font-bold">Loading Protected Document</p>
+        <p className="text-white text-xl font-bold">Loading...</p>
       </div>
     </div>
   );
@@ -160,11 +168,11 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   if (error) return (
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
       <div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
-        <AlertCircle className="mx-auto text-red-500 mb-4 animate-pulse" size={64}/>
+        <AlertCircle className="mx-auto text-red-500 mb-4" size={64}/>
         <h3 className="text-white text-2xl font-bold mb-3">Failed to Load</h3>
         <p className="text-gray-300 mb-6 text-sm">{error}</p>
-        <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
-          ✕ Close
+        <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
+          Close
         </button>
       </div>
     </div>
@@ -176,8 +184,8 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
           <div className="text-center">
             <Shield size={64} className="text-red-500 mx-auto mb-4 animate-pulse"/>
-            <h2 className="text-white text-2xl font-bold">CONTENT BLOCKED</h2>
-            <p className="text-red-400 mt-2">Violation #{violations} of 5</p>
+            <h2 className="text-white text-2xl font-bold">BLOCKED</h2>
+            <p className="text-red-400 mt-2">Violation #{violations}/5</p>
           </div>
         </div>
       )}

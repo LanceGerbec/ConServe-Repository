@@ -123,12 +123,11 @@ const ResearchDetail = () => {
   };
 
 const handleViewPDF = () => {
-  console.log('🔍 Opening PDF viewer...');
+  console.log('🔍 Opening PDF');
   console.log('📄 PDF URL:', paper?.pdfUrl);
   
   if (!paper?.pdfUrl) {
-    console.error('❌ No PDF URL found!');
-    showToast('PDF URL not available. Please refresh the page.', 'error');
+    showToast('PDF URL not available', 'error');
     return;
   }
   
@@ -348,7 +347,7 @@ const handleViewPDF = () => {
 
       {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
 
-      {showPDF && paper.pdfUrl && (
+{showPDF && paper.pdfUrl && (
   <ProtectedPDFViewer 
     pdfUrl={paper.pdfUrl}
     paperTitle={paper.title}
