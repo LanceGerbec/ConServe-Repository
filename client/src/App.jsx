@@ -15,8 +15,9 @@ import Privacy from './pages/Privacy';
 import Dashboard from './pages/Dashboard';
 import Browse from './pages/Browse';
 import ResearchDetail from './pages/ResearchDetail';
-import Layout from './components/layout/Layout';
 import Notifications from './pages/Notifications';
+import AdvancedSearch from './components/search/AdvancedSearch';
+import Layout from './components/layout/Layout';
 
 function App() {
   return (
@@ -49,7 +50,12 @@ function App() {
                 <Layout><Browse /></Layout>
               </ProtectedRoute>
             } />
-              <Route path="/notifications" element={
+            <Route path="/search" element={
+              <ProtectedRoute>
+                <Layout><AdvancedSearch /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/notifications" element={
               <ProtectedRoute>
                 <Layout><Notifications /></Layout>
               </ProtectedRoute>

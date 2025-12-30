@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
 import ReviewForm from '../components/review/ReviewForm';
+import SimilarPapers from '../components/research/SimilarPapers';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -183,7 +184,7 @@ const ResearchDetail = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in">
+    <div className="max-w-5xl mx-auto animate-fade-in space-y-6">
       {toast.show && (
         <div className={`fixed top-24 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-up ${
           toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'
@@ -328,6 +329,9 @@ const ResearchDetail = () => {
           </button>
         </div>
       </div>
+
+      {/* Similar Papers - Only show for approved papers */}
+      {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
 
       {/* Modals */}
       {showPDF && (

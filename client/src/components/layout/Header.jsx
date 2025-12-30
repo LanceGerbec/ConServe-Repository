@@ -1,6 +1,5 @@
-// client/src/components/layout/Header.jsx
 import { Link, useLocation } from 'react-router-dom';
-import { Moon, Sun, Menu, X, LogOut, User } from 'lucide-react';
+import { Moon, Sun, Menu, X, LogOut, User, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +41,7 @@ const Header = () => {
   const navLinks = [
     { path: '/', label: 'Home' },
     { path: '/browse', label: 'Browse' },
+    { path: '/search', label: 'Search' },
     { path: '/about', label: 'About' },
     { path: '/help', label: 'Help' },
   ];
@@ -75,7 +75,8 @@ const Header = () => {
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center space-x-2">
               {navLinks.map((link) => (
-                <Link key={link.path} to={link.path} className={`px-4 py-2 rounded-lg font-medium transition ${isActive(link.path) ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                <Link key={link.path} to={link.path} className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${isActive(link.path) ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  {link.label === 'Search' && <Search size={16} />}
                   {link.label}
                 </Link>
               ))}
@@ -122,7 +123,8 @@ const Header = () => {
           {isMenuOpen && (
             <div className="md:hidden mt-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-800 pt-4 animate-slide-up">
               {navLinks.map((link) => (
-                <Link key={link.path} to={link.path} onClick={() => setIsMenuOpen(false)} className={`block px-4 py-2 rounded-lg font-medium ${isActive(link.path) ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                <Link key={link.path} to={link.path} onClick={() => setIsMenuOpen(false)} className={`block px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${isActive(link.path) ? 'bg-navy text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  {link.label === 'Search' && <Search size={16} />}
                   {link.label}
                 </Link>
               ))}
@@ -158,4 +160,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default Header;  

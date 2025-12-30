@@ -1,39 +1,37 @@
 import express from 'express';
-import { auth, authorize } from '../middleware/auth.js';
-import { upload } from '../middleware/upload.js';
-import {
-  getAllResearch,
-  getResearchById,
-  submitResearch,
-  updateResearchStatus,
-  deleteResearch,
-  getMySubmissions,
-  getResearchStats,
-  getCitation,
-  streamPDFWithToken,
-  getRecentlyViewed,
-  getTrendingPapers,
-  logViolation // ADD THIS IMPORT
-} from '../controllers/researchController.js';
+import { auth } from '../middleware/auth.js';
+import { advancedSearch, findSimilarPapers, getRecommendations } from '../utils/searchService.js';
 
 const router = express.Router();
 
-// Public route for PDF streaming
-router.get('/view/:fileId', streamPDFWithToken);
+router.get('/advanced', auth, async (req, res) => {
+  try {
+    const papers = await advancedSearch(req.query);
+    res.json({ papers, count: papers.length });
+  } catch (error) {
+    console.error('Advanced search error:', error);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
 
-// Protected routes
-router.get('/', auth, getAllResearch);
-router.get('/stats', auth, authorize('admin'), getResearchStats);
-router.get('/my-submissions', auth, getMySubmissions);
-router.get('/recently-viewed', auth, getRecentlyViewed);
-router.get('/trending', auth, getTrendingPapers);
-router.get('/:id/citation', auth, getCitation);
-router.get('/:id', auth, getResearchById);
-router.post('/', auth, upload.single('file'), submitResearch);
-router.patch('/:id/status', auth, authorize('admin', 'faculty'), updateResearchStatus);
-router.delete('/:id', auth, authorize('admin'), deleteResearch);
-router.post('/log-violation', auth, logViolation); // ADD THIS ROUTE
+router.get('/similar/:id', auth, async (req, res) => {
+  try {
+    const papers = await findSimilarPapers(req.params.id, parseInt(req.query.limit) || 5);
+    res.json({ papers, count: papers.length });
+  } catch (error) {
+    console.error('Similar search error:', error);
+    res.status(500).json({ error: 'Failed to find similar papers' });
+  }
+});
 
-console.log('✅ Research routes registered');
+router.get('/recommendations', auth, async (req, res) => {
+  try {
+    const papers = await getRecommendations(req.user._id, parseInt(req.query.limit) || 10);
+    res.json({ papers, count: papers.length });
+  } catch (error) {
+    console.error('Recommendations error:', error);
+    res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+});
 
 export default router;
