@@ -66,31 +66,36 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const [userStats, researchStats, pendingUsersData, pendingResearchData, allUsersData, allResearchData, bookmarksData] = await Promise.all([
-        fetch(`${API_URL}/users/stats`, { headers }).then(r => r.json()),
-        fetch(`${API_URL}/research/stats`, { headers }).then(r => r.json()),
-        fetch(`${API_URL}/users?status=pending`, { headers }).then(r => r.json()),
-        fetch(`${API_URL}/research?status=pending`, { headers }).then(r => r.json()),
-        activeTab === 'users' ? fetch(`${API_URL}/users`, { headers }).then(r => r.json()) : Promise.resolve({ users: [] }),
-        activeTab === 'research' ? fetch(`${API_URL}/research`, { headers }).then(r => r.json()) : Promise.resolve({ papers: [] }),
-        activeTab === 'bookmarks' ? fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }).then(r => r.json()) : Promise.resolve({ bookmarks: [] })
-      ]);
-      setStats({ users: userStats, research: researchStats });
-      setPendingUsers(pendingUsersData.users || []);
-      setPendingResearch(pendingResearchData.papers || []);
-      setAllUsers(allUsersData.users || []);
-      setAllResearch(allResearchData.papers || []);
-      setBookmarks(bookmarksData.bookmarks || []);
-    } catch (error) {
-      console.error('Fetch error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+ // client/src/components/dashboard/AdminDashboard.jsx - UPDATE fetchData function only
+const fetchData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    const [userStats, researchStats, pendingUsersData, pendingResearchData, allUsersData, allResearchData, bookmarksData] = await Promise.all([
+      fetch(`${API_URL}/users/stats`, { headers }).then(r => r.json()),
+      fetch(`${API_URL}/research/stats`, { headers }).then(r => r.json()),
+      fetch(`${API_URL}/users?status=pending`, { headers }).then(r => r.json()),
+      fetch(`${API_URL}/research?status=pending`, { headers }).then(r => r.json()),
+      activeTab === 'users' ? fetch(`${API_URL}/users`, { headers }).then(r => r.json()) : Promise.resolve({ users: [] }),
+      activeTab === 'research' ? fetch(`${API_URL}/research`, { headers }).then(r => r.json()) : Promise.resolve({ papers: [] }),
+      activeTab === 'bookmarks' ? fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }).then(r => r.json()) : Promise.resolve({ bookmarks: [] })
+    ]);
+    
+    setStats({ 
+      users: userStats || { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, 
+      research: researchStats || { total: 0, pending: 0, approved: 0, rejected: 0 } 
+    });
+    setPendingUsers(pendingUsersData.users || []);
+    setPendingResearch(pendingResearchData.papers || []);
+    setAllUsers(allUsersData.users || []);
+    setAllResearch(allResearchData.papers || []);
+    setBookmarks(bookmarksData.bookmarks || []);
+  } catch (error) {
+    console.error('Fetch error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleApproveUser = async (userId) => {
     try {
