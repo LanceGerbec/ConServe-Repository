@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Grid, List } from 'lucide-react';
+import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Grid, List, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
 import ActivityLogs from '../analytics/ActivityLogs';
@@ -86,44 +86,45 @@ const StudentDashboard = () => {
   );
 
   const StatCard = ({ icon: Icon, label, value, color }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-lg`}>
-          <Icon className="text-white" size={22} />
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 md:p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className={`w-14 h-14 md:w-16 md:h-16 ${color} rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg`}>
+          <Icon className="text-white" size={24} />
         </div>
-        <span className="text-3xl font-bold text-navy dark:text-accent">{value}</span>
+        <span className="text-3xl md:text-4xl font-bold text-navy dark:text-accent">{value}</span>
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 font-semibold">{label}</p>
+      <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 font-semibold">{label}</p>
     </div>
   );
 
   const PaperCard = ({ paper, onRemove, isBookmark = false }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-      <div className="flex items-start justify-between mb-2">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 md:p-5 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all">
+      <div className="flex items-start justify-between mb-3 gap-3">
         <h3 
-          className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 flex-1 cursor-pointer hover:text-navy transition" 
+          className="font-bold text-sm md:text-base text-gray-900 dark:text-white line-clamp-2 flex-1 cursor-pointer hover:text-navy transition" 
           onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}
         >
           {isBookmark ? paper.research.title : paper.title}
         </h3>
         {!isBookmark && (
-          <span className={`ml-3 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${getStatusBadge(paper.status)}`}>
+          <span className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap flex-shrink-0 ${getStatusBadge(paper.status)}`}>
             {paper.status?.toUpperCase()}
           </span>
         )}
       </div>
-      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+      <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
         {isBookmark ? paper.research.abstract : paper.abstract}
       </p>
-      <div className="flex items-center justify-between">
-        <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1">
-            <Calendar size={12} />
-            {new Date(paper.createdAt).toLocaleDateString()}
+      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-3 md:gap-4 text-xs md:text-sm text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1.5">
+            <Calendar size={14} />
+            <span className="hidden sm:inline">{new Date(paper.createdAt).toLocaleDateString()}</span>
+            <span className="sm:hidden">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
           </span>
           {!isBookmark && paper.status === 'approved' && (
-            <span className="flex items-center gap-1">
-              <Eye size={12} />
+            <span className="flex items-center gap-1.5">
+              <Eye size={14} />
               {paper.views || 0}
             </span>
           )}
@@ -131,7 +132,7 @@ const StudentDashboard = () => {
         {isBookmark && (
           <button 
             onClick={() => onRemove(paper._id, paper.research._id)} 
-            className="text-red-600 hover:text-red-700 text-xs font-bold transition"
+            className="text-red-600 hover:text-red-700 text-xs md:text-sm font-bold transition px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
           >
             Remove
           </button>
@@ -152,13 +153,15 @@ const StudentDashboard = () => {
     <>
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
-      <div className="space-y-4 animate-fade-in">
-        <div className="bg-gradient-to-r from-navy to-accent text-white rounded-xl p-6 shadow-lg">
-          <h1 className="text-2xl font-bold mb-1">Welcome back, {user?.firstName}! 👋</h1>
-          <p className="text-blue-100 text-sm">Student Dashboard</p>
+      <div className="space-y-4 md:space-y-6 animate-fade-in px-4 md:px-0">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-xl">
+          <h1 className="text-xl md:text-3xl font-bold mb-2">Welcome back, {user?.firstName}! 👋</h1>
+          <p className="text-blue-100 text-sm md:text-base">Student Dashboard</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-1 flex gap-1">
+        {/* Navigation Tabs - Mobile Optimized */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex flex-col sm:flex-row gap-2">
           {[
             { id: 'overview', icon: BookOpen, label: 'Overview' },
             { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', badge: bookmarks.length },
@@ -167,16 +170,16 @@ const StudentDashboard = () => {
             <button 
               key={tab.id} 
               onClick={() => setActiveTab(tab.id)} 
-              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 relative ${
+              className={`w-full sm:flex-1 px-4 py-3 md:py-3.5 rounded-xl text-sm md:text-base font-semibold transition flex items-center justify-center gap-2 relative ${
                 activeTab === tab.id 
-                  ? 'bg-navy text-white shadow-md' 
+                  ? 'bg-navy text-white shadow-lg' 
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              <tab.icon size={16} />
+              <tab.icon size={18} />
               {tab.label}
               {tab.badge > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
                   {tab.badge}
                 </span>
               )}
@@ -184,83 +187,89 @@ const StudentDashboard = () => {
           ))}
         </div>
 
+        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
               <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-blue-600" />
               <StatCard icon={Eye} label="Total Views" value={stats.views} color="bg-green-600" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
               <button 
                 onClick={() => setShowSubmitModal(true)} 
-                className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-1 transition text-left group"
+                className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition text-left group"
               >
-                <div className="w-12 h-12 bg-navy rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition shadow-lg">
-                  <Upload className="text-white" size={24} />
+                <div className="w-14 h-14 md:w-16 md:h-16 bg-navy rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition shadow-lg">
+                  <Upload className="text-white" size={28} />
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white mb-1">Submit Research</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Upload your research paper</p>
+                <h3 className="font-bold text-base md:text-lg text-gray-900 dark:text-white mb-2">Submit Research</h3>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">Upload your research paper</p>
               </button>
 
               <button 
                 onClick={() => window.location.href = '/browse'} 
-                className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-1 transition text-left group"
+                className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition text-left group"
               >
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition shadow-lg">
-                  <BookOpen className="text-white" size={24} />
+                <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition shadow-lg">
+                  <BookOpen className="text-white" size={28} />
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white mb-1">Browse Papers</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Explore the repository</p>
+                <h3 className="font-bold text-base md:text-lg text-gray-900 dark:text-white mb-2">Browse Papers</h3>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">Explore the repository</p>
               </button>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Upload size={20} className="text-blue-600" />
-                  My Submissions ({filteredSubmissions.length})
-                </h2>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setViewMode('grid')} 
-                    className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                  >
-                    <Grid size={16} />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode('list')} 
-                    className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                  >
-                    <List size={16} />
-                  </button>
+            {/* My Submissions Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Upload size={22} className="text-blue-600 flex-shrink-0" />
+                    <span>My Submissions ({filteredSubmissions.length})</span>
+                  </h2>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setViewMode('grid')} 
+                      className={`p-2.5 md:p-3 rounded-xl transition ${viewMode === 'grid' ? 'bg-navy text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                      <Grid size={18} />
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('list')} 
+                      className={`p-2.5 md:p-3 rounded-xl transition ${viewMode === 'list' ? 'bg-navy text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                      <List size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="p-4">
                 <input 
                   type="text" 
                   value={search} 
                   onChange={(e) => setSearch(e.target.value)} 
                   placeholder="Search submissions..." 
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 text-sm focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 md:px-5 py-3 md:py-3.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-sm md:text-base focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-700 dark:text-white transition"
                 />
+              </div>
+              <div className="p-4 md:p-6">
                 {filteredSubmissions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Upload size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 font-medium">
+                  <div className="text-center py-12 md:py-16">
+                    <Upload size={56} className="mx-auto text-gray-400 mb-4 opacity-30" />
+                    <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base mb-3 font-medium">
                       {search ? 'No submissions found' : 'No submissions yet'}
                     </p>
                     {!search && (
                       <button
                         onClick={() => setShowSubmitModal(true)}
-                        className="text-navy dark:text-accent hover:underline text-sm font-semibold"
+                        className="text-navy dark:text-accent hover:underline text-sm md:text-base font-semibold"
                       >
                         Submit Your First Paper
                       </button>
                     )}
                   </div>
                 ) : (
-                  <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
+                  <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 gap-4 md:gap-5' : 'space-y-4 md:space-y-5'}`}>
                     {filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} />)}
                   </div>
                 )}
@@ -269,53 +278,56 @@ const StudentDashboard = () => {
           </>
         )}
 
+        {/* Bookmarks Tab */}
         {activeTab === 'bookmarks' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Bookmark size={20} className="text-purple-600" />
-                Bookmarked Papers ({filteredBookmarks.length})
-              </h2>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setViewMode('grid')} 
-                  className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                >
-                  <Grid size={16} />
-                </button>
-                <button 
-                  onClick={() => setViewMode('list')} 
-                  className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                >
-                  <List size={16} />
-                </button>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Bookmark size={22} className="text-purple-600 flex-shrink-0" />
+                  <span>Bookmarked Papers ({filteredBookmarks.length})</span>
+                </h2>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setViewMode('grid')} 
+                    className={`p-2.5 md:p-3 rounded-xl transition ${viewMode === 'grid' ? 'bg-navy text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <Grid size={18} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')} 
+                    className={`p-2.5 md:p-3 rounded-xl transition ${viewMode === 'list' ? 'bg-navy text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <List size={18} />
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="p-4">
               <input 
                 type="text" 
                 value={search} 
                 onChange={(e) => setSearch(e.target.value)} 
                 placeholder="Search bookmarks..." 
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 text-sm focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-sm md:text-base focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-700 dark:text-white transition"
               />
+            </div>
+            <div className="p-4 md:p-6">
               {filteredBookmarks.length === 0 ? (
-                <div className="text-center py-12">
-                  <Bookmark size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 font-medium">
+                <div className="text-center py-12 md:py-16">
+                  <Bookmark size={56} className="mx-auto text-gray-400 mb-4 opacity-30" />
+                  <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base mb-3 font-medium">
                     {search ? 'No bookmarks found' : 'No bookmarks yet'}
                   </p>
                   {!search && (
                     <button
                       onClick={() => window.location.href = '/browse'}
-                      className="text-navy dark:text-accent hover:underline text-sm font-semibold"
+                      className="text-navy dark:text-accent hover:underline text-sm md:text-base font-semibold"
                     >
                       Browse Papers
                     </button>
                   )}
                 </div>
               ) : (
-                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
+                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 gap-4 md:gap-5' : 'space-y-4 md:space-y-5'}`}>
                   {filteredBookmarks.map(b => <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />)}
                 </div>
               )}
@@ -323,9 +335,11 @@ const StudentDashboard = () => {
           </div>
         )}
 
+        {/* Activity Tab */}
         {activeTab === 'activity' && <ActivityLogs />}
       </div>
 
+      {/* Submit Modal */}
       {showSubmitModal && (
         <SubmitResearch 
           onClose={() => setShowSubmitModal(false)} 
