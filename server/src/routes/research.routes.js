@@ -1,4 +1,3 @@
-// server/src/routes/research.routes.js
 import express from 'express';
 import { auth, authorize } from '../middleware/auth.js';
 import multer from 'multer';
@@ -11,7 +10,7 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// PDF ACCESS ENDPOINT
+// PDF ACCESS
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
     const paper = await Research.findById(req.params.id).populate('submittedBy');
@@ -24,9 +23,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    if (!paper.fileUrl) {
-      return res.status(404).json({ error: 'PDF not found' });
-    }
+    if (!paper.fileUrl) return res.status(404).json({ error: 'PDF not found' });
 
     // Log view
     if (paper.status === 'approved' && !isAuthor) {
@@ -41,12 +38,8 @@ router.get('/:id/pdf', auth, async (req, res) => {
   }
 });
 
-// ADD THIS ROUTE - for backwards compatibility with /file/:id URLs
-router.get('/file/:id', auth, async (req, res) => {
-  console.log('📄 Legacy /file/:id request, redirecting to /:id/pdf');
-  // Redirect to the proper endpoint
-  return res.redirect(`/api/research/${req.params.id}/pdf`);
-});
+// Legacy support
+router.get('/file/:id', auth, (req, res) => res.redirect(`/api/research/${req.params.id}/pdf`));
 
 // STATS
 router.get('/stats', auth, async (req, res) => {
@@ -98,11 +91,28 @@ router.get('/:id/citation', auth, async (req, res) => {
   }
 });
 
-// GET SINGLE RESEARCH - FIXED pdfUrl generation
+// LOG VIOLATION
+router.post('/log-violation', auth, async (req, res) => {
+  try {
+    const { researchId, violationType } = req.body;
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'PDF_PROTECTION_VIOLATION',
+      resource: 'Research',
+      resourceId: researchId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { violationType }
+    });
+    res.json({ message: 'Violation logged' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to log violation' });
+  }
+});
+
+// GET SINGLE RESEARCH
 router.get('/:id', auth, async (req, res) => {
   try {
-    console.log('🔍 Fetching paper:', req.params.id);
-    
     const paper = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName email');
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
@@ -114,14 +124,11 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     const paperObj = paper.toObject();
-    // FIXED: Generate correct PDF URL
-    paperObj.pdfUrl = `/api/research/${paper._id}/pdf`; // Full path with /api
-
-    console.log('✅ Paper data:', { id: paper._id, pdfUrl: paperObj.pdfUrl });
+    paperObj.pdfUrl = `/api/research/${paper._id}/pdf`;
     
     res.json({ paper: paperObj });
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('Error:', error);
     res.status(500).json({ error: 'Failed to fetch paper' });
   }
 });
@@ -168,11 +175,9 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
       { folder: 'research-papers', resource_type: 'raw', format: 'pdf' },
       async (error, result) => {
         if (error) {
-          console.error('❌ Upload error:', error);
+          console.error('Upload error:', error);
           return res.status(500).json({ error: 'Upload failed' });
         }
-        
-        console.log('✅ Uploaded to:', result.secure_url);
         
         const research = await Research.create({
           title,
@@ -206,7 +211,7 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
     
     Readable.from(req.file.buffer).pipe(uploadStream);
   } catch (error) {
-    console.error('❌ Submit error:', error);
+    console.error('Submit error:', error);
     res.status(500).json({ error: 'Submission failed' });
   }
 });

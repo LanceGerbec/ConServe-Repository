@@ -18,7 +18,7 @@ const initPdfJs = async () => {
   }
 };
 
-const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
+const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const { user } = useAuth();
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,7 +60,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // ENHANCED MOBILE SCREENSHOT DETECTION
+  // Mobile Screenshot Detection
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -68,135 +68,104 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     
     if (!isMobile) return;
 
-    // ANDROID DETECTION - ENHANCED
     if (isAndroid) {
       const detectVisibility = () => {
         const now = Date.now();
-        if (document.hidden) {
-          if (now - lastHideTime.current < 1000) {
-            blockContent('📱 Android Screenshot Detected');
-            setTimeout(() => setIsBlocked(false), 3000);
-          }
-          lastHideTime.current = now;
+        if (document.hidden && now - lastHideTime.current < 1000) {
+          blockContent('📱 Screenshot Detected');
+          setTimeout(() => setIsBlocked(false), 3000);
         }
+        if (document.hidden) lastHideTime.current = now;
       };
 
       const detectBlur = () => {
-        blockContent('📱 Screenshot Attempt Blocked');
+        blockContent('📱 Screenshot Blocked');
         setTimeout(() => setIsBlocked(false), 2000);
       };
 
       const detectTouch = (e) => {
-        if (e.touches && e.touches.length > 2) {
+        if (e.touches?.length > 2) {
           e.preventDefault();
-          blockContent('📱 Multi-Touch Screenshot Blocked');
+          blockContent('📱 Multi-Touch Blocked');
         }
       };
 
-      let powerPressed = false;
-      let volumePressed = false;
+      let powerPressed = false, volumePressed = false;
       const detectKeys = (e) => {
-        if (e.keyCode === 26 || e.key === 'Power' || e.code === 'Power') powerPressed = true;
-        if (e.keyCode === 25 || e.key === 'VolumeDown' || e.code === 'VolumeDown') volumePressed = true;
+        if ([26, 'Power'].includes(e.keyCode || e.key)) powerPressed = true;
+        if ([25, 'VolumeDown'].includes(e.keyCode || e.key)) volumePressed = true;
         if (powerPressed && volumePressed) {
           blockContent('📱 Screenshot Combo Blocked');
-          setTimeout(() => { setIsBlocked(false); powerPressed = false; volumePressed = false; }, 2000);
+          setTimeout(() => { setIsBlocked(false); powerPressed = volumePressed = false; }, 2000);
         }
       };
 
       document.addEventListener('visibilitychange', detectVisibility);
       window.addEventListener('blur', detectBlur);
-      window.addEventListener('pagehide', detectBlur);
       document.addEventListener('keydown', detectKeys);
-      document.addEventListener('keyup', detectKeys);
       document.addEventListener('touchstart', detectTouch, { passive: false });
 
       return () => {
         document.removeEventListener('visibilitychange', detectVisibility);
         window.removeEventListener('blur', detectBlur);
-        window.removeEventListener('pagehide', detectBlur);
         document.removeEventListener('keydown', detectKeys);
-        document.removeEventListener('keyup', detectKeys);
         document.removeEventListener('touchstart', detectTouch);
       };
     }
 
-    // iOS DETECTION - ENHANCED
     if (isIOS) {
       let volumeUp = false, power = false;
       const detectIOS = (e) => {
-        if (e.key === 'VolumeUp' || e.keyCode === 175 || e.code === 'VolumeUp') volumeUp = true;
-        if (e.key === 'Power' || e.keyCode === 116 || e.code === 'Power') power = true;
+        if (['VolumeUp', 175].includes(e.key || e.keyCode)) volumeUp = true;
+        if (['Power', 116].includes(e.key || e.keyCode)) power = true;
         if (volumeUp && power) {
           blockContent('📱 iOS Screenshot Blocked');
-          setTimeout(() => { setIsBlocked(false); volumeUp = false; power = false; }, 2000);
+          setTimeout(() => { setIsBlocked(false); volumeUp = power = false; }, 2000);
         }
       };
 
       const detectVisibility = () => {
         const now = Date.now();
-        if (document.hidden) {
-          if (now - lastHideTime.current < 1000) {
-            blockContent('📱 iOS Screenshot Detected');
-            setTimeout(() => setIsBlocked(false), 2000);
-          }
-          lastHideTime.current = now;
+        if (document.hidden && now - lastHideTime.current < 1000) {
+          blockContent('📱 Screenshot Detected');
+          setTimeout(() => setIsBlocked(false), 2000);
         }
-      };
-
-      const detectGesture = (e) => {
-        if (e.touches && e.touches.length >= 3) {
-          e.preventDefault();
-          blockContent('📱 Gesture Screenshot Blocked');
-        }
+        if (document.hidden) lastHideTime.current = now;
       };
 
       document.addEventListener('keydown', detectIOS);
-      document.addEventListener('keyup', detectIOS);
       document.addEventListener('visibilitychange', detectVisibility);
       window.addEventListener('blur', detectVisibility);
-      window.addEventListener('pagehide', detectVisibility);
-      document.addEventListener('touchstart', detectGesture, { passive: false });
 
       return () => {
         document.removeEventListener('keydown', detectIOS);
-        document.removeEventListener('keyup', detectIOS);
         document.removeEventListener('visibilitychange', detectVisibility);
         window.removeEventListener('blur', detectVisibility);
-        window.removeEventListener('pagehide', detectVisibility);
-        document.removeEventListener('touchstart', detectGesture);
       };
     }
 
-    // UNIVERSAL MOBILE PROTECTIONS
-    const preventContext = (e) => { e.preventDefault(); blockContent('📱 Context Blocked'); setTimeout(() => setIsBlocked(false), 1500); };
-    const preventMulti = (e) => { if (e.touches && e.touches.length > 1) { e.preventDefault(); blockContent('📱 Multi-Touch Blocked'); } };
+    // Universal Mobile Protections
+    const preventContext = (e) => { e.preventDefault(); blockContent('📱 Blocked'); setTimeout(() => setIsBlocked(false), 1500); };
+    const preventMulti = (e) => { if (e.touches?.length > 1) { e.preventDefault(); blockContent('📱 Multi-Touch Blocked'); } };
     const preventSelect = (e) => { e.preventDefault(); return false; };
-    const preventLongPress = (e) => { e.preventDefault(); blockContent('📱 Long Press Blocked'); };
 
-    document.addEventListener('contextmenu', preventContext, { passive: false });
+    ['contextmenu', 'selectstart', 'dragstart'].forEach(ev => 
+      document.addEventListener(ev, preventContext, { passive: false })
+    );
     document.addEventListener('touchstart', preventMulti, { passive: false });
-    document.addEventListener('selectstart', preventSelect, { passive: false });
-    document.addEventListener('touchend', preventLongPress, { passive: false });
-    document.addEventListener('touchmove', preventSelect, { passive: false });
     
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
     document.body.style.webkitTouchCallout = 'none';
-    document.body.style.MozUserSelect = 'none';
-    document.body.style.msUserSelect = 'none';
 
     return () => {
-      document.removeEventListener('contextmenu', preventContext);
+      ['contextmenu', 'selectstart', 'dragstart'].forEach(ev => 
+        document.removeEventListener(ev, preventContext)
+      );
       document.removeEventListener('touchstart', preventMulti);
-      document.removeEventListener('selectstart', preventSelect);
-      document.removeEventListener('touchend', preventLongPress);
-      document.removeEventListener('touchmove', preventSelect);
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
       document.body.style.webkitTouchCallout = '';
-      document.body.style.MozUserSelect = '';
-      document.body.style.msUserSelect = '';
     };
   }, [violations]);
 
@@ -215,17 +184,17 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     return () => clearTimeout(sessionTimerRef.current); 
   }, []);
 
-  // DESKTOP SCREENSHOT DETECTION
+  // Desktop Screenshot Detection
   useEffect(() => {
     const detect = (e) => { 
-      if (e.key === 'PrintScreen' || e.keyCode === 44 || e.code === 'PrintScreen') { 
+      if (['PrintScreen', 44].includes(e.key || e.keyCode)) { 
         screenshotAttempts.current++; 
         blockContent('💻 Screenshot Blocked'); 
         setTimeout(() => { if (screenshotAttempts.current < 3) setIsBlocked(false); }, 3000); 
       } 
     };
     const prevent = (e) => { 
-      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') { 
+      if (['PrintScreen'].includes(e.key)) { 
         e.preventDefault(); 
         navigator.clipboard.writeText(''); 
         blockContent('💻 Blocked'); 
@@ -243,16 +212,12 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     const handleVis = () => { 
       if (document.hidden) { 
         blockContent('⚠️ Tab Changed'); 
-        setTimeout(() => { 
-          if (!document.hidden && violations < MAX_VIOLATIONS) setIsBlocked(false); 
-        }, 2000); 
+        setTimeout(() => { if (!document.hidden && violations < MAX_VIOLATIONS) setIsBlocked(false); }, 2000); 
       } 
     };
     const handleBlur = () => { 
       blockContent('⚠️ Focus Lost'); 
-      setTimeout(() => { 
-        if (violations < MAX_VIOLATIONS) setIsBlocked(false); 
-      }, 1500); 
+      setTimeout(() => { if (violations < MAX_VIOLATIONS) setIsBlocked(false); }, 1500); 
     };
     document.addEventListener('visibilitychange', handleVis);
     window.addEventListener('blur', handleBlur);
@@ -281,7 +246,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
     });
     try {
       const token = localStorage.getItem('token');
-      const researchId = signedPdfUrl?.split('/')[2];
+      const researchId = pdfUrl?.split('/')[2];
       if (researchId) await fetch(`${API_BASE}/research/log-violation`, { 
         method: 'POST', 
         headers: { 
@@ -301,13 +266,14 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         const pdfjs = await initPdfJs();
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Auth required');
-        const res = await fetch(`${API_BASE}${signedPdfUrl}`, { 
+        
+        const res = await fetch(`${API_BASE}${pdfUrl}`, { 
           headers: { 
             'Authorization': `Bearer ${token}`, 
             'Accept': 'application/pdf' 
-          }, 
-          mode: 'cors' 
+          } 
         });
+        
         if (!res.ok) throw new Error(res.status === 401 ? 'Session expired' : `Error ${res.status}`);
         const blob = await res.blob();
         if (blob.size === 0) throw new Error('Empty file');
@@ -321,14 +287,10 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         setLoading(false); 
       }
     };
-    if (signedPdfUrl) loadPDF(); 
-    else { 
-      setError('No URL'); 
-      setLoading(false); 
-    }
-  }, [signedPdfUrl, API_BASE]);
+    if (pdfUrl) loadPDF();
+  }, [pdfUrl, API_BASE]);
 
-  // RENDER PDF WITH ENHANCED WATERMARK
+  // Render PDF with Watermark
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
     const render = async () => {
@@ -339,19 +301,14 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         const vp = page.getViewport({ scale });
         canvas.height = vp.height; 
         canvas.width = vp.width;
-        await page.render({ 
-          canvasContext: ctx, 
-          viewport: vp, 
-          enableWebGL: true, 
-          renderInteractiveForms: false 
-        }).promise;
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
         
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
         
-        // CENTER WATERMARK - MUCH LARGER
+        // Center Watermark
         ctx.save();
         ctx.translate(canvas.width/2, canvas.height/2);
         ctx.rotate(-30 * Math.PI/180);
@@ -369,7 +326,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
         ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 100);
         ctx.restore();
 
-        // DIAGONAL WATERMARKS - LARGER
+        // Diagonal Watermarks
         const drawDiagonal = (x, y, angle) => {
           ctx.save();
           ctx.translate(x, y);
@@ -384,18 +341,13 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
           ctx.restore();
         };
 
-        // Multiple diagonal watermarks
         for (let i = 0; i < 3; i++) {
           for (let j = 0; j < 3; j++) {
-            drawDiagonal(
-              (canvas.width / 4) * (i + 1),
-              (canvas.height / 4) * (j + 1),
-              -25
-            );
+            drawDiagonal((canvas.width / 4) * (i + 1), (canvas.height / 4) * (j + 1), -25);
           }
         }
 
-        // CORNER BADGES - LARGER
+        // Corner Badges
         const badge = (txt, x, y, align='left') => {
           ctx.save();
           ctx.globalAlpha = 0.15;
@@ -567,10 +519,7 @@ const ProtectedPDFViewer = ({ signedPdfUrl, paperTitle, onClose }) => {
               filter:isBlocked?'blur(50px) brightness(0.3)':'none',
               pointerEvents:isBlocked?'none':'auto',
               userSelect: 'none',
-              WebkitUserSelect: 'none',
-              MozUserSelect: 'none',
-              msUserSelect: 'none',
-              WebkitTouchCallout: 'none'
+              WebkitUserSelect: 'none'
             }}
           />
         </div>

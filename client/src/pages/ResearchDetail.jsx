@@ -20,9 +20,7 @@ const ResearchDetail = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  useEffect(() => {
-    fetchPaper();
-  }, [id]);
+  useEffect(() => { fetchPaper(); }, [id]);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -50,20 +48,10 @@ const ResearchDetail = () => {
       }
 
       const data = await res.json();
-      console.log('📄 Paper loaded:', { 
-        id: data.paper._id, 
-        title: data.paper.title,
-        pdfUrl: data.paper.pdfUrl,
-        fileUrl: data.paper.fileUrl 
-      });
-      
       setPaper(data.paper);
-
-      if (data.paper.status === 'approved') {
-        checkBookmark();
-      }
+      if (data.paper.status === 'approved') checkBookmark();
     } catch (error) {
-      console.error('❌ Fetch error:', error);
+      console.error('Fetch error:', error);
       setError('Connection error');
     } finally {
       setLoading(false);
@@ -118,21 +106,15 @@ const ResearchDetail = () => {
         showToast('✓ Link copied!');
       }
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        showToast('Failed to share', 'error');
-      }
+      if (error.name !== 'AbortError') showToast('Failed to share', 'error');
     }
   };
 
   const handleViewPDF = () => {
-    console.log('🔍 Opening PDF viewer');
-    console.log('📄 PDF URL:', paper?.pdfUrl || paper?.fileUrl);
-    
     if (!paper?.pdfUrl && !paper?.fileUrl) {
       showToast('PDF not available', 'error');
       return;
     }
-    
     setShowPDF(true);
   };
 
@@ -151,27 +133,9 @@ const ResearchDetail = () => {
 
   if (error || !canAccess) {
     const statusInfo = {
-      rejected: {
-        icon: XCircle,
-        color: 'red',
-        title: 'Research Not Available',
-        message: 'This research paper has been rejected.',
-        bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-500'
-      },
-      pending: {
-        icon: AlertTriangle,
-        color: 'yellow',
-        title: 'Research Under Review',
-        message: 'This research paper is under review.',
-        bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500'
-      },
-      default: {
-        icon: Lock,
-        color: 'gray',
-        title: 'Access Denied',
-        message: error || 'Only approved research can be viewed.',
-        bgClass: 'bg-gray-50 dark:bg-gray-900/20 border-gray-500'
-      }
+      rejected: { icon: XCircle, color: 'red', title: 'Research Not Available', message: 'This research paper has been rejected.', bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-500' },
+      pending: { icon: AlertTriangle, color: 'yellow', title: 'Research Under Review', message: 'This research paper is under review.', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' },
+      default: { icon: Lock, color: 'gray', title: 'Access Denied', message: error || 'Only approved research can be viewed.', bgClass: 'bg-gray-50 dark:bg-gray-900/20 border-gray-500' }
     };
 
     const info = statusInfo[paper?.status] || statusInfo.default;
@@ -186,8 +150,7 @@ const ResearchDetail = () => {
           
           <div className="flex gap-4 justify-center">
             <button onClick={() => navigate('/browse')} className="flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg">
-              <ArrowLeft size={20} />
-              Browse Papers
+              <ArrowLeft size={20} />Browse Papers
             </button>
             {user?.role === 'admin' && (
               <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg">
@@ -204,14 +167,12 @@ const ResearchDetail = () => {
     <div className="max-w-5xl mx-auto space-y-6">
       {toast.show && (
         <div className={`fixed top-24 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white`}>
-          <Check size={20} />
-          <span>{toast.message}</span>
+          <Check size={20} /><span>{toast.message}</span>
         </div>
       )}
 
       <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-6">
-        <ArrowLeft size={20} className="mr-2" />
-        Back
+        <ArrowLeft size={20} className="mr-2" />Back
       </button>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
@@ -233,21 +194,17 @@ const ResearchDetail = () => {
         {paper.status === 'approved' && (
           <div className="flex gap-3 mb-6">
             <button onClick={toggleBookmark} className={`flex items-center gap-2 px-4 py-2 rounded-lg ${bookmarked ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
-              <Bookmark size={18} className={bookmarked ? 'fill-current' : ''} />
-              {bookmarked ? 'Bookmarked' : 'Bookmark'}
+              <Bookmark size={18} className={bookmarked ? 'fill-current' : ''} />{bookmarked ? 'Bookmarked' : 'Bookmark'}
             </button>
             <button onClick={() => setShowCitation(true)} className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              <Quote size={18} />
-              Cite
+              <Quote size={18} />Cite
             </button>
             <button onClick={handleShare} className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              <Share2 size={18} />
-              Share
+              <Share2 size={18} />Share
             </button>
             {isFaculty && (
               <button onClick={() => setShowReviewModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                <MessageSquare size={18} />
-                Review
+                <MessageSquare size={18} />Review
               </button>
             )}
           </div>
@@ -286,8 +243,7 @@ const ResearchDetail = () => {
             {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : '⚠️ Preview Mode'}
           </p>
           <button onClick={handleViewPDF} className="inline-flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 shadow-lg">
-            <FileText size={20} />
-            Open Viewer
+            <FileText size={20} />Open Viewer
           </button>
         </div>
       </div>
