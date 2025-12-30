@@ -40,6 +40,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const screenshotAttempts = useRef(0);
   const lastHideTime = useRef(0);
   
+  // ✅ FIX: Remove duplicate /api
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 5;
@@ -147,7 +148,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     // Universal Mobile Protections
     const preventContext = (e) => { e.preventDefault(); blockContent('📱 Blocked'); setTimeout(() => setIsBlocked(false), 1500); };
     const preventMulti = (e) => { if (e.touches?.length > 1) { e.preventDefault(); blockContent('📱 Multi-Touch Blocked'); } };
-    const preventSelect = (e) => { e.preventDefault(); return false; };
 
     ['contextmenu', 'selectstart', 'dragstart'].forEach(ev => 
       document.addEventListener(ev, preventContext, { passive: false })
@@ -246,17 +246,22 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     });
     try {
       const token = localStorage.getItem('token');
-      const researchId = pdfUrl?.split('/')[2];
-      if (researchId) await fetch(`${API_BASE}/research/log-violation`, { 
-        method: 'POST', 
-        headers: { 
-          'Authorization': `Bearer ${token}`, 
-          'Content-Type': 'application/json' 
-        }, 
-        body: JSON.stringify({ researchId, violationType: type }) 
-      });
+      // ✅ FIX: Extract research ID correctly from pdfUrl
+      const researchId = pdfUrl?.split('/').filter(Boolean)[2]; // Gets ID from /api/research/{ID}/pdf
+      console.log('🔍 Logging violation for research:', researchId);
+      
+      if (researchId) {
+        await fetch(`${API_BASE}/research/log-violation`, { 
+          method: 'POST', 
+          headers: { 
+            'Authorization': `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          }, 
+          body: JSON.stringify({ researchId, violationType: type }) 
+        });
+      }
     } catch (err) { 
-      console.error('Log error:', err); 
+      console.error('❌ Log error:', err); 
     }
   };
 
@@ -267,22 +272,39 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Auth required');
         
-        const res = await fetch(`${API_BASE}${pdfUrl}`, { 
+        // ✅ FIX: Build correct URL - pdfUrl already contains /api/research/{id}/pdf
+        const fullUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE.replace('/api', '')}${pdfUrl}`;
+        
+        console.log('📄 Loading PDF from:', fullUrl);
+        
+        const res = await fetch(fullUrl, { 
           headers: { 
             'Authorization': `Bearer ${token}`, 
             'Accept': 'application/pdf' 
-          } 
+          },
+          redirect: 'follow' // Follow Cloudinary redirect
         });
         
-        if (!res.ok) throw new Error(res.status === 401 ? 'Session expired' : `Error ${res.status}`);
+        if (!res.ok) {
+          console.error('❌ PDF fetch failed:', res.status, res.statusText);
+          throw new Error(res.status === 401 ? 'Session expired' : `Error ${res.status}`);
+        }
+        
         const blob = await res.blob();
+        console.log('📦 PDF blob size:', blob.size, 'bytes');
+        
         if (blob.size === 0) throw new Error('Empty file');
+        
         const arr = await blob.arrayBuffer();
         const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
+        
+        console.log('✅ PDF loaded:', doc.numPages, 'pages');
+        
         setPdf(doc);
         setTotalPages(doc.numPages);
         setLoading(false);
       } catch (err) { 
+        console.error('❌ PDF load error:', err);
         setError(err.message || 'Load failed'); 
         setLoading(false); 
       }
@@ -375,6 +397,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         badge(`📍 ${userIP}`, 20, canvas.height-20);
         badge(`${date} ${time} • Pg${currentPage}/${totalPages}`, canvas.width-20, canvas.height-20, 'right');
       } catch (err) { 
+        console.error('❌ Render error:', err);
         setError(`Render failed: ${err.message}`); 
       }
     };
