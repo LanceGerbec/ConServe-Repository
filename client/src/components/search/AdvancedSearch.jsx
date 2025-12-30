@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, X, Sparkles, BookOpen, TrendingUp, Calendar, User } from 'lucide-react';
+import { Search, Filter, X, Sparkles, BookOpen, TrendingUp, Calendar, User, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AdvancedSearch = () => {
@@ -83,12 +83,38 @@ const AdvancedSearch = () => {
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (query ? 1 : 0) + (semantic ? 1 : 0);
 
+  const InfoTooltip = ({ text }) => (
+    <div className="group relative inline-block ml-2">
+      <button type="button" className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
+        <Info size={14} className="text-blue-600 dark:text-blue-400" />
+      </button>
+      <div className="absolute left-0 top-full mt-2 w-80 bg-gray-900 text-white text-xs p-3 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+        {text}
+      </div>
+    </div>
+  );
+
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-6">
-      {/* Header */}
+      {/* Header with Explanation */}
       <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-8 shadow-xl">
-        <h1 className="text-3xl font-bold mb-2">🔍 Advanced Search</h1>
-        <p className="text-blue-100">Use boolean operators (AND, OR, NOT) and field-specific search (title:, author:, keyword:, year:)</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+              🔍 Advanced Search
+            </h1>
+            <p className="text-blue-100 text-sm">
+              Use powerful search operators and filters to find exactly what you need
+            </p>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 max-w-md">
+            <p className="text-xs font-semibold mb-2">💡 Search vs Browse:</p>
+            <p className="text-xs text-blue-100 leading-relaxed">
+              <strong>Search:</strong> Use boolean operators (AND, OR, NOT) and field-specific queries for precise results.<br/>
+              <strong>Browse:</strong> Simple filtering by category, year, and subject for casual exploration.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -114,13 +140,13 @@ const AdvancedSearch = () => {
           </button>
         </div>
 
-        {/* Semantic Toggle */}
-        <div className="flex items-center justify-between mb-4">
-          <label className="flex items-center gap-2 cursor-pointer">
+        {/* Semantic Toggle & Filter Button */}
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer group">
             <input type="checkbox" checked={semantic} onChange={(e) => setSemantic(e.target.checked)} className="w-5 h-5 rounded" />
             <Sparkles size={18} className="text-purple-600" />
             <span className="font-semibold text-gray-900 dark:text-white">Semantic Search</span>
-            <span className="text-xs text-gray-500">(AI-powered relevance ranking)</span>
+            <InfoTooltip text="Uses AI to understand the meaning of your search query and ranks results by relevance, not just keyword matching. Best for finding conceptually similar papers." />
           </label>
 
           <button type="button" onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition ${showFilters ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
@@ -130,11 +156,14 @@ const AdvancedSearch = () => {
           </button>
         </div>
 
-        {/* Filters */}
+        {/* Filter Dropdowns */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Category</label>
+              <label className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Category
+                <InfoTooltip text="Filter by research status: Completed (finished thesis/capstone) or Published (in journals/conferences)" />
+              </label>
               <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm">
                 <option value="">All</option>
                 <option value="Completed">Completed</option>
@@ -143,7 +172,10 @@ const AdvancedSearch = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Year</label>
+              <label className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Year
+                <InfoTooltip text="Filter papers by the year they were completed" />
+              </label>
               <select value={filters.yearCompleted} onChange={(e) => setFilters({ ...filters, yearCompleted: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm">
                 <option value="">All Years</option>
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -151,7 +183,10 @@ const AdvancedSearch = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Subject Area</label>
+              <label className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Subject Area
+                <InfoTooltip text="Filter by nursing specialty (e.g., Pediatric, Adult Health, Community Health)" />
+              </label>
               <select value={filters.subjectArea} onChange={(e) => setFilters({ ...filters, subjectArea: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm">
                 <option value="">All Subjects</option>
                 {subjects.map(s => <option key={s} value={s}>{s}</option>)}
@@ -159,7 +194,10 @@ const AdvancedSearch = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Author</label>
+              <label className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Author
+                <InfoTooltip text="Search by author name (partial matches work)" />
+              </label>
               <input type="text" value={filters.author} onChange={(e) => setFilters({ ...filters, author: e.target.value })} placeholder="Author name" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
             </div>
 
@@ -175,15 +213,19 @@ const AdvancedSearch = () => {
         )}
       </form>
 
-      {/* Search Tips */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-        <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">💡 Search Tips</h3>
-        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-          <li><strong>Boolean:</strong> diabetes AND management, pediatric OR geriatric, nursing NOT administration</li>
-          <li><strong>Field Search:</strong> title:therapy, author:Smith, keyword:pain, year:2024, subject:Pediatric</li>
-          <li><strong>Phrases:</strong> "evidence-based practice" (use quotes for exact match)</li>
-        </ul>
-      </div>
+      {/* Search Tips - Collapsible */}
+      <details className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 overflow-hidden">
+        <summary className="p-4 cursor-pointer font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition">
+          <Info size={18} />
+          Search Tips (Click to expand)
+        </summary>
+        <div className="p-4 pt-0 text-sm text-blue-800 dark:text-blue-200 space-y-2">
+          <p><strong>Boolean:</strong> diabetes AND management, pediatric OR geriatric, nursing NOT administration</p>
+          <p><strong>Field Search:</strong> title:therapy, author:Smith, keyword:pain, year:2024, subject:Pediatric</p>
+          <p><strong>Phrases:</strong> "evidence-based practice" (use quotes for exact match)</p>
+          <p><strong>Combine:</strong> title:"pain management" AND author:Garcia AND year:2023</p>
+        </div>
+      </details>
 
       {/* Results */}
       {results.length > 0 && (
