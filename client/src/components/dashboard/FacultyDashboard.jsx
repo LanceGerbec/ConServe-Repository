@@ -1,4 +1,4 @@
-// client/src/components/dashboard/FacultyDashboard.jsx - OPTIMIZED VERSION
+// client/src/components/dashboard/FacultyDashboard.jsx - FINAL OPTIMIZED
 import { useState, useEffect, useRef } from 'react';
 import { FileText, Clock, Eye, BookOpen, Activity, Bookmark, Calendar, Users, Upload, Search, X, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -202,17 +202,14 @@ const FacultyDashboard = () => {
 
         <div className="px-4 space-y-6">
           {activeTab === 'overview' && (
-            <>
-              {/* Stats */}
-              <div className="grid grid-cols-1 gap-4">
-                <StatCard icon={FileText} label="My Reviews" value={stats.reviews} color="bg-gradient-to-br from-blue-500 to-blue-600" />
-                <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-gradient-to-br from-yellow-500 to-yellow-600" onClick={() => scrollToSection(pendingRef, 'pending')} />
-                <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-gradient-to-br from-green-500 to-green-600" onClick={() => scrollToSection(submissionsRef, 'submissions')} />
-              </div>
-            </>
+            <div className="grid grid-cols-1 gap-4">
+              <StatCard icon={FileText} label="My Reviews" value={stats.reviews} color="bg-gradient-to-br from-blue-500 to-blue-600" />
+              <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-gradient-to-br from-yellow-500 to-yellow-600" onClick={() => scrollToSection(pendingRef, 'pending')} />
+              <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-gradient-to-br from-green-500 to-green-600" onClick={() => scrollToSection(submissionsRef, 'submissions')} />
+            </div>
           )}
 
-          {(activeTab === 'overview' || activeTab === 'pending') && (
+          {activeTab === 'pending' && (
             <div ref={pendingRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -239,7 +236,7 @@ const FacultyDashboard = () => {
             </div>
           )}
 
-          {(activeTab === 'overview' || activeTab === 'submissions') && (
+          {activeTab === 'submissions' && (
             <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">

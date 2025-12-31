@@ -1,4 +1,4 @@
-// client/src/components/dashboard/StudentDashboard.jsx - OPTIMIZED VERSION
+// client/src/components/dashboard/StudentDashboard.jsx - FINAL OPTIMIZED
 import { useState, useEffect, useRef } from 'react';
 import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -231,7 +231,7 @@ const StudentDashboard = () => {
             </>
           )}
 
-          {(activeTab === 'overview' || activeTab === 'submissions') && (
+          {activeTab === 'submissions' && (
             <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -260,7 +260,7 @@ const StudentDashboard = () => {
             </div>
           )}
 
-          {(activeTab === 'bookmarks') && (
+          {activeTab === 'bookmarks' && (
             <div ref={bookmarksRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
