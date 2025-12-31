@@ -1,4 +1,4 @@
-// client/src/pages/Home.jsx
+// client/src/pages/Home.jsx - MOBILE OPTIMIZED
 import { Link } from 'react-router-dom';
 import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Award, Lock, Zap, FileText, CheckCircle, Star, Activity, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +28,6 @@ const Home = () => {
       const token = localStorage.getItem('token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
-      // Fetch both research and user stats
       const [researchRes, userRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/research/stats`, { headers }),
         fetch(`${import.meta.env.VITE_API_URL}/users/stats`, { headers })
@@ -37,7 +36,6 @@ const Home = () => {
       const researchData = await researchRes.json();
       const userData = await userRes.json();
 
-      // Fetch all approved research to calculate total views
       const approvedRes = await fetch(`${import.meta.env.VITE_API_URL}/research?status=approved`, { headers });
       const approvedData = await approvedRes.json();
       const totalViews = approvedData.papers?.reduce((sum, paper) => sum + (paper.views || 0), 0) || 0;
@@ -61,21 +59,9 @@ const Home = () => {
   ];
 
   const displayStats = [
-    { 
-      icon: FileText, 
-      value: stats.loading ? '...' : `${stats.papers}+`, 
-      label: 'Research Papers' 
-    },
-    { 
-      icon: Users, 
-      value: stats.loading ? '...' : `${stats.users}+`, 
-      label: 'Active Researchers' 
-    },
-    { 
-      icon: TrendingUp, 
-      value: stats.loading ? '...' : `${stats.views.toLocaleString()}+`, 
-      label: 'Total Views' 
-    }
+    { icon: FileText, value: stats.loading ? '...' : `${stats.papers}+`, label: 'Research Papers' },
+    { icon: Users, value: stats.loading ? '...' : `${stats.users}+`, label: 'Active Researchers' },
+    { icon: TrendingUp, value: stats.loading ? '...' : `${stats.views.toLocaleString()}+`, label: 'Total Views' }
   ];
 
   const benefits = [
@@ -86,111 +72,108 @@ const Home = () => {
   ];
 
   return (
-    <div className="space-y-16 overflow-hidden">
+    <div className="space-y-8 pb-8">
       {showOnboarding && <OnboardingModal onComplete={() => { localStorage.setItem('hasSeenOnboarding', 'true'); setShowOnboarding(false); }} onSkip={() => { localStorage.setItem('hasSeenOnboarding', 'true'); setShowOnboarding(false); }} />}
 
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] flex items-center justify-center -mt-8">
+      {/* HERO SECTION - MOBILE OPTIMIZED */}
+      <section className="relative min-h-[85vh] flex items-center justify-center px-4 py-12">
+        {/* Background Effects */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-navy-950 dark:to-gray-900"></div>
-          <svg className="absolute w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 100 Q 60 80, 70 100" stroke="#1e3a8a" strokeWidth="2" fill="none"/>
-            <circle cx="50" cy="95" r="8" fill="#1e3a8a"/>
-            <circle cx="70" cy="95" r="8" fill="#1e3a8a"/>
-            <g transform="translate(200, 100)">
-              <rect x="-5" y="-15" width="10" height="30" fill="#1e3a8a"/>
-              <rect x="-15" y="-5" width="30" height="10" fill="#1e3a8a"/>
-            </g>
-            <path d="M300 120 L310 120 L315 110 L320 130 L325 120 L335 120" stroke="#1e3a8a" strokeWidth="2" fill="none"/>
-          </svg>
-          <div className="absolute top-20 left-10 w-72 h-72 bg-navy/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-10 left-5 w-40 h-40 md:w-72 md:h-72 bg-navy/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-10 right-5 w-48 h-48 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
 
-        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg mb-8 border border-navy/20">
-            <Star className="text-yellow-500" size={18} />
-            <span className="text-sm font-bold text-navy dark:text-blue-400">NEUST College of Nursing Research Repository</span>
+        <div className="relative z-10 text-center max-w-4xl mx-auto">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 md:px-6 md:py-3 rounded-full shadow-lg mb-6 md:mb-8 border border-navy/20">
+            <Star className="text-yellow-500 flex-shrink-0" size={16} />
+            <span className="text-xs md:text-sm font-bold text-navy dark:text-blue-400">NEUST College of Nursing</span>
           </div>
 
-          <h1 className="text-6xl md:text-8xl font-black mb-6 leading-[1.1] tracking-tight text-navy dark:text-white">
+          {/* Main Title */}
+          <h1 className="text-5xl md:text-8xl font-black mb-4 md:mb-6 leading-tight tracking-tight text-navy dark:text-white">
             ConServe
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-4 max-w-3xl mx-auto font-medium">
+          {/* Tagline */}
+          <p className="text-lg md:text-2xl text-gray-700 dark:text-gray-300 mb-3 md:mb-4 font-medium px-4">
             Where Knowledge Flows and Nursing Grows.
           </p>
-          <p className="text-base text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
+          
+          {/* Description */}
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-8 md:mb-10 px-4">
             Discover {stats.papers}+ peer-reviewed papers • Secure watermarked viewing • AI-powered search
           </p>
 
-          <div className="flex flex-wrap gap-4 justify-center mb-8">
+          {/* CTA Buttons - MOBILE OPTIMIZED */}
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 justify-center mb-6 md:mb-8 px-4">
             {user ? (
               <>
-                <Link to="/browse" className="group px-8 py-4 bg-navy hover:bg-navy-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
-                  <Search size={20} className="group-hover:rotate-90 transition-transform" />
+                <Link to="/explore" className="group px-6 py-4 bg-navy hover:bg-navy-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">
+                  <Search size={20} className="group-hover:rotate-90 transition-transform flex-shrink-0" />
                   Browse Research
                 </Link>
                 {(user.role === 'student' || user.role === 'faculty') && (
-                  <button onClick={() => setShowSubmitModal(true)} className="px-8 py-4 bg-white dark:bg-gray-800 text-navy dark:text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all border-2 border-navy/20 flex items-center gap-2">
-                    <Upload size={20} />
+                  <button onClick={() => setShowSubmitModal(true)} className="px-6 py-4 bg-white dark:bg-gray-800 text-navy dark:text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all border-2 border-navy/20 flex items-center justify-center gap-2">
+                    <Upload size={20} className="flex-shrink-0" />
                     Submit Research
                   </button>
                 )}
               </>
             ) : (
               <>
-                <Link to="/register" className="group px-10 py-4 bg-navy hover:bg-navy-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
+                <Link to="/register" className="group px-8 py-4 bg-navy hover:bg-navy-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">
                   Get Started Free
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform flex-shrink-0" />
                 </Link>
-                <Link to="/about" className="px-8 py-4 bg-white dark:bg-gray-800 text-navy dark:text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all border-2 border-navy/20">
+                <Link to="/about" className="px-6 py-4 bg-white dark:bg-gray-800 text-navy dark:text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all border-2 border-navy/20">
                   Learn More
                 </Link>
               </>
             )}
           </div>
 
-          {/* Live Stats */}
-          <div className="inline-flex items-center gap-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-8 py-4 rounded-2xl shadow-xl border border-navy/20">
+          {/* Stats - MOBILE OPTIMIZED */}
+          <div className="inline-flex flex-col md:flex-row items-center gap-4 md:gap-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-6 py-4 md:px-8 md:py-4 rounded-2xl shadow-xl border border-navy/20">
             {displayStats.map((stat, i) => (
               <div key={i} className="text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
-                  <stat.icon size={20} className="text-navy dark:text-blue-400" />
-                  <div className="text-2xl font-black text-navy dark:text-blue-400">
+                  <stat.icon size={18} className="text-navy dark:text-blue-400 flex-shrink-0" />
+                  <div className="text-xl md:text-2xl font-black text-navy dark:text-blue-400">
                     {stat.value}
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features */}
+      {/* FEATURES - MOBILE OPTIMIZED */}
       <section className="px-4 max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-black text-navy dark:text-white mb-4">Why ConServe?</h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400">Enterprise-grade features for researchers</p>
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-3xl md:text-5xl font-black text-navy dark:text-white mb-3 md:mb-4">Why ConServe?</h2>
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400">Enterprise-grade features for researchers</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {features.map((f, i) => (
-            <div key={i} className={`group bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 border-2 ${activeFeature === i ? 'border-navy scale-105' : 'border-transparent hover:border-navy/30'} cursor-pointer`} onClick={() => setActiveFeature(i)}>
-              <div className="w-16 h-16 bg-navy dark:bg-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-all shadow-lg">
-                <f.icon className="text-white" size={28} />
+            <div key={i} className={`group bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 border-2 ${activeFeature === i ? 'border-navy scale-105' : 'border-transparent hover:border-navy/30'} cursor-pointer`} onClick={() => setActiveFeature(i)}>
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-navy dark:bg-blue-600 rounded-2xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-all shadow-lg">
+                <f.icon className="text-white" size={24} />
               </div>
-              <h3 className="text-2xl font-bold text-navy dark:text-white mb-3">{f.title}</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{f.desc}</p>
+              <h3 className="text-xl md:text-2xl font-bold text-navy dark:text-white mb-2 md:mb-3">{f.title}</h3>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Benefits */}
+      {/* BENEFITS - MOBILE OPTIMIZED */}
       <section className="px-4 max-w-7xl mx-auto">
-        <div className="bg-navy dark:bg-gray-900 rounded-3xl p-12 shadow-2xl relative overflow-hidden">
+        <div className="bg-navy dark:bg-gray-900 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
               <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -200,14 +183,14 @@ const Home = () => {
             </svg>
           </div>
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-8 text-center">Everything You Need</h2>
-            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <h2 className="text-3xl md:text-5xl font-black text-white mb-6 md:mb-8 text-center">Everything You Need</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
               {benefits.map((b, i) => (
-                <div key={i} className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20">
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <b.icon className="text-white" size={24} />
+                <div key={i} className="flex items-center gap-3 md:gap-4 bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-2xl border border-white/20">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <b.icon className="text-white" size={20} />
                   </div>
-                  <p className="text-white font-semibold text-lg">{b.text}</p>
+                  <p className="text-white font-semibold text-base md:text-lg">{b.text}</p>
                 </div>
               ))}
             </div>
@@ -215,35 +198,35 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA SECTION - MOBILE OPTIMIZED */}
       {!user ? (
         <section className="px-4 max-w-4xl mx-auto text-center">
-          <div className="bg-navy dark:bg-gray-900 rounded-3xl p-12 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
+          <div className="bg-navy dark:bg-gray-900 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
             <div className="relative z-10">
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Ready to Transform Your Research?</h2>
-              <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">Join {stats.users}+ researchers advancing nursing science</p>
-              <Link to="/register" className="inline-flex items-center gap-2 px-10 py-4 bg-white text-navy rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all">
+              <h2 className="text-3xl md:text-5xl font-black text-white mb-3 md:mb-4">Ready to Transform Your Research?</h2>
+              <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8">Join {stats.users}+ researchers advancing nursing science</p>
+              <Link to="/register" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-navy rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all">
                 Get Started Free
-                <ArrowRight size={20} />
+                <ArrowRight size={20} className="flex-shrink-0" />
               </Link>
             </div>
           </div>
         </section>
       ) : (
         <section className="px-4 max-w-4xl mx-auto">
-          <div className="bg-navy dark:bg-gray-900 rounded-3xl p-12 text-center shadow-2xl">
-            <h2 className="text-4xl font-black text-white mb-6">Welcome Back, {user.firstName}! 👋</h2>
-            <p className="text-xl text-blue-100 mb-8">Continue your research journey</p>
-            <div className="flex flex-wrap gap-4 justify-center">
+          <div className="bg-navy dark:bg-gray-900 rounded-3xl p-8 md:p-12 text-center shadow-2xl">
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-4 md:mb-6">Welcome Back, {user.firstName}! 👋</h2>
+            <p className="text-lg md:text-xl text-blue-100 mb-6 md:mb-8">Continue your research journey</p>
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4 justify-center">
               {(user.role === 'student' || user.role === 'faculty') && (
-                <button onClick={() => setShowSubmitModal(true)} className="px-8 py-3 bg-white text-navy rounded-xl font-bold hover:scale-105 transition shadow-xl flex items-center gap-2">
-                  <Upload size={20} />
+                <button onClick={() => setShowSubmitModal(true)} className="px-6 py-3 bg-white text-navy rounded-xl font-bold hover:scale-105 transition shadow-xl flex items-center justify-center gap-2">
+                  <Upload size={20} className="flex-shrink-0" />
                   Submit Research
                 </button>
               )}
-              <Link to="/browse" className="px-8 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold hover:scale-105 transition border-2 border-white/30 flex items-center gap-2">
-                <Search size={20} />
+              <Link to="/explore" className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold hover:scale-105 transition border-2 border-white/30 flex items-center justify-center gap-2">
+                <Search size={20} className="flex-shrink-0" />
                 Browse Papers
               </Link>
             </div>
