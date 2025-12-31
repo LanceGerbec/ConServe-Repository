@@ -264,20 +264,21 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Auth required');
         
-        // FIXED: Get PDF URL from backend first
-        const urlRes = await fetch(`${API_BASE}${pdfUrl}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        // Fetch PDF directly from GridFS via backend
+        const res = await fetch(`${API_BASE}${pdfUrl}`, { 
+          headers: { 
+            'Authorization': `Bearer ${token}`, 
+            'Accept': 'application/pdf' 
+          } 
         });
         
-        if (!urlRes.ok) throw new Error(urlRes.status === 401 ? 'Session expired' : `Error ${urlRes.status}`);
+        if (!res.ok) {
+          if (res.status === 401) throw new Error('Session expired');
+          if (res.status === 404) throw new Error('PDF not found');
+          throw new Error(`Error ${res.status}`);
+        }
         
-        const { pdfUrl: cloudinaryUrl } = await urlRes.json();
-        
-        // Now fetch the actual PDF from Cloudinary
-        const pdfRes = await fetch(cloudinaryUrl);
-        if (!pdfRes.ok) throw new Error('Failed to fetch PDF');
-        
-        const blob = await pdfRes.blob();
+        const blob = await res.blob();
         if (blob.size === 0) throw new Error('Empty file');
         
         const arr = await blob.arrayBuffer();
@@ -392,39 +393,37 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     const preventKeys = (e) => {
       const blocked = [
         e.ctrlKey && ['s','p','c','a','u','f'].includes(e.key.toLowerCase()), 
-        e.metaKey && ['s','p','c','a','u','f'].includes(e.key.toLowerCase()), 
-        e.key === 'PrintScreen', 
-        e.key === 'F12', 
-        e.ctrlKey && e.shiftKey
-      ];
-      if (blocked.some(Boolean)) { 
-        e.preventDefault(); 
-        blockContent('⌨️ Shortcut Blocked'); 
-        setTimeout(() => setIsBlocked(false), 1500); 
-        return false; 
-      }
-    };
-    ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart','drag','drop'].forEach(ev => 
-      document.addEventListener(ev, ev==='keydown'?preventKeys:prevent, { passive: false })
-    );
-    return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart','drag','drop'].forEach(ev => 
-      document.removeEventListener(ev, ev==='keydown'?preventKeys:prevent)
-    );
-  }, []);
-
-  const fitToWidth = () => { 
-    if (!pdf || !containerRef.current || !canvasRef.current) return; 
-    const w = containerRef.current.clientWidth - 48; 
-    const pw = canvasRef.current.width / scale; 
-    setScale(Math.min(w/pw, 2.5)); 
-  };
-
-  if (loading) return (
-    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
-          <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32}/>
+        e.metaKey && ['s','p','c','a','u','f'].includes(e.key.toLowerCase()),
+e.key === 'PrintScreen',
+e.key === 'F12',
+e.ctrlKey && e.shiftKey
+];
+if (blocked.some(Boolean)) {
+e.preventDefault();
+blockContent('⌨️ Shortcut Blocked');
+setTimeout(() => setIsBlocked(false), 1500);
+return false;
+}
+};
+['contextmenu','keydown','copy','cut','paste','selectstart','dragstart','drag','drop'].forEach(ev =>
+document.addEventListener(ev, ev==='keydown'?preventKeys:prevent, { passive: false })
+);
+return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart','drag','drop'].forEach(ev =>
+document.removeEventListener(ev, ev==='keydown'?preventKeys:prevent)
+);
+}, []);
+const fitToWidth = () => {
+if (!pdf || !containerRef.current || !canvasRef.current) return;
+const w = containerRef.current.clientWidth - 48;
+const pw = canvasRef.current.width / scale;
+setScale(Math.min(w/pw, 2.5));
+};
+if (loading) return (
+<div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+<div className="text-center">
+<div className="relative">
+<div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
+<Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32}/>
 </div>
 <p className="text-white text-xl font-bold">Loading Protected Document</p>
 <p className="text-blue-400 text-sm mt-2">🔒 Initializing Security...</p>
