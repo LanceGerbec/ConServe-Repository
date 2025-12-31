@@ -53,6 +53,16 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     logViolation(reason);
     showToast(`🚫 ${reason}`, 'error');
     screenshotAttempts.current++;
+    
+    // Make entire screen blank on mobile to prevent any capture
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      document.body.style.opacity = '0';
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+        if (violations < MAX_VIOLATIONS) setIsBlocked(false);
+      }, 3000);
+    }
+    
     if (violations >= MAX_VIOLATIONS - 1 || screenshotAttempts.current >= 3) {
       setTimeout(() => {
         showToast('⚠️ Too many violations - Closing', 'error');
@@ -61,7 +71,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Enhanced Mobile Screenshot Detection
+  // Enhanced Mobile Screenshot Detection with Aggressive Protection
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -69,168 +79,271 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     
     if (!isMobile) return;
 
-    // Android Detection
+    // AGGRESSIVE: Hide content on ANY suspicious activity
+    const hideContent = () => {
+      if (canvasRef.current) {
+        canvasRef.current.style.opacity = '0';
+        canvasRef.current.style.filter = 'blur(50px)';
+        setTimeout(() => {
+          if (canvasRef.current) {
+            canvasRef.current.style.opacity = '1';
+            canvasRef.current.style.filter = 'none';
+          }
+        }, 2000);
+      }
+    };
+
+    // Android Detection - ENHANCED
     if (isAndroid) {
+      let visibilityTimer = null;
+      
       const detectVisibility = () => {
         const now = Date.now();
         visibilityCount.current++;
         
-        // Rapid visibility changes indicate screenshot
-        if (document.hidden && now - lastHideTime.current < 500) {
-          blockContent('📱 Screenshot Detected (Visibility)');
-          setTimeout(() => setIsBlocked(false), 3000);
+        if (document.hidden) {
+          hideContent();
+          blockContent('📱 Screenshot Blocked (Hidden)');
+          lastHideTime.current = now;
+          
+          // Block for longer if rapid attempts
+          if (now - lastHideTime.current < 1000) {
+            screenshotAttempts.current += 2;
+          }
         }
-        
-        // Pause detection (common in screenshots)
-        if (document.hidden && visibilityCount.current > 3) {
-          blockContent('📱 Screenshot Attempt Blocked');
-          setTimeout(() => setIsBlocked(false), 2000);
-        }
-        
-        if (document.hidden) lastHideTime.current = now;
       };
 
       const detectBlur = () => {
+        hideContent();
         blockContent('📱 Screenshot Blocked (Blur)');
-        setTimeout(() => setIsBlocked(false), 2000);
       };
 
-      // Detect multi-touch (screenshot gestures)
+      // Aggressive multi-touch blocking
       const detectTouch = (e) => {
-        if (e.touches?.length > 2) {
+        if (e.touches?.length > 2 || e.touches?.length === 3) {
           e.preventDefault();
-          blockContent('📱 Multi-Touch Screenshot Blocked');
+          e.stopPropagation();
+          hideContent();
+          blockContent('📱 Multi-Touch Blocked');
+          return false;
         }
       };
 
-      // Detect hardware buttons
-      let powerPressed = false, volumePressed = false;
+      // Hardware button detection with immediate response
+      let powerPressed = false, volumePressed = false, volumeTime = 0;
       const detectKeys = (e) => {
         const key = e.keyCode || e.key;
-        if ([26, 'Power', 116].includes(key)) powerPressed = true;
-        if ([25, 'VolumeDown', 114].includes(key)) volumePressed = true;
+        const now = Date.now();
         
-        if (powerPressed && volumePressed) {
-          e.preventDefault();
-          blockContent('📱 Hardware Screenshot Blocked');
-          setTimeout(() => { 
-            setIsBlocked(false); 
-            powerPressed = volumePressed = false; 
-          }, 2000);
+        if ([26, 'Power', 116, 223].includes(key)) powerPressed = true;
+        if ([25, 'VolumeDown', 114, 175, 'AudioVolumeDown'].includes(key)) {
+          volumePressed = true;
+          volumeTime = now;
         }
         
-        // Reset after 1 second
-        setTimeout(() => { powerPressed = volumePressed = false; }, 1000);
+        // Immediate block if both pressed within 500ms
+        if (powerPressed && volumePressed && now - volumeTime < 500) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideContent();
+          blockContent('📱 Hardware Screenshot BLOCKED');
+          screenshotAttempts.current += 2;
+          document.body.style.opacity = '0';
+          setTimeout(() => {
+            document.body.style.opacity = '1';
+            powerPressed = volumePressed = false;
+          }, 3000);
+          return false;
+        }
+        
+        setTimeout(() => { powerPressed = volumePressed = false; }, 600);
       };
 
-      // Detect focus loss (screenshot overlay)
-      const detectFocusLoss = () => {
-        if (!document.hasFocus()) {
-          blockContent('📱 Focus Lost - Screenshot Blocked');
-          setTimeout(() => setIsBlocked(false), 2000);
+      // Detect screen recordings and overlays
+      const detectRecording = () => {
+        if (!document.hasFocus() || document.hidden) {
+          hideContent();
+          blockContent('📱 Recording Detected');
+        }
+      };
+
+      // Detect Android gestures (3-finger swipe, etc)
+      const detectGestures = (e) => {
+        if (e.touches?.length >= 3) {
+          e.preventDefault();
+          hideContent();
+          blockContent('📱 Gesture Blocked');
+        }
+      };
+
+      // Monitor battery and screen state changes (indicates screenshot)
+      const detectStateChange = () => {
+        if (document.visibilityState === 'hidden') {
+          hideContent();
+          blockContent('📱 State Change Blocked');
         }
       };
 
       document.addEventListener('visibilitychange', detectVisibility);
+      document.addEventListener('visibilitychange', detectStateChange);
       window.addEventListener('blur', detectBlur);
       window.addEventListener('pagehide', detectBlur);
-      document.addEventListener('keydown', detectKeys);
-      document.addEventListener('keyup', detectKeys);
+      window.addEventListener('freeze', detectBlur);
+      document.addEventListener('keydown', detectKeys, { passive: false });
+      document.addEventListener('keyup', detectKeys, { passive: false });
       document.addEventListener('touchstart', detectTouch, { passive: false });
-      setInterval(detectFocusLoss, 500);
+      document.addEventListener('touchmove', detectGestures, { passive: false });
+      
+      const recordInterval = setInterval(detectRecording, 300);
 
       return () => {
         document.removeEventListener('visibilitychange', detectVisibility);
+        document.removeEventListener('visibilitychange', detectStateChange);
         window.removeEventListener('blur', detectBlur);
         window.removeEventListener('pagehide', detectBlur);
+        window.removeEventListener('freeze', detectBlur);
         document.removeEventListener('keydown', detectKeys);
         document.removeEventListener('keyup', detectKeys);
         document.removeEventListener('touchstart', detectTouch);
+        document.removeEventListener('touchmove', detectGestures);
+        clearInterval(recordInterval);
       };
     }
 
-    // iOS Detection
+    // iOS Detection - ENHANCED
     if (isIOS) {
-      let volumeUp = false, power = false;
+      let volumeUp = false, power = false, buttonTime = 0;
+      
       const detectIOS = (e) => {
         const key = e.key || e.keyCode;
-        if (['VolumeUp', 175].includes(key)) volumeUp = true;
-        if (['Power', 116].includes(key)) power = true;
-        
-        if (volumeUp && power) {
-          e.preventDefault();
-          blockContent('📱 iOS Screenshot Blocked');
-          setTimeout(() => { 
-            setIsBlocked(false); 
-            volumeUp = power = false; 
-          }, 2000);
-        }
-        
-        setTimeout(() => { volumeUp = power = false; }, 1000);
-      };
-
-      const detectVisibility = () => {
         const now = Date.now();
-        visibilityCount.current++;
         
-        if (document.hidden && now - lastHideTime.current < 500) {
-          blockContent('📱 iOS Screenshot Detected');
-          setTimeout(() => setIsBlocked(false), 2000);
+        if (['VolumeUp', 175, 'AudioVolumeUp'].includes(key)) {
+          volumeUp = true;
+          buttonTime = now;
+        }
+        if (['Power', 116, 223].includes(key)) power = true;
+        
+        if ((volumeUp && power) || (now - buttonTime < 300 && volumeUp)) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideContent();
+          blockContent('📱 iOS Screenshot BLOCKED');
+          document.body.style.opacity = '0';
+          screenshotAttempts.current += 2;
+          setTimeout(() => {
+            document.body.style.opacity = '1';
+            volumeUp = power = false;
+          }, 3000);
+          return false;
         }
         
-        if (document.hidden) lastHideTime.current = now;
+        setTimeout(() => { volumeUp = power = false; }, 500);
       };
 
-      // iOS specific blur detection
+      const detectIOSVisibility = () => {
+        const now = Date.now();
+        if (document.hidden) {
+          hideContent();
+          if (now - lastHideTime.current < 800) {
+            blockContent('📱 iOS Screenshot Detected');
+          }
+          lastHideTime.current = now;
+        }
+      };
+
       const detectIOSBlur = () => {
+        hideContent();
         blockContent('📱 Screenshot Blocked');
-        setTimeout(() => setIsBlocked(false), 1500);
       };
 
-      document.addEventListener('keydown', detectIOS);
-      document.addEventListener('keyup', detectIOS);
-      document.addEventListener('visibilitychange', detectVisibility);
+      // iOS specific - detect Control Center or notification pull
+      const detectIOSGestures = (e) => {
+        if (e.touches?.length > 1) {
+          e.preventDefault();
+          hideContent();
+        }
+      };
+
+      document.addEventListener('keydown', detectIOS, { passive: false });
+      document.addEventListener('keyup', detectIOS, { passive: false });
+      document.addEventListener('visibilitychange', detectIOSVisibility);
       window.addEventListener('blur', detectIOSBlur);
       window.addEventListener('pagehide', detectIOSBlur);
+      document.addEventListener('touchstart', detectIOSGestures, { passive: false });
 
       return () => {
         document.removeEventListener('keydown', detectIOS);
         document.removeEventListener('keyup', detectIOS);
-        document.removeEventListener('visibilitychange', detectVisibility);
+        document.removeEventListener('visibilitychange', detectIOSVisibility);
         window.removeEventListener('blur', detectIOSBlur);
         window.removeEventListener('pagehide', detectIOSBlur);
+        document.removeEventListener('touchstart', detectIOSGestures);
       };
     }
 
-    // General mobile protections
-    const preventContext = (e) => { 
-      e.preventDefault(); 
-      blockContent('📱 Action Blocked'); 
-      setTimeout(() => setIsBlocked(false), 1500); 
+    // Universal Mobile Protection - ENHANCED
+    const preventAll = (e) => { 
+      e.preventDefault();
+      e.stopPropagation();
+      hideContent();
+      blockContent('📱 Action Blocked');
+      return false;
     };
     
     const preventMulti = (e) => { 
       if (e.touches?.length > 1) { 
-        e.preventDefault(); 
-        blockContent('📱 Multi-Touch Blocked'); 
+        e.preventDefault();
+        e.stopPropagation();
+        hideContent();
+        blockContent('📱 Multi-Touch Blocked');
+        return false;
       } 
     };
 
-    ['contextmenu', 'selectstart', 'dragstart', 'longpress'].forEach(ev => 
-      document.addEventListener(ev, preventContext, { passive: false })
+    // CRITICAL: Prevent text selection and OCR attempts
+    const preventSelection = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.getSelection().removeAllRanges();
+      document.getSelection().empty();
+      return false;
+    };
+
+    ['contextmenu', 'selectstart', 'select', 'dragstart', 'longpress', 'touchhold'].forEach(ev => 
+      document.addEventListener(ev, preventAll, { passive: false })
     );
-    document.addEventListener('touchstart', preventMulti, { passive: false });
     
+    document.addEventListener('touchstart', preventMulti, { passive: false });
+    document.addEventListener('touchmove', preventMulti, { passive: false });
+    document.addEventListener('mousedown', preventSelection, { passive: false });
+    document.addEventListener('mouseup', preventSelection, { passive: false });
+    document.addEventListener('copy', preventAll, { passive: false });
+    
+    // Aggressive CSS prevention
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
     document.body.style.webkitTouchCallout = 'none';
     document.body.style.webkitUserDrag = 'none';
+    document.body.style.MozUserSelect = 'none';
+    document.body.style.msUserSelect = 'none';
+    
+    if (canvasRef.current) {
+      canvasRef.current.style.userSelect = 'none';
+      canvasRef.current.style.webkitUserSelect = 'none';
+      canvasRef.current.style.pointerEvents = 'none';
+    }
 
     return () => {
-      ['contextmenu', 'selectstart', 'dragstart', 'longpress'].forEach(ev => 
-        document.removeEventListener(ev, preventContext)
+      ['contextmenu', 'selectstart', 'select', 'dragstart', 'longpress', 'touchhold'].forEach(ev => 
+        document.removeEventListener(ev, preventAll)
       );
       document.removeEventListener('touchstart', preventMulti);
+      document.removeEventListener('touchmove', preventMulti);
+      document.removeEventListener('mousedown', preventSelection);
+      document.removeEventListener('mouseup', preventSelection);
+      document.removeEventListener('copy', preventAll);
+      
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
       document.body.style.webkitTouchCallout = '';
@@ -386,37 +499,100 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
         
-        // SINGLE LARGE DIAGONAL WATERMARK
+        // === CORNER BADGES ===
+        // Top-Left Badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(0, 0, 280, 100);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px Inter, monospace';
+        ctx.fillText(`🔒 PROTECTED DOCUMENT`, 10, 25);
+        ctx.font = '12px Inter, monospace';
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 10, 45);
+        ctx.fillText(`${time}`, 10, 65);
+        ctx.fillText(`Session: ${sid}`, 10, 85);
+        ctx.restore();
+
+        // Top-Right Badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(canvas.width - 220, 0, 220, 100);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 14px Inter, monospace';
+        ctx.fillText(`Page ${currentPage}/${totalPages}`, canvas.width - 10, 25);
+        ctx.font = '12px Inter, monospace';
+        ctx.fillText(`IP: ${userIP}`, canvas.width - 10, 45);
+        ctx.fillText(`${date}`, canvas.width - 10, 65);
+        ctx.fillText(`View Only`, canvas.width - 10, 85);
+        ctx.restore();
+
+        // Bottom-Left Badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(0, canvas.height - 80, 250, 80);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 12px Inter, monospace';
+        ctx.fillText(`ConServe Repository`, 10, canvas.height - 55);
+        ctx.font = '11px Inter, monospace';
+        ctx.fillText(`NEUST College of Nursing`, 10, canvas.height - 35);
+        ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10, canvas.height - 15);
+        ctx.restore();
+
+        // Bottom-Right Badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(canvas.width - 250, canvas.height - 80, 250, 80);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 12px Inter, monospace';
+        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, canvas.width - 10, canvas.height - 55);
+        ctx.font = '11px Inter, monospace';
+        ctx.fillText(`${user?.email || 'Confidential'}`, canvas.width - 10, canvas.height - 35);
+        ctx.fillText(`Unauthorized copy prohibited`, canvas.width - 10, canvas.height - 15);
+        ctx.restore();
+        
+        // === SINGLE LARGE DIAGONAL WATERMARK (CENTER) ===
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(-35 * Math.PI / 180);
         
-        // Main user info
-        ctx.globalAlpha = 0.20;
+        // Main user info with ID
+        ctx.globalAlpha = 0.22;
         ctx.font = 'bold 72px Inter, sans-serif';
         ctx.fillStyle = '#1e3a8a';
         ctx.textAlign = 'center';
-        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -80);
+        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100);
+        
+        // ID Number (NEW)
+        ctx.font = 'bold 56px Inter, monospace';
+        ctx.globalAlpha = 0.20;
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30);
         
         // Email
         ctx.font = 'bold 48px Inter, sans-serif';
         ctx.globalAlpha = 0.18;
-        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, -10);
+        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35);
         
         // Date and time
         ctx.font = '40px Inter, sans-serif';
         ctx.globalAlpha = 0.16;
-        ctx.fillText(`${date} • ${time}`, 0, 50);
+        ctx.fillText(`${date} • ${time}`, 0, 90);
         
         // Session ID and IP
         ctx.font = 'bold 32px Inter, monospace';
         ctx.globalAlpha = 0.14;
-        ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 110);
+        ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140);
         
         // Page info
         ctx.font = '28px Inter, sans-serif';
         ctx.globalAlpha = 0.12;
-        ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 160);
+        ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185);
         
         ctx.restore();
       } catch (err) { 
