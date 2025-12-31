@@ -1,6 +1,5 @@
-// client/src/components/dashboard/AdminDashboard.jsx
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Grid, List, Trash2, User, Calendar } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
@@ -14,38 +13,49 @@ import Toast from '../common/Toast';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const StatCard = memo(({ icon: Icon, label, value, color }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-    <div className={`w-14 h-14 ${color} rounded-xl flex items-center justify-center mb-3 shadow-lg`}>
-      <Icon className="text-white" size={24} />
+  <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border-2 border-gray-100 dark:border-gray-700">
+    <div className="flex items-center gap-4 mb-3">
+      <div className={`w-14 h-14 ${color} rounded-xl flex items-center justify-center shadow-md`}>
+        <Icon className="text-white" size={22} />
+      </div>
+      <div className="text-3xl font-bold text-navy dark:text-accent">{value}</div>
     </div>
-    <div className="text-3xl font-bold text-navy dark:text-accent mb-1">{value}</div>
-    <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold">{label}</div>
+    <div className="text-sm text-gray-700 dark:text-gray-300 font-semibold">{label}</div>
   </div>
 ));
 
 const PendingUserCard = memo(({ user, onApprove, onReject }) => (
-  <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition bg-gray-50 dark:bg-gray-900">
+  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 active:scale-98 transition-all">
     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{user.firstName} {user.lastName}</h3>
     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{user.email}</p>
     <p className="text-xs text-gray-500 mb-3">ID: {user.studentId} • {user.role}</p>
     <div className="flex gap-2">
-      <button onClick={() => onApprove(user._id)} className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-semibold flex items-center justify-center gap-1">
-        <CheckCircle size={14} /> Approve
+      <button 
+        onClick={() => onApprove(user._id)}
+        className="flex-1 bg-green-500 text-white px-4 py-2.5 rounded-xl hover:bg-green-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+      >
+        <CheckCircle size={16} /> Approve
       </button>
-      <button onClick={() => onReject(user._id)} className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm font-semibold flex items-center justify-center gap-1">
-        <XCircle size={14} /> Reject
+      <button 
+        onClick={() => onReject(user._id)}
+        className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-xl hover:bg-red-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+      >
+        <XCircle size={16} /> Reject
       </button>
     </div>
   </div>
 ));
 
 const PendingResearchCard = memo(({ paper, onReview }) => (
-  <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition bg-gray-50 dark:bg-gray-900">
+  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 active:scale-98 transition-all">
     <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 text-sm">{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
     <p className="text-xs text-gray-500 mb-3 line-clamp-2">{paper.abstract}</p>
-    <button onClick={() => onReview(paper)} className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm font-semibold flex items-center justify-center gap-1">
-      <Eye size={14} /> Review
+    <button 
+      onClick={() => onReview(paper)}
+      className="w-full bg-blue-500 text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+    >
+      <Eye size={16} /> Review
     </button>
   </div>
 ));
@@ -55,8 +65,10 @@ const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [viewMode, setViewMode] = useState('grid');
-  const [stats, setStats] = useState({ users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: { total: 0, pending: 0, approved: 0, rejected: 0 } });
+  const [stats, setStats] = useState({ 
+    users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, 
+    research: { total: 0, pending: 0, approved: 0, rejected: 0 } 
+  });
   const [allUsers, setAllUsers] = useState([]);
   const [allResearch, setAllResearch] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -68,7 +80,9 @@ const AdminDashboard = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
 
-  const showToast = useCallback((msg, type = 'success') => setToast({ show: true, message: msg, type }), []);
+  const showToast = useCallback((msg, type = 'success') => 
+    setToast({ show: true, message: msg, type }), []
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -108,10 +122,7 @@ const AdminDashboard = () => {
       ]);
 
       const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([
-        userStatsRes.json(),
-        researchStatsRes.json(),
-        pendingUsersRes.json(),
-        pendingResearchRes.json()
+        userStatsRes.json(), researchStatsRes.json(), pendingUsersRes.json(), pendingResearchRes.json()
       ]);
 
       setStats({
@@ -122,7 +133,6 @@ const AdminDashboard = () => {
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
 
-      // Fetch data for specific tabs
       if (activeTab === 'users') {
         const usersRes = await fetch(`${API_URL}/users`, { headers });
         const usersData = await usersRes.json();
@@ -141,16 +151,13 @@ const AdminDashboard = () => {
         setBookmarks(bookmarksData.bookmarks || []);
       }
     } catch (error) {
-      console.error('Fetch error:', error);
       showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
   }, [activeTab, showToast]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleApproveUser = useCallback(async (userId) => {
     try {
@@ -207,338 +214,203 @@ const AdminDashboard = () => {
     }
   }, [showToast]);
 
-  const handleToggleUserStatus = useCallback(async (userId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/users/${userId}/toggle-status`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        showToast('✅ Status updated');
-        fetchData();
-      }
-    } catch (error) {
-      showToast('Failed to update', 'error');
-    }
-  }, [showToast, fetchData]);
-
-  const handleDeleteResearch = useCallback(async (researchId) => {
-    if (!confirm('Delete this research paper? This cannot be undone.')) return;
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/research/${researchId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        showToast('✅ Research deleted');
-        fetchData();
-      }
-    } catch (error) {
-      showToast('Failed to delete', 'error');
-    }
-  }, [showToast, fetchData]);
-
-  const filteredUsers = allUsers.filter(u =>
-    u.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-    u.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredResearch = allResearch.filter(r =>
-    r.title?.toLowerCase().includes(search.toLowerCase()) ||
-    r.authors?.some(a => a.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  const filteredBookmarks = bookmarks.filter(b =>
-    b.research?.title?.toLowerCase().includes(search.toLowerCase())
-  );
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-navy border-t-transparent"></div>
       </div>
     );
   }
 
   const adminStats = [
-    { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-blue-500' },
-    { icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-green-500' },
-    { icon: Shield, label: 'Pending', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-yellow-500' },
-    { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-purple-500' }
+    { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
+    { icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-gradient-to-br from-green-500 to-green-600' },
+    { icon: Shield, label: 'Pending', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-gradient-to-br from-yellow-500 to-yellow-600' },
+    { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
+  ];
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'users', label: 'Users' },
+    { id: 'research', label: 'Papers' },
+    { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
+    { id: 'valid-ids', label: 'Valid IDs' },
+    { id: 'team', label: 'Team' },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'logs', label: 'Logs' },
+    { id: 'settings', label: 'Settings' }
   ];
 
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />}
 
-      <div className="space-y-4 animate-fade-in">
-        <div className="bg-gradient-to-r from-navy to-accent text-white rounded-2xl p-6 shadow-lg">
-          <h1 className="text-2xl font-bold mb-1">Admin Dashboard</h1>
-          <p className="text-blue-100">Welcome, {user?.firstName}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2 flex gap-2 overflow-x-auto">
-          {['overview', 'users', 'research', 'bookmarks', 'valid-ids', 'team', 'analytics', 'logs', 'settings'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition whitespace-nowrap text-sm ${activeTab === tab ? 'bg-navy text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-            >
-              {tab === 'valid-ids' ? 'Valid IDs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-              {tab === 'bookmarks' && bookmarks.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">{bookmarks.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* OVERVIEW TAB */}
-        {activeTab === 'overview' && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {adminStats.map((stat, i) => (
-                <StatCard key={i} {...stat} />
-              ))}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
+        {/* Mobile Header */}
+        <div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <Shield size={24} />
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Users size={20} /> Pending Users ({pendingUsers.length})
-                </h2>
-                {pendingUsers.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No pending users</div>
-                ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {pendingUsers.map((u) => (
-                      <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FileText size={20} /> Pending Research ({pendingResearch.length})
-                </h2>
-                {pendingResearch.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No pending research</div>
-                ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {pendingResearch.map((paper) => (
-                      <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* USERS TAB */}
-        {activeTab === 'users' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Users size={20} /> All Users ({filteredUsers.length})
-              </h2>
-              <input 
-                type="text" 
-                value={search} 
-                onChange={(e) => setSearch(e.target.value)} 
-                placeholder="Search users..." 
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-navy focus:outline-none dark:bg-gray-700" 
-              />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold">Name</th>
-                    <th className="px-4 py-3 text-left font-semibold">Email</th>
-                    <th className="px-4 py-3 text-left font-semibold">Role</th>
-                    <th className="px-4 py-3 text-left font-semibold">Status</th>
-                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredUsers.map((u) => (
-                    <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                      <td className="px-4 py-3 font-medium">{u.firstName} {u.lastName}</td>
-                      <td className="px-4 py-3">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          u.role === 'admin' ? 'bg-red-100 text-red-700' :
-                          u.role === 'faculty' ? 'bg-blue-100 text-blue-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>{u.role}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.isApproved ? (
-                          u.isActive ? (
-                            <span className="text-green-600 text-xs font-semibold">✓ Active</span>
-                          ) : (
-                            <span className="text-gray-500 text-xs font-semibold">Inactive</span>
-                          )
-                        ) : (
-                          <span className="text-yellow-600 text-xs font-semibold">Pending</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex gap-1 justify-end">
-                          {!u.isApproved && (
-                            <>
-                              <button onClick={() => handleApproveUser(u._id)} className="text-green-600 hover:text-green-700 p-1" title="Approve">
-                                <CheckCircle size={16} />
-                              </button>
-                              <button onClick={() => handleRejectUser(u._id)} className="text-red-600 hover:text-red-700 p-1" title="Reject">
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          )}
-                          {u.isApproved && u.role !== 'admin' && (
-                            <button onClick={() => handleToggleUserStatus(u._id)} className="text-blue-600 hover:text-blue-700 p-1" title="Toggle Status">
-                              <Shield size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <h1 className="text-xl font-bold">Admin Dashboard</h1>
+              <p className="text-sm text-blue-100 opacity-90">Welcome, {user?.firstName}</p>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* RESEARCH TAB */}
-        {activeTab === 'research' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <FileText size={20} /> All Research ({filteredResearch.length})
-              </h2>
-              <input 
-                type="text" 
-                value={search} 
-                onChange={(e) => setSearch(e.target.value)} 
-                placeholder="Search research..." 
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-navy focus:outline-none dark:bg-gray-700" 
-              />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold">Title</th>
-                    <th className="px-4 py-3 text-left font-semibold">Author</th>
-                    <th className="px-4 py-3 text-left font-semibold">Status</th>
-                    <th className="px-4 py-3 text-left font-semibold">Views</th>
-                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredResearch.map((r) => (
-                    <tr key={r._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                      <td className="px-4 py-3">
-                        <div className="max-w-md">
-                          <p className="font-medium line-clamp-2">{r.title}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{r.submittedBy?.firstName} {r.submittedBy?.lastName}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          r.status === 'approved' ? 'bg-green-100 text-green-700' :
-                          r.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                          r.status === 'revision' ? 'bg-orange-100 text-orange-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>{r.status}</span>
-                      </td>
-                      <td className="px-4 py-3">{r.views || 0}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex gap-1 justify-end">
-                          {r.status === 'pending' && (
-                            <button onClick={() => handleReviewPaper(r)} className="text-blue-600 hover:text-blue-700 p-1" title="Review">
-                              <Eye size={16} />
-                            </button>
-                          )}
-                          <button onClick={() => navigate(`/research/${r._id}`)} className="text-purple-600 hover:text-purple-700 p-1" title="View">
-                            <FileText size={16} />
-                          </button>
-                          <button onClick={() => handleDeleteResearch(r._id)} className="text-red-600 hover:text-red-700 p-1" title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Mobile Tabs - Horizontal Scroll */}
+        <div className="px-4 mb-6">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {tabs.map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
+                  activeTab === tab.id 
+                    ? 'bg-navy text-white shadow-lg scale-105' 
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
+                }`}
+              >
+                {tab.label}
+                {tab.badge > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* BOOKMARKS TAB */}
-        {activeTab === 'bookmarks' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Bookmark size={20} className="text-purple-600" /> My Bookmarks ({filteredBookmarks.length})
-              </h2>
-              <div className="flex gap-2">
-                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                  <Grid size={16} />
-                </button>
-                <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-navy text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                  <List size={16} />
-                </button>
+        <div className="px-4 space-y-6">
+          {activeTab === 'overview' && (
+            <>
+              <div className="grid grid-cols-1 gap-4">
+                {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
               </div>
-            </div>
-            <div className="p-4">
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 text-sm focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none dark:bg-gray-700 dark:text-white" />
-              {filteredBookmarks.length === 0 ? (
-                <div className="text-center py-12">
-                  <Bookmark size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 font-medium">{search ? 'No bookmarks found' : 'No bookmarks yet'}</p>
-                  {!search && <button onClick={() => navigate('/explore')} className="text-navy dark:text-accent hover:underline text-sm font-semibold">Browse Papers</button>}
-                </div>
-              ) : (
-                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
-                  {filteredBookmarks.map(b => (
-                    <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition">
-                      <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy transition" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
-                      <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold transition">Remove</button>
+
+              <div className="space-y-6">
+                {/* Pending Users */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />
+                    Pending Users ({pendingUsers.length})
+                  </h2>
+                  {pendingUsers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {pendingUsers.map(u => (
+                        <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+
+                {/* Pending Research */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />
+                    Pending Research ({pendingResearch.length})
+                  </h2>
+                  {pendingResearch.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {pendingResearch.map(paper => (
+                        <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'bookmarks' && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Bookmark size={20} className="text-purple-600" />
+                  My Bookmarks ({bookmarks.length})
+                </h2>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input 
+                    type="text" 
+                    value={search} 
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search bookmarks..." 
+                    className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900"
+                  />
+                  {search && (
+                    <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <X size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="p-4">
+                {bookmarks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Bookmark size={32} className="text-gray-400" />
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {bookmarks.map(b => (
+                      <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <h3 
+                          className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" 
+                          onClick={() => navigate(`/research/${b.research._id}`)}
+                        >
+                          {b.research.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
+                        <button 
+                          onClick={() => handleRemoveBookmark(b._id, b.research._id)}
+                          className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'valid-ids' && <ValidIdsManagement />}
-        {activeTab === 'team' && <TeamManagement />}
-        {activeTab === 'analytics' && <AnalyticsDashboard />}
-        {activeTab === 'logs' && <ActivityLogs />}
-        {activeTab === 'settings' && <SettingsManagement />}
-
-        {showReviewModal && selectedPaper && (
-          <AdminReviewModal
-            paper={selectedPaper}
-            onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }}
-            onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }}
-          />
-        )}
+          {activeTab === 'valid-ids' && <ValidIdsManagement />}
+          {activeTab === 'team' && <TeamManagement />}
+          {activeTab === 'analytics' && <AnalyticsDashboard />}
+          {activeTab === 'logs' && <ActivityLogs />}
+          {activeTab === 'settings' && <SettingsManagement />}
+        </div>
       </div>
+
+      {showReviewModal && selectedPaper && (
+        <AdminReviewModal
+          paper={selectedPaper}
+          onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }}
+          onSuccess={() => { 
+            fetchData(); 
+            setShowReviewModal(false); 
+            setSelectedPaper(null); 
+            showToast('✅ Review submitted'); 
+          }}
+        />
+      )}
     </>
   );
 };
 
 AdminDashboard.displayName = 'AdminDashboard';
-StatCard.displayName = 'StatCard';PendingUserCard.displayName = 'PendingUserCard';
+StatCard.displayName = 'StatCard';
+PendingUserCard.displayName = 'PendingUserCard';
 PendingResearchCard.displayName = 'PendingResearchCard';
+
 export default AdminDashboard;
