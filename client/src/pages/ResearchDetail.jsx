@@ -1,3 +1,4 @@
+// client/src/pages/ResearchDetail.jsx - MOBILE OPTIMIZED
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare } from 'lucide-react';
@@ -120,7 +121,7 @@ const ResearchDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
       </div>
     );
@@ -142,18 +143,18 @@ const ResearchDetail = () => {
     const IconComponent = info.icon;
 
     return (
-      <div className="max-w-3xl mx-auto text-center py-16">
-        <div className={`${info.bgClass} rounded-2xl p-12 shadow-xl border-2`}>
-          <IconComponent className={`mx-auto text-${info.color}-500 mb-6`} size={80} />
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{info.title}</h2>
-          <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">{info.message}</p>
+      <div className="px-4 py-8">
+        <div className={`${info.bgClass} rounded-2xl p-8 shadow-xl border-2 text-center`}>
+          <IconComponent className={`mx-auto text-${info.color}-500 mb-4`} size={64} />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{info.title}</h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">{info.message}</p>
           
-          <div className="flex gap-4 justify-center">
-            <button onClick={() => navigate('/browse')} className="flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg">
-              <ArrowLeft size={20} />Browse Papers
+          <div className="flex flex-col gap-3">
+            <button onClick={() => navigate('/explore')} className="flex items-center justify-center gap-2 bg-navy text-white px-6 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg">
+              <ArrowLeft size={18} />Browse Papers
             </button>
             {user?.role === 'admin' && (
-              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg">
+              <button onClick={() => navigate('/dashboard')} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg">
                 Dashboard
               </button>
             )}
@@ -164,92 +165,153 @@ const ResearchDetail = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen pb-6">
       {toast.show && (
-        <div className={`fixed top-24 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white`}>
-          <Check size={20} /><span>{toast.message}</span>
+        <div className={`fixed top-20 right-4 left-4 md:left-auto md:w-auto z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white animate-slide-up`}>
+          <Check size={18} /><span className="text-sm">{toast.message}</span>
         </div>
       )}
 
-      <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-6">
-        <ArrowLeft size={20} className="mr-2" />Back
+      {/* BACK BUTTON */}
+      <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-4 px-4 py-2">
+        <ArrowLeft size={18} className="mr-2" />
+        <span className="text-sm font-semibold">Back</span>
       </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
-        {paper.status !== 'approved' && (
-          <div className={`mb-6 p-4 rounded-lg border-l-4 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
-            <p className="font-bold text-gray-900 dark:text-white">⚠️ {paper.status.toUpperCase()} PAPER</p>
-          </div>
-        )}
+      {/* MAIN CONTENT CARD */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
+        <div className="p-4 space-y-4">
+          {/* STATUS WARNING */}
+          {paper.status !== 'approved' && (
+            <div className={`p-3 rounded-lg border-l-4 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
+              <p className="font-bold text-xs text-gray-900 dark:text-white">⚠️ {paper.status.toUpperCase()} PAPER</p>
+            </div>
+          )}
 
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{paper.title}</h1>
+          {/* TITLE */}
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words">
+            {paper.title}
+          </h1>
 
-        <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
-          <div className="flex items-center"><User size={16} className="mr-2" /><span>{paper.authors.join(', ')}</span></div>
-          <div className="flex items-center"><Calendar size={16} className="mr-2" /><span>{new Date(paper.createdAt).toLocaleDateString()}</span></div>
-          {paper.status === 'approved' && <div className="flex items-center"><Eye size={16} className="mr-2" /><span>{paper.views} views</span></div>}
-          <div className="flex items-center"><Tag size={16} className="mr-2" /><span>{paper.category}</span></div>
-        </div>
-
-        {paper.status === 'approved' && (
-          <div className="flex gap-3 mb-6">
-            <button onClick={toggleBookmark} className={`flex items-center gap-2 px-4 py-2 rounded-lg ${bookmarked ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
-              <Bookmark size={18} className={bookmarked ? 'fill-current' : ''} />{bookmarked ? 'Bookmarked' : 'Bookmark'}
-            </button>
-            <button onClick={() => setShowCitation(true)} className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              <Quote size={18} />Cite
-            </button>
-            <button onClick={handleShare} className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              <Share2 size={18} />Share
-            </button>
-            {isFaculty && (
-              <button onClick={() => setShowReviewModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                <MessageSquare size={18} />Review
-              </button>
+          {/* META INFO - STACKED ON MOBILE */}
+          <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2">
+              <User size={14} className="flex-shrink-0" />
+              <span className="break-words">{paper.authors.join(', ')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="flex-shrink-0" />
+              <span>{new Date(paper.createdAt).toLocaleDateString()}</span>
+            </div>
+            {paper.status === 'approved' && (
+              <div className="flex items-center gap-2">
+                <Eye size={14} className="flex-shrink-0" />
+                <span>{paper.views} views</span>
+              </div>
             )}
-          </div>
-        )}
-
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Abstract</h2>
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{paper.abstract}</p>
-        </div>
-
-        {paper.keywords?.length > 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Keywords</h2>
-            <div className="flex flex-wrap gap-2">
-              {paper.keywords.map((keyword, i) => (
-                <span key={i} className="px-3 py-1 bg-navy/10 text-navy rounded-full text-sm">{keyword}</span>
-              ))}
+            <div className="flex items-center gap-2">
+              <Tag size={14} className="flex-shrink-0" />
+              <span>{paper.category}</span>
             </div>
           </div>
-        )}
 
-        {paper.subjectArea && (
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Subject Area</h2>
-            <p className="text-gray-700 dark:text-gray-300">{paper.subjectArea}</p>
+          {/* ACTION BUTTONS - MOBILE OPTIMIZED */}
+          {paper.status === 'approved' && (
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                onClick={toggleBookmark} 
+                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${bookmarked ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+              >
+                <Bookmark size={16} className={bookmarked ? 'fill-current' : ''} />
+                {bookmarked ? 'Saved' : 'Save'}
+              </button>
+              <button 
+                onClick={() => setShowCitation(true)} 
+                className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition"
+              >
+                <Quote size={16} />
+                Cite
+              </button>
+              <button 
+                onClick={handleShare} 
+                className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition"
+              >
+                <Share2 size={16} />
+                Share
+              </button>
+              {isFaculty && (
+                <button 
+                  onClick={() => setShowReviewModal(true)} 
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-semibold transition"
+                >
+                  <MessageSquare size={16} />
+                  Review
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ABSTRACT */}
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Abstract</h2>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line break-words">
+              {paper.abstract}
+            </p>
           </div>
-        )}
-      </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Full Document</h2>
-        <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-8 text-center border-2 border-dashed border-red-300 dark:border-red-700">
-          <FileText className="mx-auto text-red-600 mb-4" size={64} />
-          <p className="text-gray-900 dark:text-white mb-2 font-bold text-lg">🔒 View-Only Protected Document</p>
-          <p className="text-gray-700 dark:text-gray-300 mb-4 text-sm">
-            {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : '⚠️ Preview Mode'}
-          </p>
-          <button onClick={handleViewPDF} className="inline-flex items-center gap-2 bg-navy text-white px-8 py-3 rounded-lg hover:bg-navy-800 shadow-lg">
-            <FileText size={20} />Open Viewer
-          </button>
+          {/* KEYWORDS */}
+          {paper.keywords?.length > 0 && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Keywords</h2>
+              <div className="flex flex-wrap gap-2">
+                {paper.keywords.map((keyword, i) => (
+                  <span key={i} className="px-2 py-1 bg-navy/10 text-navy dark:bg-accent/10 dark:text-accent rounded-full text-xs font-semibold break-words">
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SUBJECT AREA */}
+          {paper.subjectArea && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Subject Area</h2>
+              <p className="text-sm text-gray-700 dark:text-gray-300 break-words">{paper.subjectArea}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
+      {/* FULL DOCUMENT CARD */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
+        <div className="p-4">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Full Document</h2>
+          <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-6 text-center border-2 border-dashed border-red-300 dark:border-red-700">
+            <FileText className="mx-auto text-red-600 mb-3" size={48} />
+            <p className="text-gray-900 dark:text-white mb-1 font-bold text-sm">🔒 View-Only Protected Document</p>
+            <p className="text-gray-700 dark:text-gray-300 mb-4 text-xs">
+              {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : '⚠️ Preview Mode'}
+            </p>
+            <button 
+              onClick={handleViewPDF} 
+              className="inline-flex items-center justify-center gap-2 bg-navy text-white px-6 py-3 rounded-lg hover:bg-navy-800 shadow-lg text-sm font-semibold w-full md:w-auto"
+            >
+              <FileText size={18} />
+              Open Viewer
+            </button>
+          </div>
+        </div>
+      </div>
 
+      {/* SIMILAR PAPERS */}
+      {paper.status === 'approved' && (
+        <div className="mx-4">
+          <SimilarPapers paperId={paper._id} />
+        </div>
+      )}
+
+      {/* MODALS */}
       {showPDF && (paper.pdfUrl || paper.fileUrl) && (
         <ProtectedPDFViewer 
           pdfUrl={paper.pdfUrl || paper.fileUrl}
@@ -263,7 +325,11 @@ const ResearchDetail = () => {
       )}
 
       {showReviewModal && isFaculty && (
-        <ReviewForm paper={paper} onClose={() => setShowReviewModal(false)} onSuccess={() => { setShowReviewModal(false); fetchPaper(); }} />
+        <ReviewForm 
+          paper={paper} 
+          onClose={() => setShowReviewModal(false)} 
+          onSuccess={() => { setShowReviewModal(false); fetchPaper(); }} 
+        />
       )}
     </div>
   );
