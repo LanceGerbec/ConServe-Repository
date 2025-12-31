@@ -258,42 +258,55 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
   useEffect(() => {
-    const loadPDF = async () => {
-      try {
-        const pdfjs = await initPdfJs();
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Auth required');
-        
-        // Fetch PDF directly from GridFS via backend
-        const res = await fetch(`${API_BASE}${pdfUrl}`, { 
-          headers: { 
-            'Authorization': `Bearer ${token}`, 
-            'Accept': 'application/pdf' 
-          } 
-        });
-        
-        if (!res.ok) {
-          if (res.status === 401) throw new Error('Session expired');
-          if (res.status === 404) throw new Error('PDF not found');
-          throw new Error(`Error ${res.status}`);
-        }
-        
-        const blob = await res.blob();
-        if (blob.size === 0) throw new Error('Empty file');
-        
-        const arr = await blob.arrayBuffer();
-        const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
-        setPdf(doc);
-        setTotalPages(doc.numPages);
-        setLoading(false);
-      } catch (err) { 
-        console.error('PDF Load Error:', err);
-        setError(err.message || 'Load failed'); 
-        setLoading(false); 
+  const loadPDF = async () => {
+    try {
+      const pdfjs = await initPdfJs();
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Auth required');
+      
+      console.log('📄 Loading PDF from:', pdfUrl);
+      
+      // Construct full URL
+      const fullUrl = pdfUrl.startsWith('http') 
+        ? pdfUrl 
+        : `${API_BASE}${pdfUrl}`;
+      
+      console.log('🔗 Full URL:', fullUrl);
+      
+      const res = await fetch(fullUrl, { 
+        headers: { 
+          'Authorization': `Bearer ${token}`, 
+          'Accept': 'application/pdf' 
+        } 
+      });
+      
+      console.log('📡 Response status:', res.status);
+      
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired');
+        if (res.status === 404) throw new Error('PDF not found');
+        throw new Error(`Error ${res.status}`);
       }
-    };
-    if (pdfUrl) loadPDF();
-  }, [pdfUrl, API_BASE]);
+      
+      const blob = await res.blob();
+      console.log('📦 Blob size:', blob.size, 'bytes');
+      
+      if (blob.size === 0) throw new Error('Empty file');
+      
+      const arr = await blob.arrayBuffer();
+      const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
+      setPdf(doc);
+      setTotalPages(doc.numPages);
+      setLoading(false);
+      console.log('✅ PDF loaded:', doc.numPages, 'pages');
+    } catch (err) { 
+      console.error('❌ PDF Load Error:', err);
+      setError(err.message || 'Load failed'); 
+      setLoading(false); 
+    }
+  };
+  if (pdfUrl) loadPDF();
+}, [pdfUrl, API_BASE]);
 
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;

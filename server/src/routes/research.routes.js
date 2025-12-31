@@ -11,27 +11,40 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// PDF STREAM - Primary endpoint for viewing PDFs
+// ============================================
+// PDF STREAMING ENDPOINT - MUST BE FIRST
+// ============================================
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
+    console.log('📄 PDF Request:', req.params.id);
+    
     const paper = await Research.findById(req.params.id).populate('submittedBy');
-    if (!paper) return res.status(404).json({ error: 'Paper not found' });
+    if (!paper) {
+      console.error('❌ Paper not found:', req.params.id);
+      return res.status(404).json({ error: 'Paper not found' });
+    }
 
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
     
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
+      console.error('❌ Access denied:', req.user.email);
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    if (!paper.gridfsId) return res.status(404).json({ error: 'PDF not found' });
+    if (!paper.gridfsId) {
+      console.error('❌ No GridFS ID:', paper._id);
+      return res.status(404).json({ error: 'PDF not available' });
+    }
 
-    // Log view
+    // Log view for approved papers
     if (paper.status === 'approved' && !isAuthor) {
       await Research.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
     }
 
-    // Stream PDF from GridFS
+    console.log('✅ Streaming PDF from GridFS:', paper.gridfsId);
+
+    // Stream from GridFS
     const bucket = getGridFSBucket();
     const downloadStream = bucket.openDownloadStream(new mongoose.Types.ObjectId(paper.gridfsId));
 
@@ -40,29 +53,35 @@ router.get('/:id/pdf', auth, async (req, res) => {
       'Content-Disposition': 'inline',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
-      'Expires': '0'
+      'Expires': '0',
+      'Access-Control-Allow-Origin': '*'
     });
 
     downloadStream.on('error', (error) => {
-      console.error('GridFS stream error:', error);
+      console.error('❌ GridFS Error:', error);
       if (!res.headersSent) {
-        res.status(404).json({ error: 'PDF not found' });
+        res.status(404).json({ error: 'PDF stream failed' });
       }
+    });
+
+    downloadStream.on('end', () => {
+      console.log('✅ PDF stream completed');
     });
 
     downloadStream.pipe(res);
   } catch (error) {
-    console.error('PDF Error:', error);
+    console.error('❌ PDF Endpoint Error:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Failed to load PDF' });
     }
   }
 });
 
-// Legacy support
-router.get('/file/:id', auth, (req, res) => res.redirect(`/api/research/${req.params.id}/pdf`));
+// ============================================
+// OTHER ROUTES
+// ============================================
 
-// STATS
+// GET STATS
 router.get('/stats', auth, async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
@@ -91,7 +110,7 @@ router.get('/my-submissions', auth, async (req, res) => {
   }
 });
 
-// CITATION
+// CITATION GENERATOR
 router.get('/:id/citation', auth, async (req, res) => {
   try {
     const { style = 'APA' } = req.query;
@@ -125,9 +144,9 @@ router.post('/log-violation', auth, async (req, res) => {
       userAgent: req.get('user-agent'),
       details: { violationType }
     });
-    res.json({ message: 'Violation logged' });
+    res.json({ message: 'Logged' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to log violation' });
+    res.status(500).json({ error: 'Failed to log' });
   }
 });
 
@@ -145,7 +164,7 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     const paperObj = paper.toObject();
-    paperObj.pdfUrl = `/api/research/${paper._id}/pdf`;
+    paperObj.pdfUrl = `/research/${paper._id}/pdf`;
     
     res.json({ paper: paperObj });
   } catch (error) {
@@ -185,7 +204,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// SUBMIT RESEARCH - Store in GridFS
+// SUBMIT RESEARCH
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF required' });
@@ -203,7 +222,6 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
     });
 
     const readableStream = Readable.from(req.file.buffer);
-    
     readableStream.pipe(uploadStream);
 
     uploadStream.on('finish', async () => {
@@ -219,7 +237,7 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           gridfsId: uploadStream.id,
           fileName: req.file.originalname,
           fileSize: req.file.size,
-          fileUrl: `/api/research/file/${uploadStream.id}`,
+          fileUrl: `/research/${uploadStream.id}/pdf`,
           submittedBy: req.user._id,
           status: 'pending'
         });
@@ -238,13 +256,13 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
         res.status(201).json({ message: 'Research submitted', research });
       } catch (error) {
         console.error('Research creation error:', error);
-        res.status(500).json({ error: 'Failed to save research metadata' });
+        res.status(500).json({ error: 'Failed to save' });
       }
     });
 
     uploadStream.on('error', (error) => {
       console.error('GridFS upload error:', error);
-      res.status(500).json({ error: 'PDF upload failed' });
+      res.status(500).json({ error: 'Upload failed' });
     });
   } catch (error) {
     console.error('Submit error:', error);
@@ -282,13 +300,12 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// DELETE RESEARCH (Admin only)
+// DELETE RESEARCH
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
     const research = await Research.findById(req.params.id);
     if (!research) return res.status(404).json({ error: 'Not found' });
 
-    // Delete from GridFS
     if (research.gridfsId) {
       const bucket = getGridFSBucket();
       await bucket.delete(new mongoose.Types.ObjectId(research.gridfsId));
@@ -305,9 +322,8 @@ router.delete('/:id', auth, authorize('admin'), async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    res.json({ message: 'Research deleted' });
+    res.json({ message: 'Deleted' });
   } catch (error) {
-    console.error('Delete error:', error);
     res.status(500).json({ error: 'Failed to delete' });
   }
 });
