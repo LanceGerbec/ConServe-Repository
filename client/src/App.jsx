@@ -1,3 +1,4 @@
+// client/src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
@@ -13,10 +14,9 @@ import Help from './pages/Help';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Dashboard from './pages/Dashboard';
-import Browse from './pages/Browse';
+import Explore from './pages/Explore';
 import ResearchDetail from './pages/ResearchDetail';
 import Notifications from './pages/Notifications';
-import AdvancedSearch from './components/search/AdvancedSearch';
 import Layout from './components/layout/Layout';
 
 function App() {
@@ -25,48 +25,27 @@ function App() {
       <Router>
         <AuthProvider>
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<Layout><Home /></Layout>} />
             <Route path="/about" element={<Layout><About /></Layout>} />
             <Route path="/help" element={<Layout><Help /></Layout>} />
             <Route path="/terms" element={<Layout><Terms /></Layout>} />
             <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
             
-            {/* Login Routes - NO LAYOUT */}
             <Route path="/login" element={<RoleSelect />} />
             <Route path="/login/student" element={<StudentLogin />} />
             <Route path="/login/faculty" element={<FacultyLogin />} />
             <Route path="/login/admin" element={<AdminLogin />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Layout><Dashboard /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/browse" element={
-              <ProtectedRoute>
-                <Layout><Browse /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/search" element={
-              <ProtectedRoute>
-                <Layout><AdvancedSearch /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/notifications" element={
-              <ProtectedRoute>
-                <Layout><Notifications /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/research/:id" element={
-              <ProtectedRoute>
-                <Layout><ResearchDetail /></Layout>
-              </ProtectedRoute>
-            } />
+            <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            <Route path="/explore" element={<ProtectedRoute><Layout><Explore /></Layout></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
+            <Route path="/research/:id" element={<ProtectedRoute><Layout><ResearchDetail /></Layout></ProtectedRoute>} />
 
-            {/* Catch all - redirect to home */}
+            {/* Redirects for old routes */}
+            <Route path="/browse" element={<Navigate to="/explore" replace />} />
+            <Route path="/search" element={<Navigate to="/explore" replace />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

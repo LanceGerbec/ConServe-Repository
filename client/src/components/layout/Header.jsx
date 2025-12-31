@@ -1,5 +1,6 @@
+// client/src/components/layout/Header.jsx
 import { Link, useLocation } from 'react-router-dom';
-import { Moon, Sun, Menu, X, LogOut, User, Search, BookOpen, Home, HelpCircle, Info } from 'lucide-react';
+import { Moon, Sun, Menu, X, LogOut, User, BookOpen, Home, HelpCircle, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -40,8 +41,7 @@ const Header = () => {
 
   const navLinks = [
     { path: '/', label: 'Home', icon: Home },
-    { path: '/browse', label: 'Browse', icon: BookOpen },
-    { path: '/search', label: 'Search', icon: Search },
+    { path: '/explore', label: 'Explore', icon: BookOpen },
     { path: '/about', label: 'About', icon: Info },
     { path: '/help', label: 'Help', icon: HelpCircle },
   ];
@@ -51,7 +51,7 @@ const Header = () => {
       <header className="bg-white dark:bg-gray-900 border-b-4 border-navy dark:border-accent shadow-lg sticky top-0 z-50">
         <nav className="container mx-auto px-4 md:px-6 py-3 md:py-4 max-w-7xl">
           <div className="flex items-center justify-between gap-4">
-            {/* Logos - Compact on mobile */}
+            {/* Logos */}
             <div className="flex items-center gap-2 md:gap-4">
               <a href="https://neust.edu.ph/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 border-navy shadow-md hover:scale-110 transition-transform overflow-hidden bg-white" title="Visit NEUST">
                 {logos.school?.url ? <img src={logos.school.url} alt="NEUST" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-gray-500">NU</span>}
