@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Grid, List, ArrowRight, Search, X } from 'lucide-react';
+// client/src/components/dashboard/StudentDashboard.jsx - OPTIMIZED VERSION
+import { useState, useEffect, useRef } from 'react';
+import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
 import ActivityLogs from '../analytics/ActivityLogs';
@@ -8,7 +9,6 @@ import Toast from '../common/Toast';
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [viewMode, setViewMode] = useState('grid');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
@@ -16,11 +16,16 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  
+  const submissionsRef = useRef(null);
+  const bookmarksRef = useRef(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    if (activeTab === 'overview' || activeTab === 'bookmarks') fetchData();
+    if (activeTab === 'overview' || activeTab === 'submissions' || activeTab === 'bookmarks') {
+      fetchData();
+    }
   }, [activeTab]);
 
   const fetchData = async () => {
@@ -32,10 +37,7 @@ const StudentDashboard = () => {
         fetch(`${API_URL}/research/my-submissions`, { headers }),
         fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers })
       ]);
-      const [submissionsData, bookmarksData] = await Promise.all([
-        submissionsRes.json(),
-        bookmarksRes.json()
-      ]);
+      const [submissionsData, bookmarksData] = await Promise.all([submissionsRes.json(), bookmarksRes.json()]);
       setSubmissions(submissionsData.papers || []);
       setBookmarks(bookmarksData.bookmarks || []);
       const totalViews = (submissionsData.papers || []).reduce((sum, p) => sum + (p.views || 0), 0);
@@ -57,8 +59,15 @@ const StudentDashboard = () => {
       setBookmarks(prev => prev.filter(b => b._id !== bookmarkId));
       showToast('Bookmark removed', 'success');
     } catch (error) {
-      showToast('Failed to remove bookmark', 'error');
+      showToast('Failed to remove', 'error');
     }
+  };
+
+  const scrollToSection = (ref, tab) => {
+    setActiveTab(tab);
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const showToast = (msg, type) => setToast({ show: true, message: msg, type });
@@ -72,43 +81,29 @@ const StudentDashboard = () => {
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const filteredSubmissions = submissions.filter(p => 
-    p.title?.toLowerCase().includes(search.toLowerCase())
-  );
-  const filteredBookmarks = bookmarks.filter(b => 
-    b.research?.title?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSubmissions = submissions.filter(p => p.title?.toLowerCase().includes(search.toLowerCase()));
+  const filteredBookmarks = bookmarks.filter(b => b.research?.title?.toLowerCase().includes(search.toLowerCase()));
 
-  // Mobile-optimized stat card
   const StatCard = ({ icon: Icon, label, value, color, onClick }) => (
-    <div 
-      onClick={onClick} 
-      className={`bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border-2 border-gray-100 dark:border-gray-700 ${onClick ? 'active:scale-95 cursor-pointer' : ''} transition-all`}
-    >
+    <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border-2 border-gray-100 dark:border-gray-700 ${onClick ? 'active:scale-95 cursor-pointer' : ''} transition-all`}>
       <div className="flex items-center gap-4 mb-3">
         <div className={`w-14 h-14 ${color} rounded-xl flex items-center justify-center shadow-md`}>
           <Icon className="text-white" size={22} />
         </div>
-        <div className="flex-1">
-          <div className="text-3xl font-bold text-navy dark:text-accent">{value}</div>
-        </div>
+        <div className="text-3xl font-bold text-navy dark:text-accent">{value}</div>
       </div>
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</p>
-        {onClick && <ArrowRight className="text-gray-400" size={18} />}
+        {onClick && <ChevronRight className="text-gray-400" size={18} />}
       </div>
     </div>
   );
 
-  // Mobile-optimized paper card
   const PaperCard = ({ paper, onRemove, isBookmark = false }) => (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-md border border-gray-200 dark:border-gray-700 active:scale-98 transition-all">
       <div className="flex items-start gap-3 mb-3">
         <div className="flex-1 min-w-0">
-          <h3 
-            className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 mb-2 active:text-navy cursor-pointer" 
-            onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}
-          >
+          <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 mb-2 active:text-navy cursor-pointer" onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}>
             {isBookmark ? paper.research.title : paper.title}
           </h3>
         </div>
@@ -118,11 +113,9 @@ const StudentDashboard = () => {
           </span>
         )}
       </div>
-      
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
         {isBookmark ? paper.research.abstract : paper.abstract}
       </p>
-      
       <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
         <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1.5">
@@ -137,10 +130,7 @@ const StudentDashboard = () => {
           )}
         </div>
         {isBookmark && (
-          <button 
-            onClick={() => onRemove(paper._id, paper.research._id)} 
-            className="px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95"
-          >
+          <button onClick={() => onRemove(paper._id, paper.research._id)} className="px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95">
             Remove
           </button>
         )}
@@ -161,7 +151,7 @@ const StudentDashboard = () => {
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-        {/* Mobile Header with better spacing */}
+        {/* Header */}
         <div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -175,23 +165,20 @@ const StudentDashboard = () => {
           <p className="text-sm text-blue-100 opacity-90 mt-2">Student Dashboard</p>
         </div>
 
-        {/* Mobile-optimized tabs - Horizontal scroll */}
+        {/* Tabs */}
         <div className="px-4 mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {[
               { id: 'overview', icon: BookOpen, label: 'Overview' },
+              { id: 'submissions', icon: FileText, label: 'Submissions', badge: stats.submissions },
               { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', badge: bookmarks.length },
               { id: 'activity', icon: Activity, label: 'Activity' }
             ].map(tab => (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
-                  activeTab === tab.id 
-                    ? 'bg-navy text-white shadow-lg scale-105' 
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
-                }`}
-              >
+              <button key={tab.id} onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === 'submissions') scrollToSection(submissionsRef, 'submissions');
+                if (tab.id === 'bookmarks') scrollToSection(bookmarksRef, 'bookmarks');
+              }} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
                 <tab.icon size={18} />
                 <span className="text-sm">{tab.label}</span>
                 {tab.badge > 0 && (
@@ -207,30 +194,16 @@ const StudentDashboard = () => {
         <div className="px-4 space-y-6">
           {activeTab === 'overview' && (
             <>
-              {/* Stats with better mobile spacing */}
+              {/* Stats */}
               <div className="grid grid-cols-1 gap-4">
-                <StatCard 
-                  icon={Upload} 
-                  label="My Submissions" 
-                  value={stats.submissions} 
-                  color="bg-gradient-to-br from-blue-500 to-blue-600"
-                  onClick={() => document.getElementById('submissions')?.scrollIntoView({ behavior: 'smooth' })}
-                />
-                <StatCard 
-                  icon={Eye} 
-                  label="Total Views" 
-                  value={stats.views} 
-                  color="bg-gradient-to-br from-green-500 to-green-600"
-                />
+                <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-gradient-to-br from-blue-500 to-blue-600" onClick={() => scrollToSection(submissionsRef, 'submissions')} />
+                <StatCard icon={Eye} label="Total Views" value={stats.views} color="bg-gradient-to-br from-green-500 to-green-600" />
               </div>
 
-              {/* Action Cards - Better mobile layout */}
+              {/* Actions */}
               <div className="grid grid-cols-1 gap-4">
-                <button 
-                  onClick={() => setShowSubmitModal(true)}
-                  className="bg-gradient-to-br from-navy to-blue-700 text-white p-6 rounded-2xl shadow-lg active:scale-95 transition-all"
-                >
-                  <div className="flex items-center gap-4 mb-3">
+                <button onClick={() => setShowSubmitModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
+                  <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
                       <Upload size={24} />
                     </div>
@@ -238,14 +211,11 @@ const StudentDashboard = () => {
                       <h3 className="font-bold text-lg mb-1">Submit Research</h3>
                       <p className="text-sm text-blue-100 opacity-90">Upload your paper</p>
                     </div>
-                    <ArrowRight size={20} className="opacity-70" />
+                    <ChevronRight size={20} className="opacity-70" />
                   </div>
                 </button>
 
-                <button 
-                  onClick={() => window.location.href = '/explore'}
-                  className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition-all"
-                >
+                <button onClick={() => window.location.href = '/explore'} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                       <BookOpen className="text-blue-600" size={24} />
@@ -254,122 +224,66 @@ const StudentDashboard = () => {
                       <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">Browse Papers</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Explore repository</p>
                     </div>
-                    <ArrowRight size={20} className="text-gray-400" />
+                    <ChevronRight size={20} className="text-gray-400" />
                   </div>
                 </button>
-              </div>
-
-              {/* Submissions Section */}
-              <div id="submissions" className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Upload size={20} className="text-blue-600" />
-                      My Submissions ({filteredSubmissions.length})
-                    </h2>
-                  </div>
-                  
-                  {/* Mobile search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                      type="text" 
-                      value={search} 
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search submissions..." 
-                      className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900"
-                    />
-                    {search && (
-                      <button 
-                        onClick={() => setSearch('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X size={18} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4">
-                  {filteredSubmissions.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Upload size={32} className="text-gray-400" />
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-3 font-medium">
-                        {search ? 'No submissions found' : 'No submissions yet'}
-                      </p>
-                      {!search && (
-                        <button 
-                          onClick={() => setShowSubmitModal(true)}
-                          className="text-navy dark:text-accent font-semibold hover:underline"
-                        >
-                          Submit Your First Paper
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} />)}
-                    </div>
-                  )}
-                </div>
               </div>
             </>
           )}
 
-          {activeTab === 'bookmarks' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {(activeTab === 'overview' || activeTab === 'submissions') && (
+            <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Upload size={20} className="text-blue-600" />
+                  My Submissions ({filteredSubmissions.length})
+                </h2>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search submissions..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                </div>
+              </div>
+              <div className="p-4">
+                {filteredSubmissions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Upload size={32} className="text-gray-400" />
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-3 font-medium">{search ? 'No submissions found' : 'No submissions yet'}</p>
+                    {!search && <button onClick={() => setShowSubmitModal(true)} className="text-navy dark:text-accent font-semibold hover:underline">Submit Your First Paper</button>}
+                  </div>
+                ) : (
+                  <div className="space-y-4">{filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} />)}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(activeTab === 'bookmarks') && (
+            <div ref={bookmarksRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <Bookmark size={20} className="text-purple-600" />
                   Bookmarked Papers ({filteredBookmarks.length})
                 </h2>
-                
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
-                    value={search} 
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search bookmarks..." 
-                    className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900"
-                  />
-                  {search && (
-                    <button 
-                      onClick={() => setSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    >
-                      <X size={18} />
-                    </button>
-                  )}
+                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
                 </div>
               </div>
-
               <div className="p-4">
                 {filteredBookmarks.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Bookmark size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3 font-medium">
-                      {search ? 'No bookmarks found' : 'No bookmarks yet'}
-                    </p>
-                    {!search && (
-                      <button 
-                        onClick={() => window.location.href = '/explore'}
-                        className="text-navy dark:text-accent font-semibold hover:underline"
-                      >
-                        Browse Papers
-                      </button>
-                    )}
+                    <p className="text-gray-600 dark:text-gray-400 mb-3 font-medium">{search ? 'No bookmarks found' : 'No bookmarks yet'}</p>
+                    {!search && <button onClick={() => window.location.href = '/explore'} className="text-navy dark:text-accent font-semibold hover:underline">Browse Papers</button>}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {filteredBookmarks.map(b => (
-                      <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />
-                    ))}
-                  </div>
+                  <div className="space-y-4">{filteredBookmarks.map(b => <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />)}</div>
                 )}
               </div>
             </div>
@@ -379,15 +293,7 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      {showSubmitModal && (
-        <SubmitResearch 
-          onClose={() => setShowSubmitModal(false)} 
-          onSuccess={() => { 
-            setShowSubmitModal(false); 
-            fetchData(); 
-          }} 
-        />
-      )}
+      {showSubmitModal && <SubmitResearch onClose={() => setShowSubmitModal(false)} onSuccess={() => { setShowSubmitModal(false); fetchData(); }} />}
     </>
   );
 };
