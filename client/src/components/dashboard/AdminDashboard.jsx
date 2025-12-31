@@ -1,6 +1,6 @@
 // client/src/components/dashboard/AdminDashboard.jsx
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Grid, List } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Grid, List, Trash2, User, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
@@ -13,7 +13,6 @@ import Toast from '../common/Toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Memoized stat card component
 const StatCard = memo(({ icon: Icon, label, value, color }) => (
   <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
     <div className={`w-14 h-14 ${color} rounded-xl flex items-center justify-center mb-3 shadow-lg`}>
@@ -24,7 +23,6 @@ const StatCard = memo(({ icon: Icon, label, value, color }) => (
   </div>
 ));
 
-// Memoized pending user card
 const PendingUserCard = memo(({ user, onApprove, onReject }) => (
   <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition bg-gray-50 dark:bg-gray-900">
     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{user.firstName} {user.lastName}</h3>
@@ -41,7 +39,6 @@ const PendingUserCard = memo(({ user, onApprove, onReject }) => (
   </div>
 ));
 
-// Memoized pending research card
 const PendingResearchCard = memo(({ paper, onReview }) => (
   <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition bg-gray-50 dark:bg-gray-900">
     <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 text-sm">{paper.title}</h3>
@@ -73,7 +70,6 @@ const AdminDashboard = () => {
 
   const showToast = useCallback((msg, type = 'success') => setToast({ show: true, message: msg, type }), []);
 
-  // Check URL params for review request
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const adminReviewId = params.get('adminReview');
@@ -83,7 +79,6 @@ const AdminDashboard = () => {
     }
   }, [location.search, navigate]);
 
-  // Fetch paper for review
   const fetchPaperForReview = async (paperId) => {
     try {
       const token = localStorage.getItem('token');
@@ -100,21 +95,16 @@ const AdminDashboard = () => {
     }
   };
 
-  // Optimized data fetching
   const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch all data in parallel
-      const [userStatsRes, researchStatsRes, pendingUsersRes, pendingResearchRes, allUsersRes, allResearchRes, bookmarksRes] = await Promise.all([
+      const [userStatsRes, researchStatsRes, pendingUsersRes, pendingResearchRes] = await Promise.all([
         fetch(`${API_URL}/users/stats`, { headers }),
         fetch(`${API_URL}/research/stats`, { headers }),
         fetch(`${API_URL}/users?status=pending`, { headers }),
-        fetch(`${API_URL}/research?status=pending`, { headers }),
-        activeTab === 'users' ? fetch(`${API_URL}/users`, { headers }) : Promise.resolve(null),
-        activeTab === 'research' ? fetch(`${API_URL}/research`, { headers }) : Promise.resolve(null),
-        activeTab === 'bookmarks' ? fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }) : Promise.resolve(null)
+        fetch(`${API_URL}/research?status=pending`, { headers })
       ]);
 
       const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([
@@ -132,16 +122,21 @@ const AdminDashboard = () => {
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
 
-      // Only fetch additional data if on specific tabs
-      if (activeTab === 'users' && allUsersRes) {
-        const allUsersData = await allUsersRes.json();
-        setAllUsers(allUsersData.users || []);
+      // Fetch data for specific tabs
+      if (activeTab === 'users') {
+        const usersRes = await fetch(`${API_URL}/users`, { headers });
+        const usersData = await usersRes.json();
+        setAllUsers(usersData.users || []);
       }
-      if (activeTab === 'research' && allResearchRes) {
-        const allResearchData = await allResearchRes.json();
-        setAllResearch(allResearchData.papers || []);
+      
+      if (activeTab === 'research') {
+        const researchRes = await fetch(`${API_URL}/research`, { headers });
+        const researchData = await researchRes.json();
+        setAllResearch(researchData.papers || []);
       }
-      if (activeTab === 'bookmarks' && bookmarksRes) {
+
+      if (activeTab === 'bookmarks') {
+        const bookmarksRes = await fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers });
         const bookmarksData = await bookmarksRes.json();
         setBookmarks(bookmarksData.bookmarks || []);
       }
@@ -157,7 +152,6 @@ const AdminDashboard = () => {
     fetchData();
   }, [fetchData]);
 
-  // Handle approve user
   const handleApproveUser = useCallback(async (userId) => {
     try {
       const token = localStorage.getItem('token');
@@ -177,7 +171,6 @@ const AdminDashboard = () => {
     }
   }, [showToast, fetchData]);
 
-  // Handle reject user
   const handleRejectUser = useCallback(async (userId) => {
     if (!confirm('Delete this user?')) return;
     try {
@@ -195,13 +188,11 @@ const AdminDashboard = () => {
     }
   }, [showToast, fetchData]);
 
-  // Handle review paper
   const handleReviewPaper = useCallback((paper) => {
     setSelectedPaper(paper);
     setShowReviewModal(true);
   }, []);
 
-  // Handle remove bookmark
   const handleRemoveBookmark = useCallback(async (bookmarkId, researchId) => {
     try {
       const token = localStorage.getItem('token');
@@ -215,6 +206,50 @@ const AdminDashboard = () => {
       showToast('Failed to remove', 'error');
     }
   }, [showToast]);
+
+  const handleToggleUserStatus = useCallback(async (userId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/users/${userId}/toggle-status`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('✅ Status updated');
+        fetchData();
+      }
+    } catch (error) {
+      showToast('Failed to update', 'error');
+    }
+  }, [showToast, fetchData]);
+
+  const handleDeleteResearch = useCallback(async (researchId) => {
+    if (!confirm('Delete this research paper? This cannot be undone.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/research/${researchId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('✅ Research deleted');
+        fetchData();
+      }
+    } catch (error) {
+      showToast('Failed to delete', 'error');
+    }
+  }, [showToast, fetchData]);
+
+  const filteredUsers = allUsers.filter(u =>
+    u.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+    u.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredResearch = allResearch.filter(r =>
+    r.title?.toLowerCase().includes(search.toLowerCase()) ||
+    r.authors?.some(a => a.toLowerCase().includes(search.toLowerCase()))
+  );
 
   const filteredBookmarks = bookmarks.filter(b =>
     b.research?.title?.toLowerCase().includes(search.toLowerCase())
@@ -260,6 +295,7 @@ const AdminDashboard = () => {
           ))}
         </div>
 
+        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -269,7 +305,6 @@ const AdminDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Pending Users */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <Users size={20} /> Pending Users ({pendingUsers.length})
@@ -285,7 +320,6 @@ const AdminDashboard = () => {
                 )}
               </div>
 
-              {/* Pending Research */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FileText size={20} /> Pending Research ({pendingResearch.length})
@@ -304,6 +338,150 @@ const AdminDashboard = () => {
           </>
         )}
 
+        {/* USERS TAB */}
+        {activeTab === 'users' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Users size={20} /> All Users ({filteredUsers.length})
+              </h2>
+              <input 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                placeholder="Search users..." 
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-navy focus:outline-none dark:bg-gray-700" 
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">Name</th>
+                    <th className="px-4 py-3 text-left font-semibold">Email</th>
+                    <th className="px-4 py-3 text-left font-semibold">Role</th>
+                    <th className="px-4 py-3 text-left font-semibold">Status</th>
+                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredUsers.map((u) => (
+                    <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
+                      <td className="px-4 py-3 font-medium">{u.firstName} {u.lastName}</td>
+                      <td className="px-4 py-3">{u.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          u.role === 'admin' ? 'bg-red-100 text-red-700' :
+                          u.role === 'faculty' ? 'bg-blue-100 text-blue-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>{u.role}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.isApproved ? (
+                          u.isActive ? (
+                            <span className="text-green-600 text-xs font-semibold">✓ Active</span>
+                          ) : (
+                            <span className="text-gray-500 text-xs font-semibold">Inactive</span>
+                          )
+                        ) : (
+                          <span className="text-yellow-600 text-xs font-semibold">Pending</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex gap-1 justify-end">
+                          {!u.isApproved && (
+                            <>
+                              <button onClick={() => handleApproveUser(u._id)} className="text-green-600 hover:text-green-700 p-1" title="Approve">
+                                <CheckCircle size={16} />
+                              </button>
+                              <button onClick={() => handleRejectUser(u._id)} className="text-red-600 hover:text-red-700 p-1" title="Reject">
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
+                          {u.isApproved && u.role !== 'admin' && (
+                            <button onClick={() => handleToggleUserStatus(u._id)} className="text-blue-600 hover:text-blue-700 p-1" title="Toggle Status">
+                              <Shield size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* RESEARCH TAB */}
+        {activeTab === 'research' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <FileText size={20} /> All Research ({filteredResearch.length})
+              </h2>
+              <input 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                placeholder="Search research..." 
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-navy focus:outline-none dark:bg-gray-700" 
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">Title</th>
+                    <th className="px-4 py-3 text-left font-semibold">Author</th>
+                    <th className="px-4 py-3 text-left font-semibold">Status</th>
+                    <th className="px-4 py-3 text-left font-semibold">Views</th>
+                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredResearch.map((r) => (
+                    <tr key={r._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
+                      <td className="px-4 py-3">
+                        <div className="max-w-md">
+                          <p className="font-medium line-clamp-2">{r.title}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{r.submittedBy?.firstName} {r.submittedBy?.lastName}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          r.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          r.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          r.status === 'revision' ? 'bg-orange-100 text-orange-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>{r.status}</span>
+                      </td>
+                      <td className="px-4 py-3">{r.views || 0}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex gap-1 justify-end">
+                          {r.status === 'pending' && (
+                            <button onClick={() => handleReviewPaper(r)} className="text-blue-600 hover:text-blue-700 p-1" title="Review">
+                              <Eye size={16} />
+                            </button>
+                          )}
+                          <button onClick={() => navigate(`/research/${r._id}`)} className="text-purple-600 hover:text-purple-700 p-1" title="View">
+                            <FileText size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteResearch(r._id)} className="text-red-600 hover:text-red-700 p-1" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* BOOKMARKS TAB */}
         {activeTab === 'bookmarks' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -325,13 +503,13 @@ const AdminDashboard = () => {
                 <div className="text-center py-12">
                   <Bookmark size={48} className="mx-auto text-gray-400 mb-3 opacity-30" />
                   <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 font-medium">{search ? 'No bookmarks found' : 'No bookmarks yet'}</p>
-                  {!search && <button onClick={() => window.location.href = '/explore'} className="text-navy dark:text-accent hover:underline text-sm font-semibold">Browse Papers</button>}
+                  {!search && <button onClick={() => navigate('/explore')} className="text-navy dark:text-accent hover:underline text-sm font-semibold">Browse Papers</button>}
                 </div>
               ) : (
                 <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
                   {filteredBookmarks.map(b => (
                     <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition">
-                      <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy transition" onClick={() => window.location.href = `/research/${b.research._id}`}>{b.research.title}</h3>
+                      <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy transition" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
                       <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold transition">Remove</button>
                     </div>
@@ -361,8 +539,6 @@ const AdminDashboard = () => {
 };
 
 AdminDashboard.displayName = 'AdminDashboard';
-StatCard.displayName = 'StatCard';
-PendingUserCard.displayName = 'PendingUserCard';
+StatCard.displayName = 'StatCard';PendingUserCard.displayName = 'PendingUserCard';
 PendingResearchCard.displayName = 'PendingResearchCard';
-
 export default AdminDashboard;
