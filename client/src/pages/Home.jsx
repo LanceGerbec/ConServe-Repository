@@ -41,10 +41,10 @@ const Home = () => {
           </div>
 
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-3 md:mb-6 animate-fade-in tracking-tight leading-tight">
-            <span className="text-navy-700 dark:text-white">Con</span><span className="text-navy-900 dark:text-white">Serve</span>
+            <span className="text-navy-800 dark:text-white">Con</span><span className="text-navy-900 dark:text-white">Serve</span>
           </h1>
           
-          <p className="text-lg md:text-2xl lg:text-3xl text-navy-700 dark:text-gray-300 mb-2 md:mb-4 font-bold tracking-wide">
+          <p className="text-base md:text-xl lg:text-3xl text-navy-700 dark:text-gray-300 mb-2 md:mb-4 font-bold tracking-wide">
             Where Knowledge Flows and Nursing Grows
           </p>
           
@@ -91,7 +91,7 @@ const Home = () => {
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-navy-900 dark:text-white mb-3 md:mb-5 tracking-tight leading-tight">
             Why Choose ConServe?
           </h2>
-          <p className="text-base md:text-xl text-navy-700 dark:text-navy-300 font-semibold">Professional Tools for Nursing Research Excellence</p>
+          <p className="text-sm md:text-lg lg:text-xl text-navy-700 dark:text-navy-300 font-semibold">Professional Tools for Nursing Research Excellence</p>
         </div>
         
         <div className="flex md:hidden overflow-x-auto gap-5 px-4 pb-4 snap-x snap-mandatory scrollbar-hide">
