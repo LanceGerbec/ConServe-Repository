@@ -1,21 +1,20 @@
-// client/src/pages/Home.jsx - MOBILE OPTIMIZED
+// client/src/pages/Home.jsx - UPDATE THE IMPORTS AND STATS SECTION
 import { Link } from 'react-router-dom';
 import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Award, Lock, Zap, FileText, CheckCircle, Star, Activity, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import SubmitResearch from '../components/research/SubmitResearch';
 import OnboardingModal from '../components/onboarding/OnboardingModal';
+import HomeAnalytics from '../components/home/HomeAnalytics'; // ADD THIS
 
 const Home = () => {
   const { user } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [stats, setStats] = useState({ papers: 0, users: 0, views: 0, loading: true });
 
   useEffect(() => {
     if (!localStorage.getItem('hasSeenOnboarding')) setShowOnboarding(true);
-    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -23,45 +22,10 @@ const Home = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const [researchRes, userRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/research/stats`, { headers }),
-        fetch(`${import.meta.env.VITE_API_URL}/users/stats`, { headers })
-      ]);
-
-      const researchData = await researchRes.json();
-      const userData = await userRes.json();
-
-      const approvedRes = await fetch(`${import.meta.env.VITE_API_URL}/research?status=approved`, { headers });
-      const approvedData = await approvedRes.json();
-      const totalViews = approvedData.papers?.reduce((sum, paper) => sum + (paper.views || 0), 0) || 0;
-
-      setStats({
-        papers: researchData.approved || 0,
-        users: userData.activeUsers || 0,
-        views: totalViews,
-        loading: false
-      });
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-      setStats({ papers: 0, users: 0, views: 0, loading: false });
-    }
-  };
-
   const features = [
     { icon: BookOpen, title: 'Smart Repository', desc: 'Advanced search across thousands of nursing research papers' },
     { icon: Shield, title: 'Institutional Security', desc: 'Watermarked documents with comprehensive academic protection' },
     { icon: Users, title: 'Collaborative Network', desc: 'Connect with researchers and share knowledge seamlessly' }
-  ];
-
-  const displayStats = [
-    { icon: FileText, value: stats.loading ? '...' : `${stats.papers}+`, label: 'Research Papers' },
-    { icon: Users, value: stats.loading ? '...' : `${stats.users}+`, label: 'Active Researchers' },
-    { icon: TrendingUp, value: stats.loading ? '...' : `${stats.views.toLocaleString()}+`, label: 'Total Views' }
   ];
 
   const benefits = [
@@ -75,9 +39,8 @@ const Home = () => {
     <div className="space-y-8 pb-8">
       {showOnboarding && <OnboardingModal onComplete={() => { localStorage.setItem('hasSeenOnboarding', 'true'); setShowOnboarding(false); }} onSkip={() => { localStorage.setItem('hasSeenOnboarding', 'true'); setShowOnboarding(false); }} />}
 
-      {/* HERO SECTION - MOBILE OPTIMIZED */}
+      {/* HERO SECTION */}
       <section className="relative min-h-[85vh] flex items-center justify-center px-4 py-12">
-        {/* Background Effects */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-navy-950 dark:to-gray-900"></div>
           <div className="absolute top-10 left-5 w-40 h-40 md:w-72 md:h-72 bg-navy/10 rounded-full blur-3xl animate-pulse"></div>
@@ -85,28 +48,24 @@ const Home = () => {
         </div>
 
         <div className="relative z-10 text-center max-w-4xl mx-auto">
-          {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 md:px-6 md:py-3 rounded-full shadow-lg mb-6 md:mb-8 border border-navy/20">
             <Star className="text-yellow-500 flex-shrink-0" size={16} />
             <span className="text-xs md:text-sm font-bold text-navy dark:text-blue-400">NEUST College of Nursing</span>
           </div>
 
-          {/* Main Title */}
           <h1 className="text-5xl md:text-8xl font-black mb-4 md:mb-6 leading-tight tracking-tight text-navy dark:text-white">
             ConServe
           </h1>
 
-          {/* Tagline */}
           <p className="text-lg md:text-2xl text-gray-700 dark:text-gray-300 mb-3 md:mb-4 font-medium px-4">
             Where Knowledge Flows and Nursing Grows.
           </p>
           
-          {/* Description */}
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-8 md:mb-10 px-4">
-            Discover {stats.papers}+ peer-reviewed papers • Secure watermarked viewing • AI-powered search
+            Discover peer-reviewed papers • Secure watermarked viewing • AI-powered search
           </p>
 
-          {/* CTA Buttons - MOBILE OPTIMIZED */}
+          {/* CTA Buttons */}
           <div className="flex flex-col md:flex-row gap-3 md:gap-4 justify-center mb-6 md:mb-8 px-4">
             {user ? (
               <>
@@ -134,24 +93,12 @@ const Home = () => {
             )}
           </div>
 
-          {/* Stats - MOBILE OPTIMIZED */}
-          <div className="inline-flex flex-col md:flex-row items-center gap-4 md:gap-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-6 py-4 md:px-8 md:py-4 rounded-2xl shadow-xl border border-navy/20">
-            {displayStats.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <stat.icon size={18} className="text-navy dark:text-blue-400 flex-shrink-0" />
-                  <div className="text-xl md:text-2xl font-black text-navy dark:text-blue-400">
-                    {stat.value}
-                  </div>
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          {/* OPTIMIZED ANALYTICS - REPLACE OLD STATS SECTION */}
+          <HomeAnalytics />
         </div>
       </section>
 
-      {/* FEATURES - MOBILE OPTIMIZED */}
+      {/* FEATURES */}
       <section className="px-4 max-w-7xl mx-auto">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="text-3xl md:text-5xl font-black text-navy dark:text-white mb-3 md:mb-4">Why ConServe?</h2>
@@ -171,7 +118,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* BENEFITS - MOBILE OPTIMIZED */}
+      {/* BENEFITS */}
       <section className="px-4 max-w-7xl mx-auto">
         <div className="bg-navy dark:bg-gray-900 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
@@ -198,14 +145,14 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA SECTION - MOBILE OPTIMIZED */}
+      {/* CTA SECTION */}
       {!user ? (
         <section className="px-4 max-w-4xl mx-auto text-center">
           <div className="bg-navy dark:bg-gray-900 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
             <div className="relative z-10">
               <h2 className="text-3xl md:text-5xl font-black text-white mb-3 md:mb-4">Ready to Transform Your Research?</h2>
-              <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8">Join {stats.users}+ researchers advancing nursing science</p>
+              <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8">Join researchers advancing nursing science</p>
               <Link to="/register" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-navy rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all">
                 Get Started Free
                 <ArrowRight size={20} className="flex-shrink-0" />
