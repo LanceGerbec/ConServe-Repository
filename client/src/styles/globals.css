@@ -53,3 +53,14 @@ iframe {
   display: inline-block;
   transform-origin: 70% 70%;
 }
+
+/* Hide Scrollbar - Chrome, Safari, Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide Scrollbar - IE, Edge, Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

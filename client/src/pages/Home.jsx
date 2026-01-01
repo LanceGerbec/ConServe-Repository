@@ -41,7 +41,7 @@ const Home = () => {
           </div>
 
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-3 md:mb-6 animate-fade-in tracking-tight leading-tight">
-            <span className="text-navy-600 dark:text-white">Con</span><span className="text-navy-900 dark:text-white">Serve</span>
+            <span className="text-navy-700 dark:text-white">Con</span><span className="text-navy-900 dark:text-white">Serve</span>
           </h1>
           
           <p className="text-lg md:text-2xl lg:text-3xl text-navy-700 dark:text-gray-300 mb-2 md:mb-4 font-bold tracking-wide">
@@ -94,7 +94,29 @@ const Home = () => {
           <p className="text-base md:text-xl text-navy-700 dark:text-navy-300 font-semibold">Professional Tools for Nursing Research Excellence</p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 md:gap-8 lg:gap-10">
+        <div className="flex md:hidden overflow-x-auto gap-5 px-4 pb-4 snap-x snap-mandatory scrollbar-hide">
+          {features.map((f, i) => (
+            <div 
+              key={i} 
+              className={`flex-shrink-0 w-[85vw] group bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all border-2 snap-center ${
+                activeFeature === i 
+                  ? 'border-navy-600 dark:border-accent scale-105 shadow-xl' 
+                  : 'border-gray-200 dark:border-gray-700 hover:border-navy-400 dark:hover:border-navy-600'
+              }`}
+              onClick={() => setActiveFeature(i)}
+            >
+              <div className="w-14 h-14 bg-gradient-to-br from-navy-800 to-navy-600 dark:from-navy-700 dark:to-navy-500 rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all">
+                <f.icon className="text-white" size={24} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-xl font-black text-navy-900 dark:text-white mb-2 group-hover:text-navy-700 dark:group-hover:text-accent transition-colors tracking-tight">
+                {f.title}
+              </h3>
+              <p className="text-sm text-navy-600 dark:text-gray-400 leading-relaxed font-medium">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-8 lg:gap-10">
           {features.map((f, i) => (
             <div 
               key={i} 
