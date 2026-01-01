@@ -1,81 +1,100 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Star, CheckCircle, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import SubmitResearch from '../components/research/SubmitResearch';
 
 const Home = () => {
   const { user } = useAuth();
-  const [activeFeature, setActiveFeature] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => setActiveFeature(p => (p + 1) % 3), 4000);
-    return () => clearInterval(timer);
-  }, []);
-
   const features = [
-    { icon: BookOpen, title: 'Smart Repository', desc: 'Advanced search across nursing research' },
-    { icon: Shield, title: 'IP Security', desc: 'Comprehensive intellectual property protection with digital watermarking' },
-    { icon: Users, title: 'Collaboration', desc: 'Connect with nursing researchers' }
+    { 
+      icon: BookOpen, 
+      title: 'Smart Repository', 
+      desc: 'Advanced search and filtering across thousands of peer-reviewed nursing research papers with intelligent categorization.' 
+    },
+    { 
+      icon: Shield, 
+      title: 'IP Security', 
+      desc: 'Military-grade protection with dynamic watermarking, signed URLs, and comprehensive audit logging for all documents.' 
+    },
+    { 
+      icon: Users, 
+      title: 'Collaboration', 
+      desc: 'Connect with fellow nursing researchers, share insights, and build upon collective knowledge in a secure environment.' 
+    }
   ];
 
   const benefits = [
-    { icon: CheckCircle, text: 'Peer-reviewed' },
+    { icon: CheckCircle, text: 'Peer-Reviewed Quality' },
     { icon: Lock, text: 'IP Protected' },
     { icon: Search, text: 'Smart Search' },
     { icon: Star, text: 'Citation Tools' }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Hero Section - Desktop Zoomed, Mobile Optimized */}
-      <section className="relative min-h-[70vh] md:min-h-[85vh] flex items-center justify-center px-4 py-8 md:py-16 bg-white dark:bg-gray-900">
-        <div className="relative z-10 text-center max-w-5xl mx-auto">
-          {/* Badge - Larger on Desktop */}
-          <div className="inline-flex items-center gap-2 bg-navy-50 dark:bg-navy-900/30 px-4 py-2 md:px-5 md:py-2.5 rounded-full shadow-sm mb-4 md:mb-8 border border-navy-200 dark:border-navy-800">
-            <Star className="text-navy-600 dark:text-navy-400" size={16} />
-            <span className="text-xs md:text-sm font-semibold text-navy-700 dark:text-navy-300">
-              NEUST College of Nursing
-            </span>
+    <div className="min-h-screen bg-[#0a1628]">
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center px-4 py-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a1628] via-[#0d1d35] to-[#0a1628] opacity-50"></div>
+        
+        <div className="relative z-10 text-center max-w-5xl mx-auto animate-fade-in">
+          <div className="mb-8">
+            <div className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-sm px-6 py-3 rounded-full border border-white/10 mb-8">
+              <Star className="text-blue-400" size={18} />
+              <span className="text-sm font-semibold text-white/90 tracking-wide">
+                NEUST COLLEGE OF NURSING
+              </span>
+            </div>
           </div>
 
-          {/* Title - Larger on Desktop */}
-          <h1 className="text-4xl md:text-7xl lg:text-8xl font-black mb-3 md:mb-6 text-navy-900 dark:text-white animate-fade-in">
+          <h1 className="text-7xl md:text-9xl font-black text-white mb-6 tracking-tight leading-none">
             ConServe
           </h1>
           
-          <p className="text-base md:text-2xl lg:text-3xl text-navy-700 dark:text-navy-300 mb-2 md:mb-4 font-semibold">
-            Where Knowledge Flows and Nursing Grows
+          <p className="text-xl md:text-2xl text-slate-300 mb-4 font-light tracking-wide">
+            Professional Research Repository System
           </p>
           
-          <p className="text-sm md:text-lg text-navy-600 dark:text-navy-400 mb-6 md:mb-10">
-            Discover • Secure • Search • Collaborate
+          <p className="text-base md:text-lg text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+            Discover, secure, and collaborate on nursing research with enterprise-grade protection and intelligent search capabilities
           </p>
 
-          {/* CTA Buttons - Larger on Desktop */}
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center max-w-md md:max-w-2xl mx-auto">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
             {user ? (
               <>
-                <Link to="/explore" className="group px-6 md:px-10 py-3 md:py-5 bg-navy-600 hover:bg-navy-700 text-white rounded-lg md:rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-base md:text-lg">
-                  <Search size={18} className="md:w-6 md:h-6" />
+                <Link 
+                  to="/explore" 
+                  className="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
+                >
+                  <Search size={20} />
                   Browse Research
-                  <ArrowRight size={18} className="md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
                 {(user.role === 'student' || user.role === 'faculty') && (
-                  <button onClick={() => setShowSubmitModal(true)} className="px-6 md:px-10 py-3 md:py-5 bg-navy-100 dark:bg-navy-800 text-navy-700 dark:text-navy-200 rounded-lg md:rounded-xl font-bold shadow-lg hover:shadow-xl transition-all border-2 border-navy-300 dark:border-navy-700 flex items-center justify-center gap-2 hover:scale-105 text-base md:text-lg">
-                    <Upload size={18} className="md:w-6 md:h-6" />
+                  <button 
+                    onClick={() => setShowSubmitModal(true)} 
+                    className="px-8 py-4 bg-transparent border-2 border-white/20 text-white rounded-lg font-semibold hover:border-blue-500 hover:bg-white/5 transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
+                  >
+                    <Upload size={20} />
                     Submit Paper
                   </button>
                 )}
               </>
             ) : (
               <>
-                <Link to="/register" className="group px-6 md:px-10 py-3 md:py-5 bg-navy-600 hover:bg-navy-700 text-white rounded-lg md:rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-base md:text-lg">
-                  Get Started Free
-                  <ArrowRight size={18} className="md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
+                <Link 
+                  to="/register" 
+                  className="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
+                >
+                  Get Started
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link to="/about" className="px-6 md:px-10 py-3 md:py-5 bg-navy-100 dark:bg-navy-800 text-navy-700 dark:text-navy-200 rounded-lg md:rounded-xl font-bold shadow-lg hover:shadow-xl transition-all border-2 border-navy-300 dark:border-navy-700 hover:scale-105 text-base md:text-lg">
+                <Link 
+                  to="/about" 
+                  className="px-8 py-4 bg-transparent border-2 border-white/20 text-white rounded-lg font-semibold hover:border-blue-500 hover:bg-white/5 transition-all duration-300 hover:scale-105"
+                >
                   Learn More
                 </Link>
               </>
@@ -84,107 +103,108 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Features Section - Larger on Desktop */}
-      <section className="px-4 py-8 md:py-16 max-w-7xl mx-auto">
-        <div className="text-center mb-6 md:mb-12">
-          <h2 className="text-2xl md:text-4xl lg:text-5xl font-black text-navy-900 dark:text-white mb-2 md:mb-4">
-            Why Choose ConServe?
+      {/* Features Section */}
+      <section className="px-4 py-24 max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+            Enterprise Features
           </h2>
-          <p className="text-sm md:text-lg text-navy-600 dark:text-navy-400">Enterprise-grade features for academic excellence</p>
+          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+            Professional-grade tools designed for academic excellence
+          </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {features.map((f, i) => (
             <div 
               key={i} 
-              className={`group bg-white dark:bg-gray-800 p-5 md:p-8 lg:p-10 rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all border-2 cursor-pointer ${
-                activeFeature === i 
-                  ? 'border-navy-600 dark:border-navy-500 scale-105' 
-                  : 'border-gray-200 dark:border-gray-700 hover:border-navy-400'
-              }`}
-              onClick={() => setActiveFeature(i)}
+              className="group bg-white/5 backdrop-blur-sm p-8 rounded-xl border border-white/10 hover:border-blue-500/50 transition-all duration-300"
             >
-              <div className="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-navy-600 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-5 shadow-md group-hover:scale-110 transition-transform">
-                <f.icon className="text-white" size={22} strokeWidth={2} style={{ width: 'clamp(22px, 3vw, 36px)', height: 'clamp(22px, 3vw, 36px)' }} />
+              <div className="w-14 h-14 bg-blue-600/20 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-600/30 transition-colors">
+                <f.icon className="text-blue-400" size={28} />
               </div>
-              <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-navy-900 dark:text-white mb-2 md:mb-3 group-hover:text-navy-600 dark:group-hover:text-navy-400 transition-colors">
+              <h3 className="text-xl font-bold text-white mb-3">
                 {f.title}
               </h3>
-              <p className="text-sm md:text-base text-navy-600 dark:text-navy-400 leading-relaxed">{f.desc}</p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                {f.desc}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Benefits Section - Larger on Desktop */}
-      <section className="px-4 py-8 md:py-16 max-w-7xl mx-auto">
-        <div className="bg-navy-900 dark:bg-navy-950 rounded-2xl md:rounded-3xl p-6 md:p-12 lg:p-16 shadow-xl border border-navy-800">
-          <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-6 md:mb-10 text-center">
-            Everything You Need to Succeed
+      {/* Benefits Section */}
+      <section className="px-4 py-24 max-w-7xl mx-auto">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 border border-white/10">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center tracking-tight">
+            Everything You Need
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 lg:gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((b, i) => (
               <div 
                 key={i} 
-                className="group flex flex-col items-center gap-2 md:gap-4 bg-white/10 backdrop-blur-sm p-4 md:p-6 lg:p-8 rounded-lg md:rounded-xl border border-white/20 hover:bg-white/20 hover:scale-105 transition-all"
+                className="flex flex-col items-center gap-4 p-6 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
               >
-                <div className="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-navy-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                  <b.icon className="text-white" style={{ width: 'clamp(20px, 2.5vw, 32px)', height: 'clamp(20px, 2.5vw, 32px)' }} />
+                <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                  <b.icon className="text-blue-400" size={24} />
                 </div>
-                <p className="text-white font-semibold text-sm md:text-base lg:text-lg text-center">{b.text}</p>
+                <p className="text-white font-semibold text-center">{b.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section - Larger on Desktop */}
-      <section className="px-4 py-8 md:py-16 max-w-4xl md:max-w-5xl mx-auto mb-8">
-        <div className="bg-navy-800 dark:bg-navy-900 rounded-2xl md:rounded-3xl p-6 md:p-12 lg:p-16 shadow-xl text-center border-2 border-navy-700">
+      {/* CTA Section */}
+      <section className="px-4 py-24 max-w-4xl mx-auto">
+        <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/20 backdrop-blur-sm rounded-2xl p-12 md:p-16 text-center border border-blue-500/30">
           {!user ? (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 bg-white/20 backdrop-blur-sm rounded-full mb-4 md:mb-8 shadow-lg">
-                <BookOpen className="text-white" style={{ width: 'clamp(32px, 4vw, 48px)', height: 'clamp(32px, 4vw, 48px)' }} />
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600/20 rounded-full mb-8">
+                <BookOpen className="text-blue-400" size={40} />
               </div>
-              <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-6">
-                Ready to Transform Your Research?
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
+                Ready to Get Started?
               </h2>
-              <p className="text-sm md:text-lg lg:text-xl text-navy-200 mb-6 md:mb-10 max-w-xl md:max-w-3xl mx-auto">
-                Join NEUST College of Nursing's growing research community and access thousands of peer-reviewed papers
+              <p className="text-lg text-slate-300 mb-8 max-w-2xl mx-auto">
+                Join NEUST College of Nursing's research community and access thousands of peer-reviewed papers
               </p>
               <Link 
                 to="/register" 
-                className="group inline-flex items-center gap-2 md:gap-3 px-8 md:px-12 py-3 md:py-5 bg-white text-navy-700 rounded-lg md:rounded-xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-base md:text-lg lg:text-xl"
+                className="inline-flex items-center gap-3 px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105"
               >
                 Get Started Free
-                <ArrowRight className="group-hover:translate-x-1 transition-transform" style={{ width: 'clamp(20px, 2vw, 28px)', height: 'clamp(20px, 2vw, 28px)' }} />
+                <ArrowRight size={24} />
               </Link>
             </>
           ) : (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 bg-white/20 backdrop-blur-sm rounded-full mb-4 md:mb-8 shadow-lg">
-                <span className="text-4xl md:text-5xl lg:text-6xl">👋</span>
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600/20 rounded-full mb-8">
+                <span className="text-5xl">👋</span>
               </div>
-              <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-6">
-                Welcome Back, {user.firstName}!
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
+                Welcome Back, {user.firstName}
               </h2>
-              <p className="text-sm md:text-lg text-navy-200 mb-6 md:mb-10">Continue your research journey with ConServe</p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+              <p className="text-lg text-slate-300 mb-8">
+                Continue your research journey with ConServe
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 {(user.role === 'student' || user.role === 'faculty') && (
                   <button 
                     onClick={() => setShowSubmitModal(true)} 
-                    className="group px-6 md:px-10 py-3 md:py-5 bg-white text-navy-700 rounded-lg md:rounded-xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 text-base md:text-lg"
+                    className="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
                   >
-                    <Upload style={{ width: 'clamp(18px, 2vw, 24px)', height: 'clamp(18px, 2vw, 24px)' }} />
+                    <Upload size={20} />
                     Submit Research
-                    <ArrowRight className="group-hover:translate-x-1 transition-transform" style={{ width: 'clamp(18px, 2vw, 24px)', height: 'clamp(18px, 2vw, 24px)' }} />
+                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 )}
                 <Link 
                   to="/explore" 
-                  className="px-6 md:px-10 py-3 md:py-5 bg-white/20 backdrop-blur-sm text-white rounded-lg md:rounded-xl font-bold hover:bg-white/30 transition-all border-2 border-white/30 hover:scale-105 flex items-center justify-center gap-2 text-base md:text-lg"
+                  className="px-8 py-4 bg-transparent border-2 border-white/20 text-white rounded-lg font-semibold hover:border-blue-500 hover:bg-white/5 transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
                 >
-                  <Search style={{ width: 'clamp(18px, 2vw, 24px)', height: 'clamp(18px, 2vw, 24px)' }} />
+                  <Search size={20} />
                   Browse Papers
                 </Link>
               </div>
