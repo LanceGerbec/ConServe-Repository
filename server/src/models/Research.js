@@ -55,5 +55,8 @@ researchSchema.index({ title: 'text', abstract: 'text', keywords: 'text' });
 researchSchema.index({ status: 1, submittedBy: 1 });
 researchSchema.index({ yearCompleted: 1 }); // NEW INDEX
 researchSchema.index({ subjectArea: 1 }); // NEW INDEX
+researchSchema.index({ createdAt: -1 }); // ADD THIS LINE
+researchSchema.index({ views: -1 }); // ADD THIS LINE
+researchSchema.index({ authors: 1 }); // ADD THIS LINE
 
 export default mongoose.model('Research', researchSchema);

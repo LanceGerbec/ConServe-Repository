@@ -173,10 +173,10 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// LIST RESEARCH
+// LIST RESEARCH WITH PAGINATION
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, category, yearCompleted, subjectArea, author, search } = req.query;
+    const { status, category, yearCompleted, subjectArea, author, search, page = 1, limit = 20 } = req.query;
     const isAdmin = req.user.role === 'admin';
     let query = isAdmin ? {} : { status: 'approved' };
     
@@ -194,11 +194,24 @@ router.get('/', auth, async (req, res) => {
       ];
     }
     
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Research.countDocuments(query);
+    
     const papers = await Research.find(query)
       .populate('submittedBy', 'firstName lastName email')
       .sort({ createdAt: -1 })
-      .limit(100);
-    res.json({ papers, count: papers.length });
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+    
+    res.json({ 
+      papers, 
+      count: papers.length,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      hasMore: skip + papers.length < total
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch research' });
   }
