@@ -1,4 +1,4 @@
-// client/src/pages/Home.jsx
+// lclient/src/pages/Home.jsx
 import { Link } from 'react-router-dom';
 import { BookOpen, Shield, Users, ArrowRight, Search, Upload, Star, CheckCircle, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
