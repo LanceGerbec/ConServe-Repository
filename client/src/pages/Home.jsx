@@ -19,14 +19,14 @@ const Home = () => {
   const features = [
     { icon: BookOpen, title: 'Smart Repository', desc: 'Advanced search across nursing research', color: 'from-blue-500 to-blue-600' },
     { icon: Shield, title: 'Institutional Security', desc: 'Watermarked documents with protection', color: 'from-purple-500 to-purple-600' },
-    { icon: Users, title: 'Collaborative Network', desc: 'Connect with researchers globally', color: 'from-green-500 to-green-600' }
+    { icon: Users, title: 'NEUST CON Community', desc: 'Collaborate with faculty and students', color: 'from-green-500 to-green-600' }
   ];
 
   const benefits = [
     { icon: CheckCircle, text: 'Peer-reviewed research' },
     { icon: Lock, text: 'Protected IP rights' },
-    { icon: Search, text: '20+ search filters' },
-    { icon: Star, text: 'Multi-format citations' }
+    { icon: Search, text: 'Advanced search filters' },
+    { icon: Star, text: 'APA, MLA, Chicago citations' }
   ];
 
   return (
@@ -49,7 +49,7 @@ const Home = () => {
             ConServe
           </h1>
           <p className="text-lg md:text-2xl text-gray-700 dark:text-gray-300 mb-3 md:mb-4 font-medium px-4 animate-slide-up">Where Knowledge Flows and Nursing Grows.</p>
-          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-8 md:mb-10 px-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>Discover peer-reviewed papers • Secure viewing • AI search</p>
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-8 md:mb-10 px-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>Discover peer-reviewed papers • Secure viewing • Advanced search</p>
 
           <div className="flex flex-col md:flex-row gap-3 md:gap-4 justify-center px-4 animate-scale-in" style={{ animationDelay: '0.2s' }}>
             {user ? (
@@ -186,7 +186,7 @@ const Home = () => {
             
             <div className="relative z-10 text-center">
               <h2 className="text-3xl md:text-5xl font-black text-white mb-3 md:mb-4">Ready to Transform Your Research?</h2>
-              <p className="text-lg md:text-xl text-gray-200 mb-6 md:mb-8">Join researchers advancing nursing science worldwide</p>
+              <p className="text-lg md:text-xl text-gray-200 mb-6 md:mb-8">Join NEUST College of Nursing's research community</p>
               <Link 
                 to="/register" 
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white text-navy rounded-2xl font-bold shadow-2xl hover:scale-105 hover:shadow-white/20 transition-all"
