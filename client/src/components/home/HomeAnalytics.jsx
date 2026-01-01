@@ -15,41 +15,68 @@ const HomeAnalytics = () => {
     if (cached && cacheTime && (now - parseInt(cacheTime)) < 300000) {
       setStats(JSON.parse(cached));
       setLoading(false);
-      return;
+      // Still fetch in background to update
     }
 
     // Fetch with timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/analytics/dashboard`, {
+        // Fetch research stats
+        const researchRes = await fetch(`${API_URL}/research/stats`, {
           headers,
           signal: controller.signal
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          const newStats = {
-            papers: data.totalPapers || 0,
-            users: data.totalUsers || 0,
-            views: data.totalViews || 0
-          };
-          
-          setStats(newStats);
-          localStorage.setItem('homeStats', JSON.stringify(newStats));
-          localStorage.setItem('homeStatsTime', now.toString());
-        } else {
-          // Use fallback
-          setStats({ papers: 150, users: 500, views: 12000 });
+        // Fetch users stats
+        const usersRes = await fetch(`${API_URL}/users/stats`, {
+          headers,
+          signal: controller.signal
+        });
+
+        let papers = 0;
+        let users = 0;
+        let views = 0;
+
+        if (researchRes.ok) {
+          const researchData = await researchRes.json();
+          papers = researchData.approved || researchData.total || 0;
         }
+
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          users = usersData.activeUsers || usersData.totalUsers || 0;
+        }
+
+        // Fetch approved papers to calculate total views
+        const papersRes = await fetch(`${API_URL}/research?status=approved&limit=1000`, {
+          headers,
+          signal: controller.signal
+        });
+
+        if (papersRes.ok) {
+          const papersData = await papersRes.json();
+          views = (papersData.papers || []).reduce((sum, p) => sum + (p.views || 0), 0);
+        }
+
+        const newStats = { papers, users, views };
+        
+        setStats(newStats);
+        localStorage.setItem('homeStats', JSON.stringify(newStats));
+        localStorage.setItem('homeStatsTime', now.toString());
+        
       } catch (error) {
-        // Use fallback on error
-        setStats({ papers: 150, users: 500, views: 12000 });
+        console.error('Stats fetch error:', error);
+        // Only use fallback if we have no cached data
+        if (!cached) {
+          setStats({ papers: 0, users: 0, views: 0 });
+        }
       } finally {
         clearTimeout(timeout);
         setLoading(false);
