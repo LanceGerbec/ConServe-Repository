@@ -29,11 +29,11 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Hero Section */}
-      <section className="relative min-h-[70vh] md:min-h-[85vh] flex items-center justify-center px-4 py-8 md:py-16 bg-gradient-to-br from-navy-900 via-navy-800 to-blue-900 dark:from-gray-900 dark:via-navy-950 dark:to-gray-950">
+      {/* Hero Section - FULL WIDTH */}
+      <section className="relative min-h-[70vh] md:min-h-[85vh] flex items-center justify-center py-8 md:py-16 bg-gradient-to-br from-navy-900 via-navy-800 to-blue-900 dark:from-gray-900 dark:via-navy-950 dark:to-gray-950">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjAzIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40"></div>
         
-        <div className="relative z-10 text-center max-w-5xl mx-auto">
+        <div className="relative z-10 text-center max-w-5xl mx-auto px-4">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 md:px-6 md:py-3 rounded-full shadow-lg mb-4 md:mb-8 border border-white/20">
             <span className="text-xs md:text-sm font-bold tracking-wide text-white uppercase">
               NEUST College of Nursing
