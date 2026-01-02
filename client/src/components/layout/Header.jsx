@@ -113,10 +113,13 @@ const Header = () => {
               </button>
             </div>
 
-            {/* Mobile Menu Toggle */}
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* 🚀 MOBILE: NOTIFICATION BELL + BURGER MENU */}
+            <div className="flex items-center gap-2 md:hidden">
+              {user && <NotificationBell />}
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
 
           {/* Mobile Menu */}
@@ -131,7 +134,6 @@ const Header = () => {
               {user ? (
                 <>
                   <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium bg-navy text-white">Dashboard</Link>
-                  <Link to="/notifications" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-800">Notifications</Link>
                   <button 
                     onClick={() => { setShowLogoutModal(true); setIsMenuOpen(false); }} 
                     className="w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
