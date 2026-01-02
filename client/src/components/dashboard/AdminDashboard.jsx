@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
@@ -14,7 +15,6 @@ import ConfirmModal from '../common/ConfirmModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// ✅ HORIZONTAL STAT CARD (like StudentDashboard)
 const StatCard = memo(({ icon: Icon, label, value, color, onClick }) => (
   <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 transition-all ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''}`}>
     <div className="flex items-center gap-3">
@@ -97,12 +97,12 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
   );
 });
 
-const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview }) => (
+const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview, onManageAwards }) => (
   <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
-   <div className="flex gap-1">
-  <button onClick={() => onReview(paper)} className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition text-blue-600" title="Manage Awards"><Award size={14} /></button>
-  <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
-</div>
+    <div className="flex gap-1 mb-2">
+      <button onClick={() => onManageAwards(paper)} className="p-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition text-yellow-600" title="Manage Awards"><Award size={14} /></button>
+      <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
+    </div>
     <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{paper.abstract}</p>
     <div className="flex items-center justify-between">
@@ -114,7 +114,7 @@ const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview }) =
   </div>
 ));
 
-const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview }) => (
+const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview, onManageAwards }) => (
   <div className={`flex items-center gap-3 p-3 rounded-lg transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
     <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy flex-shrink-0" />
     <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 items-center">
@@ -124,6 +124,7 @@ const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview }) =>
       </div>
       <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2"><Eye size={12} />{paper.views || 0}</div>
       <div className="flex items-center justify-end gap-2">
+        <button onClick={() => onManageAwards(paper)} className="p-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded transition text-yellow-600 flex-shrink-0"><Award size={14} /></button>
         <span className={`px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
           {paper.status?.toUpperCase()}
         </span>
@@ -333,6 +334,11 @@ const AdminDashboard = () => {
     setShowReviewModal(true);
   }, []);
 
+  const handleManageAwards = useCallback((paper) => {
+    setSelectedPaper(paper);
+    setShowAwardsModal(true);
+  }, []);
+
   const handleRemoveBookmark = useCallback(async (bookmarkId, researchId) => {
     try {
       const token = localStorage.getItem('token');
@@ -430,144 +436,130 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
-                  </h2>
-                  {pendingResearch.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {activeTab === 'users' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Users size={20} className="text-blue-600" />All Users ({filteredUsers.length})
-                  </h2>
-                  <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-                </div>
-              </div>
-              <div className="p-4 max-h-[600px] overflow-y-auto">
-                {filteredUsers.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">No users found</div>
-                ) : userViewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-                  </div>
-                )}
+                  <h2 className="text-lg font-bold text-gray-900 dark:text 7:28 PM
+-white mb-4 flex items-center gap-2"> <FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length}) </h2> {pendingResearch.length === 0 ? ( <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div> ) : ( <div className="space-y-3 max-h-96 overflow-y-auto"> {pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)} </div> )} </div> </div> </> )}
+{activeTab === 'users' && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Users size={20} className="text-blue-600" />All Users ({filteredUsers.length})
+              </h2>
+              <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
               </div>
             </div>
-          )}
-
-          {activeTab === 'research' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FileText size={20} className="text-green-600" />All Papers ({filteredResearch.length})
-                  </h2>
-                  <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-                </div>
-              </div>
-              <div className="p-4 max-h-[600px] overflow-y-auto">
-                {filteredResearch.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">No papers found</div>
-                ) : paperViewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredResearch.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} />)}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredResearch.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} />)}
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
             </div>
-          )}
-
-          {activeTab === 'bookmarks' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
-                </h2>
+          </div>
+          <div className="p-4 max-h-[600px] overflow-y-auto">
+            {filteredUsers.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">No users found</div>
+            ) : userViewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
               </div>
-              <div className="p-4">
-                {bookmarks.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Bookmark size={32} className="text-gray-400" />
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {bookmarks.map(b => (
-                      <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                        <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
-                        <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            ) : (
+              <div className="space-y-2">
+                {filteredUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'valid-ids' && <ValidIdsManagement />}
-          {activeTab === 'team' && <TeamManagement />}
-          {activeTab === 'analytics' && <AnalyticsDashboard />}
-          {activeTab === 'logs' && <ActivityLogs />}
-          {activeTab === 'settings' && <SettingsManagement />}
+            )}
+          </div>
         </div>
-      </div>
-
-      {showReviewModal && selectedPaper && (
-        <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
       )}
-    </>
-  );
+
+      {activeTab === 'research' && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <FileText size={20} className="text-green-600" />All Papers ({filteredResearch.length})
+              </h2>
+              <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+            </div>
+          </div>
+          <div className="p-4 max-h-[600px] overflow-y-auto">
+            {filteredResearch.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">No papers found</div>
+            ) : paperViewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredResearch.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredResearch.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'bookmarks' && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
+            </h2>
+          </div>
+          <div className="p-4">
+            {bookmarks.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bookmark size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bookmarks.map(b => (
+                  <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
+                    <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'valid-ids' && <ValidIdsManagement />}
+      {activeTab === 'team' && <TeamManagement />}
+      {activeTab === 'analytics' && <AnalyticsDashboard />}
+      {activeTab === 'logs' && <ActivityLogs />}
+      {activeTab === 'settings' && <SettingsManagement />}
+    </div>
+  </div>
+
+  {showReviewModal && selectedPaper && (
+    <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
+  )}
+
+  {showAwardsModal && selectedPaper && (
+    <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
+  )}
+</>
+);
 };
-
-{showAwardsModal && selectedPaper && (
-  <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); showToast('✅ Awards updated'); }} />
-)}
-
 AdminDashboard.displayName = 'AdminDashboard';
 StatCard.displayName = 'StatCard';
 ViewToggle.displayName = 'ViewToggle';
