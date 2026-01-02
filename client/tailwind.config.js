@@ -26,6 +26,14 @@ export default {
           DEFAULT: '#60a5fa',
           light: '#93c5fd',
           dark: '#2563eb',
+        },
+        peach: {
+          50: '#FFF5F2',
+          100: '#FFEDE7',
+          200: '#FFE5D9',
+          300: '#FFD4C4',
+          400: '#FFC9B5',
+          500: '#FFB89F',
         }
       },
       animation: {
