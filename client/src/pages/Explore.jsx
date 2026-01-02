@@ -1,6 +1,6 @@
-// client/src/pages/Explore.jsx - OPTIMIZED WITH AUTO-SUGGEST & FUZZY SEARCH
+// client/src/pages/Explore.jsx - WITH AWARDS & VIEW TOGGLE
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb } from 'lucide-react';
+import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const useDebounce = (value, delay) => {
@@ -12,7 +12,6 @@ const useDebounce = (value, delay) => {
   return debounced;
 };
 
-// Fuzzy matching function
 const fuzzyMatch = (str, pattern) => {
   const p = pattern.toLowerCase().split('');
   const s = str.toLowerCase();
@@ -23,7 +22,40 @@ const fuzzyMatch = (str, pattern) => {
   return pi === p.length;
 };
 
-const PaperCard = memo(({ paper, onClick, highlight }) => {
+const AwardBadge = memo(({ award, small }) => {
+  const colorMap = {
+    gold: 'bg-yellow-100 text-yellow-800 border-yellow-400',
+    silver: 'bg-gray-100 text-gray-800 border-gray-400',
+    bronze: 'bg-orange-100 text-orange-800 border-orange-400',
+    blue: 'bg-blue-100 text-blue-800 border-blue-400',
+    green: 'bg-green-100 text-green-800 border-green-400',
+    purple: 'bg-purple-100 text-purple-800 border-purple-400'
+  };
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div 
+      className="relative inline-block"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onClick={() => setShowTooltip(!showTooltip)}
+    >
+      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border ${colorMap[award.color] || colorMap.gold} ${small ? 'text-xs' : 'text-xs'} font-bold cursor-pointer transition hover:scale-105`}>
+        <Award size={small ? 10 : 12} />
+        {!small && <span className="hidden sm:inline max-w-[80px] truncate">{award.name}</span>}
+      </div>
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl whitespace-nowrap z-50 animate-fade-in">
+          {award.name}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+        </div>
+      )}
+    </div>
+  );
+});
+AwardBadge.displayName = 'AwardBadge';
+
+const PaperCard = memo(({ paper, onClick, highlight, viewMode }) => {
   const highlightText = (text) => {
     if (!highlight || !text) return text;
     const regex = new RegExp(`(${highlight})`, 'gi');
@@ -32,6 +64,35 @@ const PaperCard = memo(({ paper, onClick, highlight }) => {
       regex.test(part) ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-800">{part}</mark> : part
     );
   };
+
+  if (viewMode === 'list') {
+    return (
+      <div onClick={() => onClick(paper._id)} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 active:scale-[0.99] transition cursor-pointer hover:shadow-md flex gap-3">
+        <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-navy/10 to-accent/10 rounded-lg flex items-center justify-center">
+          <BookOpen size={20} className="text-navy dark:text-accent" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">{highlightText(paper.title)}</h3>
+            <span className="px-2 py-0.5 bg-navy/10 text-navy dark:bg-accent/10 dark:text-accent rounded text-xs font-semibold whitespace-nowrap flex-shrink-0">{paper.category}</span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-1">{highlightText(paper.abstract)}</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="flex items-center gap-1"><Eye size={10} />{paper.views || 0}</div>
+              {paper.yearCompleted && <div className="flex items-center gap-1"><Calendar size={10} />{paper.yearCompleted}</div>}
+            </div>
+            {paper.awards?.length > 0 && (
+              <div className="flex items-center gap-1">
+                {paper.awards.slice(0, 2).map((award, i) => <AwardBadge key={i} award={award} small />)}
+                {paper.awards.length > 2 && <span className="text-xs text-gray-500">+{paper.awards.length - 2}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div onClick={() => onClick(paper._id)} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 active:scale-95 transition cursor-pointer hover:shadow-md">
@@ -44,6 +105,14 @@ const PaperCard = memo(({ paper, onClick, highlight }) => {
         <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-1">{highlightText(paper.authors.join(' • '))}</p>
       </div>
       <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{highlightText(paper.abstract)}</p>
+      
+      {paper.awards?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {paper.awards.slice(0, 3).map((award, i) => <AwardBadge key={i} award={award} />)}
+          {paper.awards.length > 3 && <span className="text-xs text-gray-500 self-center">+{paper.awards.length - 3}</span>}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 text-xs text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
         {paper.yearCompleted && <div className="flex items-center gap-1"><Calendar size={10} />{paper.yearCompleted}</div>}
         {paper.subjectArea && <div className="flex items-center gap-1 max-w-[60%]"><BookOpen size={10} /><span className="truncate">{paper.subjectArea}</span></div>}
@@ -74,7 +143,6 @@ const TipsModal = memo(({ onClose }) => (
             <li>• Type any keyword (diabetes, nursing, etc.)</li>
             <li>• Auto-suggestions appear as you type</li>
             <li>• Fuzzy matching finds similar terms</li>
-            <li>• Press Enter or click Search</li>
           </ul>
         </div>
 
@@ -84,27 +152,15 @@ const TipsModal = memo(({ onClose }) => (
             <li>• <code className="px-1 bg-white/50 rounded">AND</code> - diabetes AND management</li>
             <li>• <code className="px-1 bg-white/50 rounded">OR</code> - pediatric OR children</li>
             <li>• <code className="px-1 bg-white/50 rounded">NOT</code> - nursing NOT surgery</li>
-            <li>• <code className="px-1 bg-white/50 rounded">field:</code> - author:Smith, year:2024</li>
-          </ul>
-        </div>
-
-        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <h4 className="font-semibold text-sm text-green-900 dark:text-green-300 mb-2">🎯 Filters</h4>
-          <ul className="text-xs text-green-800 dark:text-green-200 space-y-1">
-            <li>• Category: Completed vs Published</li>
-            <li>• Year: Filter by year completed</li>
-            <li>• Subject: 12+ nursing specialties</li>
-            <li>• Author: Search by author name</li>
           </ul>
         </div>
 
         <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-          <h4 className="font-semibold text-sm text-yellow-900 dark:text-yellow-300 mb-2">🤖 AI Semantic</h4>
+          <h4 className="font-semibold text-sm text-yellow-900 dark:text-yellow-300 mb-2">🏆 Awards</h4>
           <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1">
-            <li>• Understands meaning, not just words</li>
-            <li>• Finds related concepts</li>
-            <li>• Better for research questions</li>
-            <li>• Toggle on for deeper results</li>
+            <li>• Hover/tap badges to see award names</li>
+            <li>• Color-coded by award type</li>
+            <li>• Recognized research highlighted</li>
           </ul>
         </div>
       </div>
@@ -120,6 +176,7 @@ const Explore = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
   const [searchMode, setSearchMode] = useState('simple');
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('exploreViewMode') || 'grid');
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
   const [filters, setFilters] = useState({ category: '', yearCompleted: '', subjectArea: '', author: '' });
@@ -138,6 +195,10 @@ const Explore = () => {
   useEffect(() => {
     if (initialLoad) fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('exploreViewMode', viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     if (debouncedQuery && debouncedQuery.length >= 2 && searchMode === 'simple') {
@@ -179,24 +240,9 @@ const Explore = () => {
   };
 
   const generateSuggestions = useCallback((q) => {
-    const lower = q.toLowerCase();
-    const titleMatches = allPapers
-      .filter(p => fuzzyMatch(p.title, q))
-      .map(p => ({ text: p.title, type: 'title' }))
-      .slice(0, 3);
-    
-    const authorMatches = [...new Set(
-      allPapers
-        .flatMap(p => p.authors)
-        .filter(a => fuzzyMatch(a, q))
-    )].map(a => ({ text: a, type: 'author' })).slice(0, 2);
-
-    const keywordMatches = [...new Set(
-      allPapers
-        .flatMap(p => p.keywords || [])
-        .filter(k => fuzzyMatch(k, q))
-    )].map(k => ({ text: k, type: 'keyword' })).slice(0, 2);
-
+    const titleMatches = allPapers.filter(p => fuzzyMatch(p.title, q)).map(p => ({ text: p.title, type: 'title' })).slice(0, 3);
+    const authorMatches = [...new Set(allPapers.flatMap(p => p.authors).filter(a => fuzzyMatch(a, q)))].map(a => ({ text: a, type: 'author' })).slice(0, 2);
+    const keywordMatches = [...new Set(allPapers.flatMap(p => p.keywords || []).filter(k => fuzzyMatch(k, q)))].map(k => ({ text: k, type: 'keyword' })).slice(0, 2);
     const combined = [...titleMatches, ...authorMatches, ...keywordMatches].slice(0, 5);
     setSuggestions(combined);
     setShowSuggestions(combined.length > 0);
@@ -373,45 +419,66 @@ const Explore = () => {
 
       <div className="flex items-center justify-between px-4 mb-3">
         <p className="text-sm text-gray-600 dark:text-gray-400"><strong className="text-navy dark:text-accent text-base">{papers.length}</strong> papers</p>
-        {activeCount > 0 && <button onClick={clearAll} className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1"><X size={12} />Clear</button>}
+        <div className="flex items-center gap-2">
+          {activeCount > 0 && <button onClick={clearAll} className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1"><X size={12} />Clear</button>}
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+            <button onClick={() => setViewMode('grid')} className={`p-2 rounded transition ${viewMode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`} title="Grid View">
+              <Grid size={16} className={viewMode === 'grid' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
+            </button>
+            <button onClick={() => setViewMode('list')} className={`p-2 rounded transition ${viewMode === 'list' ? 'bg-white dark:bg-gray-800 shadow' : ''}`} title="List View">
+              <List size={16} className={viewMode === 'list' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {!activeQuery && recommendations.length > 0 && (
+{!activeQuery && recommendations.length > 0 && (
         <div className="mx-4 mb-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2"><TrendingUp size={16} className="text-purple-600" />Recommended</h2>
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <TrendingUp size={16} className="text-purple-600" />Recommended
+          </h2>
           <div className="space-y-2">
             {recommendations.slice(0, 3).map((paper) => (
-              <div key={paper._id} onClick={() => navigate(`/research/${paper._id}`)} className="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-purple-200 dark:border-purple-800 active:scale-95 transition cursor-pointer">
-                <span className="inline-block px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded text-xs font-semibold mb-1">{paper.category}</span>
-                <h3 className="font-bold text-xs text-gray-900 dark:text-white mb-1 line-clamp-2">{paper.title}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{paper.abstract}</p>
+              <div 
+                key={paper._id} 
+                onClick={() => navigate(`/research/${paper._id}`)} 
+                className="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-purple-200 dark:border-purple-800 active:scale-95 transition cursor-pointer"
+              >
+                <span className="inline-block px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded text-xs font-semibold mb-1">
+                  {paper.category}
+                </span>
+                <h3 className="font-bold text-xs text-gray-900 dark:text-white mb-1 line-clamp-2">
+                  {paper.title}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                  {paper.abstract}
+                </p>
               </div>
             ))}
           </div>
         </div>
       )}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy mx-auto mb-2"></div>
-            <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Searching...</p>
-          </div>
-        </div>
-      ) : papers.length === 0 ? (
-        <div className="text-center py-12 mx-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          <BookOpen size={40} className="mx-auto text-gray-400 mb-2 opacity-30" />
-          <p className="text-base font-bold text-gray-900 dark:text-white mb-1">No papers found</p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Try different keywords</p>
-          {activeCount > 0 && <button onClick={clearAll} className="px-5 py-2 bg-navy text-white rounded-lg hover:bg-navy-800 transition font-semibold text-sm">Show all</button>}
-        </div>
-      ) : (
-        <div className="space-y-3 px-4">
-          {papers.map((paper) => <PaperCard key={paper._id} paper={paper} onClick={(id) => navigate(`/research/${id}`)} highlight={activeQuery} />)}
-        </div>
-      )}
+      
+{loading ? (
+    <div className="flex items-center justify-center py-16">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy mx-auto mb-2"></div>
+        <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Searching...</p>
+      </div>
     </div>
-  );
+  ) : papers.length === 0 ? (
+    <div className="text-center py-12 mx-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <BookOpen size={40} className="mx-auto text-gray-400 mb-2 opacity-30" />
+      <p className="text-base font-bold text-gray-900 dark:text-white mb-1">No papers found</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Try different keywords</p>
+      {activeCount > 0 && <button onClick={clearAll} className="px-5 py-2 bg-navy text-white rounded-lg hover:bg-navy-800 transition font-semibold text-sm">Show all</button>}
+    </div>
+  ) : (
+    <div className={`px-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}`}>
+      {papers.map((paper) => <PaperCard key={paper._id} paper={paper} onClick={(id) => navigate(`/research/${id}`)} highlight={activeQuery} viewMode={viewMode} />)}
+    </div>
+  )}
+</div>
+);
 };
-
 export default Explore;
