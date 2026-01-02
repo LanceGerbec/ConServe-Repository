@@ -1,4 +1,4 @@
-// client/src/components/dashboard/FacultyDashboard.jsx - HORIZONTAL STATS OPTIMIZED
+// client/src/components/dashboard/FacultyDashboard.jsx - HORIZONTAL STATS + SUBMIT BUTTON
 import { useState, useEffect, useRef } from 'react';
 import { FileText, Clock, Eye, BookOpen, Activity, Bookmark, Calendar, Users, Upload, Search, X, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -99,7 +99,6 @@ const FacultyDashboard = () => {
   const filteredBookmarks = bookmarks.filter(b => b.research?.title?.toLowerCase().includes(search.toLowerCase()));
   const filteredSubmissions = submissions.filter(p => p.title?.toLowerCase().includes(search.toLowerCase()));
 
-  // ✅ NEW HORIZONTAL STAT CARD
   const StatCard = ({ icon: Icon, label, value, color, onClick }) => (
     <div 
       onClick={onClick} 
@@ -166,7 +165,6 @@ const FacultyDashboard = () => {
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-        {/* Header */}
         <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white p-6 mb-6 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -180,7 +178,6 @@ const FacultyDashboard = () => {
           <p className="text-sm text-blue-100 opacity-90 mt-2">Faculty Dashboard</p>
         </div>
 
-        {/* Tabs */}
         <div className="px-4 mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {[
@@ -206,11 +203,42 @@ const FacultyDashboard = () => {
 
         <div className="px-4 space-y-6">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard icon={FileText} label="My Reviews" value={stats.reviews} color="bg-gradient-to-br from-blue-500 to-blue-600" />
-              <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-gradient-to-br from-yellow-500 to-yellow-600" onClick={() => scrollToSection(pendingRef, 'pending')} />
-              <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-gradient-to-br from-green-500 to-green-600" onClick={() => scrollToSection(submissionsRef, 'submissions')} />
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard icon={FileText} label="My Reviews" value={stats.reviews} color="bg-gradient-to-br from-blue-500 to-blue-600" />
+                <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-gradient-to-br from-yellow-500 to-yellow-600" onClick={() => scrollToSection(pendingRef, 'pending')} />
+                <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-gradient-to-br from-green-500 to-green-600" onClick={() => scrollToSection(submissionsRef, 'submissions')} />
+              </div>
+
+              {/* ✅ NEW: SUBMIT BUTTON + BROWSE BUTTON */}
+              <div className="grid grid-cols-1 gap-4">
+                <button onClick={() => setShowSubmitModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Upload size={24} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-bold text-lg mb-1">Submit Research</h3>
+                      <p className="text-sm text-blue-100 opacity-90">Upload your paper</p>
+                    </div>
+                    <ChevronRight size={20} className="opacity-70" />
+                  </div>
+                </button>
+
+                <button onClick={() => window.location.href = '/explore'} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                      <BookOpen className="text-blue-600" size={24} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">Browse Papers</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Explore repository</p>
+                    </div>
+                    <ChevronRight size={20} className="text-gray-400" />
+                  </div>
+                </button>
+              </div>
+            </>
           )}
 
           {activeTab === 'pending' && (
