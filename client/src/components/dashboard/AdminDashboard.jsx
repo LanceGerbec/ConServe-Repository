@@ -1,6 +1,6 @@
-// client/src/components/dashboard/AdminDashboard.jsx
+// client/src/components/dashboard/AdminDashboard.jsx - ENHANCED WITH DELETE & VIEW MODES
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Calendar, User as UserIcon } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Calendar, User as UserIcon, Trash2, Grid, List, MoreVertical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
@@ -10,6 +10,7 @@ import ValidIdsManagement from '../admin/ValidIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
 import TeamManagement from '../admin/TeamManagement';
 import Toast from '../common/Toast';
+import ConfirmModal from '../common/ConfirmModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -22,6 +23,132 @@ const StatCard = memo(({ icon: Icon, label, value, color }) => (
       <div className="text-3xl font-bold text-navy dark:text-accent">{value}</div>
     </div>
     <div className="text-sm text-gray-700 dark:text-gray-300 font-semibold">{label}</div>
+  </div>
+));
+
+const ViewToggle = memo(({ mode, onChange }) => (
+  <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+    <button onClick={() => onChange('grid')} className={`p-2 rounded-md transition ${mode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>
+      <Grid size={18} className={mode === 'grid' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
+    </button>
+    <button onClick={() => onChange('list')} className={`p-2 rounded-md transition ${mode === 'list' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>
+      <List size={18} className={mode === 'list' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
+    </button>
+  </div>
+));
+
+const BulkActionsBar = memo(({ count, onDelete, onCancel, type }) => (
+  <div className="fixed top-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-navy dark:bg-gray-800 text-white p-4 rounded-xl shadow-2xl z-50 animate-slide-up border-2 border-white/20">
+    <div className="flex items-center justify-between gap-3">
+      <span className="font-bold">✓ {count} selected</span>
+      <div className="flex gap-2">
+        <button onClick={onDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm flex items-center gap-1.5 transition active:scale-95">
+          <Trash2 size={16} />Delete
+        </button>
+        <button onClick={onCancel} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-bold text-sm transition active:scale-95">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+));
+
+const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }) => {
+  const isSelf = user._id === currentUserId;
+  const isLastAdmin = user.role === 'admin';
+  
+  return (
+    <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
+      <div className="flex items-start justify-between mb-2">
+        <input type="checkbox" checked={selected} onChange={() => onSelect(user._id)} disabled={isSelf} className="w-4 h-4 rounded accent-navy" />
+        {!isSelf && (
+          <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600">
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
+      <h3 className="font-bold text-gray-900 dark:text-white mb-1">{user.firstName} {user.lastName}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate">{user.email}</p>
+      <div className="flex items-center justify-between mt-3">
+        <span className="text-xs text-gray-500">{user.studentId}</span>
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {user.isApproved ? 'APPROVED' : 'PENDING'}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId }) => {
+  const isSelf = user._id === currentUserId;
+  
+  return (
+    <div className={`flex items-center gap-3 p-3 rounded-lg transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
+      <input type="checkbox" checked={selected} onChange={() => onSelect(user._id)} disabled={isSelf} className="w-4 h-4 rounded accent-navy flex-shrink-0" />
+      <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 items-center">
+        <div className="truncate">
+          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{user.firstName} {user.lastName}</p>
+          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+        </div>
+        <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{user.studentId}</div>
+        <div className="flex items-center justify-end gap-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+            {user.isApproved ? 'APPROVED' : 'PENDING'}
+          </span>
+          {!isSelf && (
+            <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600 flex-shrink-0">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview }) => (
+  <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
+    <div className="flex items-start justify-between mb-2">
+      <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy" />
+      <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600">
+        <Trash2 size={16} />
+      </button>
+    </div>
+    <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>
+      {paper.title}
+    </h3>
+    <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{paper.abstract}</p>
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-gray-500">{paper.submittedBy?.firstName}</span>
+      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+        {paper.status?.toUpperCase()}
+      </span>
+    </div>
+  </div>
+));
+
+const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview }) => (
+  <div className={`flex items-center gap-3 p-3 rounded-lg transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
+    <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy flex-shrink-0" />
+    <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 items-center">
+      <div className="truncate">
+        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>
+          {paper.title}
+        </p>
+        <p className="text-xs text-gray-500">{paper.submittedBy?.firstName}</p>
+      </div>
+      <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+        <Eye size={12} />{paper.views || 0}
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <span className={`px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {paper.status?.toUpperCase()}
+        </span>
+        <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600 flex-shrink-0">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
   </div>
 ));
 
@@ -57,6 +184,10 @@ const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [userViewMode, setUserViewMode] = useState('grid');
+  const [paperViewMode, setPaperViewMode] = useState('grid');
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedPapers, setSelectedPapers] = useState([]);
   const [stats, setStats] = useState({ 
     users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, 
     research: { total: 0, pending: 0, approved: 0, rejected: 0 } 
@@ -68,6 +199,7 @@ const AdminDashboard = () => {
   const [bookmarks, setBookmarks] = useState([]);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', ids: [] });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
@@ -106,7 +238,6 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Always fetch stats and pending items for overview
       const [userStatsRes, researchStatsRes, pendingUsersRes, pendingResearchRes] = await Promise.all([
         fetch(`${API_URL}/users/stats`, { headers }),
         fetch(`${API_URL}/research/stats`, { headers }),
@@ -126,21 +257,18 @@ const AdminDashboard = () => {
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
 
-      // Fetch all users when Users tab is active
       if (activeTab === 'users') {
         const usersRes = await fetch(`${API_URL}/users`, { headers });
         const usersData = await usersRes.json();
         setAllUsers(usersData.users || []);
       }
       
-      // Fetch all research when Papers tab is active
       if (activeTab === 'research') {
         const researchRes = await fetch(`${API_URL}/research`, { headers });
         const researchData = await researchRes.json();
         setAllResearch(researchData.papers || []);
       }
 
-      // Fetch bookmarks when Bookmarks tab is active
       if (activeTab === 'bookmarks') {
         const bookmarksRes = await fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers });
         const bookmarksData = await bookmarksRes.json();
@@ -154,6 +282,63 @@ const AdminDashboard = () => {
   }, [activeTab, showToast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleSelectUser = useCallback((userId) => {
+    setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  }, []);
+
+  const handleSelectAllUsers = useCallback(() => {
+    const selectableUsers = allUsers.filter(u => u._id !== user._id);
+    setSelectedUsers(selectedUsers.length === selectableUsers.length ? [] : selectableUsers.map(u => u._id));
+  }, [allUsers, selectedUsers, user]);
+
+  const handleSelectPaper = useCallback((paperId) => {
+    setSelectedPapers(prev => prev.includes(paperId) ? prev.filter(id => id !== paperId) : [...prev, paperId]);
+  }, []);
+
+  const handleSelectAllPapers = useCallback(() => {
+    setSelectedPapers(selectedPapers.length === allResearch.length ? [] : allResearch.map(p => p._id));
+  }, [allResearch, selectedPapers]);
+
+  const handleDeleteUser = useCallback((userId) => {
+    setConfirmModal({ isOpen: true, type: 'user', ids: [userId] });
+  }, []);
+
+  const handleDeletePaper = useCallback((paperId) => {
+    setConfirmModal({ isOpen: true, type: 'paper', ids: [paperId] });
+  }, []);
+
+  const handleBulkDeleteUsers = useCallback(() => {
+    setConfirmModal({ isOpen: true, type: 'user', ids: selectedUsers });
+  }, [selectedUsers]);
+
+  const handleBulkDeletePapers = useCallback(() => {
+    setConfirmModal({ isOpen: true, type: 'paper', ids: selectedPapers });
+  }, [selectedPapers]);
+
+  const confirmDelete = useCallback(async () => {
+    const { type, ids } = confirmModal;
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = type === 'user' ? 'users' : 'research';
+      
+      for (const id of ids) {
+        await fetch(`${API_URL}/${endpoint}/${id}${type === 'user' ? '/reject' : ''}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      
+      showToast(`✅ Deleted ${ids.length} ${type}(s)`);
+      setSelectedUsers([]);
+      setSelectedPapers([]);
+      fetchData();
+    } catch (error) {
+      showToast('Delete failed', 'error');
+    } finally {
+      setConfirmModal({ isOpen: false, type: '', ids: [] });
+    }
+  }, [confirmModal, showToast, fetchData]);
 
   const handleApproveUser = useCallback(async (userId) => {
     try {
@@ -247,18 +432,22 @@ const AdminDashboard = () => {
     { id: 'settings', label: 'Settings' }
   ];
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800'
-    };
-    return badges[status] || 'bg-gray-100 text-gray-800';
-  };
-
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />}
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
+        onConfirm={confirmDelete}
+        title={`Delete ${confirmModal.ids.length} ${confirmModal.type}(s)?`}
+        message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal.type}(s). This cannot be undone.`}
+        confirmText="Delete"
+        type="danger"
+      />
+
+      {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} type="user" />}
+      {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} type="paper" />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
         <div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
@@ -334,39 +523,35 @@ const AdminDashboard = () => {
           {activeTab === 'users' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Users size={20} className="text-blue-600" />
-                  All Users ({filteredUsers.length})
-                </h2>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />
+                    All Users ({filteredUsers.length})
+                  </h2>
+                  <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
                 </div>
               </div>
               <div className="p-4 max-h-[600px] overflow-y-auto">
                 {filteredUsers.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">No users found</div>
+                ) : userViewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
+                  </div>
                 ) : (
-                  <div className="space-y-3">
-                    {filteredUsers.map(u => (
-                      <div key={u._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h3 className="font-bold text-gray-900 dark:text-white">{u.firstName} {u.lastName}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{u.email}</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {u.isApproved ? 'APPROVED' : 'PENDING'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span>ID: {u.studentId}</span>
-                          <span>Role: {u.role}</span>
-                          <span className="flex items-center gap-1"><Calendar size={12} />{new Date(u.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    {filteredUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
                   </div>
                 )}
               </div>
@@ -376,37 +561,35 @@ const AdminDashboard = () => {
           {activeTab === 'research' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FileText size={20} className="text-green-600" />
-                  All Papers ({filteredResearch.length})
-                </h2>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />
+                    All Papers ({filteredResearch.length})
+                  </h2>
+                  <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
                 </div>
               </div>
               <div className="p-4 max-h-[600px] overflow-y-auto">
                 {filteredResearch.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">No papers found</div>
+                ) : paperViewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredResearch.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} />)}
+                  </div>
                 ) : (
-                  <div className="space-y-3">
-                    {filteredResearch.map(p => (
-                      <div key={p._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-navy transition" onClick={() => navigate(`/research/${p._id}`)}>
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 flex-1">{p.title}</h3>
-                          <span className={`px-3 py-1 rounded-lg text-xs font-bold ml-2 whitespace-nowrap ${getStatusBadge(p.status)}`}>
-                            {p.status?.toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{p.abstract}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span className="flex items-center gap-1"><UserIcon size={12} />{p.submittedBy?.firstName}</span>
-                          <span className="flex items-center gap-1"><Eye size={12} />{p.views || 0}</span>
-                          <span className="flex items-center gap-1"><Calendar size={12} />{new Date(p.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    {filteredResearch.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} />)}
                   </div>
                 )}
               </div>
@@ -420,11 +603,6 @@ const AdminDashboard = () => {
                   <Bookmark size={20} className="text-purple-600" />
                   My Bookmarks ({bookmarks.length})
                 </h2>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-                </div>
               </div>
               <div className="p-4">
                 {bookmarks.length === 0 ? (
@@ -475,6 +653,12 @@ const AdminDashboard = () => {
 
 AdminDashboard.displayName = 'AdminDashboard';
 StatCard.displayName = 'StatCard';
+ViewToggle.displayName = 'ViewToggle';
+BulkActionsBar.displayName = 'BulkActionsBar';
+UserGridCard.displayName = 'UserGridCard';
+UserListRow.displayName = 'UserListRow';
+PaperGridCard.displayName = 'PaperGridCard';
+PaperListRow.displayName = 'PaperListRow';
 PendingUserCard.displayName = 'PendingUserCard';
 PendingResearchCard.displayName = 'PendingResearchCard';
 
