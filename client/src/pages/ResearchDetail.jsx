@@ -174,28 +174,23 @@ const ResearchDetail = () => {
         </div>
       )}
 
-      {/* BACK BUTTON */}
       <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-4 px-4 py-2">
         <ArrowLeft size={18} className="mr-2" />
         <span className="text-sm font-semibold">Back</span>
       </button>
 
-      {/* MAIN CONTENT CARD */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
         <div className="p-4 space-y-4">
-          {/* STATUS WARNING */}
           {paper.status !== 'approved' && (
             <div className={`p-3 rounded-lg border-l-4 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
               <p className="font-bold text-xs text-gray-900 dark:text-white">⚠️ {paper.status.toUpperCase()} PAPER</p>
             </div>
           )}
 
-          {/* TITLE */}
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words">
             {paper.title}
           </h1>
 
-          {/* META INFO - STACKED ON MOBILE */}
           <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <User size={14} className="flex-shrink-0" />
@@ -217,7 +212,6 @@ const ResearchDetail = () => {
             </div>
           </div>
 
-          {/* ACTION BUTTONS - MOBILE OPTIMIZED */}
           {paper.status === 'approved' && (
             <div className="grid grid-cols-2 gap-2">
               <button 
@@ -253,17 +247,16 @@ const ResearchDetail = () => {
             </div>
           )}
 
-          {user?.role === 'admin' && (
-  <button 
-    onClick={() => setShowAwardsModal(true)} 
-    className="flex items-center justify-center gap-2 px-3 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-semibold transition col-span-2"
-  >
-    <Award size={16} />
-    Manage Awards
-  </button>
-)}
+          {isAdmin && (
+            <button 
+              onClick={() => setShowAwardsModal(true)} 
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-semibold transition"
+            >
+              <Award size={16} />
+              Manage Awards
+            </button>
+          )}
 
-          {/* ABSTRACT */}
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
             <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Abstract</h2>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line break-words">
@@ -271,35 +264,33 @@ const ResearchDetail = () => {
             </p>
           </div>
 
-          {/* AWARDS */}
-{paper.awards?.length > 0 && (
-  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-    <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-      <Award size={18} className="text-yellow-600" />
-      Awards & Recognition
-    </h2>
-    <div className="flex flex-wrap gap-2">
-      {paper.awards.map((award, i) => {
-        const colorMap = {
-          gold: 'bg-yellow-100 text-yellow-800 border-yellow-500',
-          silver: 'bg-gray-100 text-gray-800 border-gray-500',
-          bronze: 'bg-orange-100 text-orange-800 border-orange-500',
-          blue: 'bg-blue-100 text-blue-800 border-blue-500',
-          green: 'bg-green-100 text-green-800 border-green-500',
-          purple: 'bg-purple-100 text-purple-800 border-purple-500'
-        };
-        return (
-          <div key={i} className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border-2 ${colorMap[award.color] || colorMap.gold} font-bold text-sm`}>
-            <Award size={16} />
-            {award.name}
-          </div>
-        );
-      })}
-    </div>
-  </div>
-)}
+          {paper.awards?.length > 0 && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Award size={18} className="text-yellow-600" />
+                Awards & Recognition
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {paper.awards.map((award, i) => {
+                  const colorMap = {
+                    gold: 'bg-yellow-100 text-yellow-800 border-yellow-500',
+                    silver: 'bg-gray-100 text-gray-800 border-gray-500',
+                    bronze: 'bg-orange-100 text-orange-800 border-orange-500',
+                    blue: 'bg-blue-100 text-blue-800 border-blue-500',
+                    green: 'bg-green-100 text-green-800 border-green-500',
+                    purple: 'bg-purple-100 text-purple-800 border-purple-500'
+                  };
+                  return (
+                    <div key={i} className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border-2 ${colorMap[award.color] || colorMap.gold} font-bold text-sm`}>
+                      <Award size={16} />
+                      {award.name}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-          {/* KEYWORDS */}
           {paper.keywords?.length > 0 && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Keywords</h2>
@@ -313,7 +304,6 @@ const ResearchDetail = () => {
             </div>
           )}
 
-          {/* SUBJECT AREA */}
           {paper.subjectArea && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Subject Area</h2>
@@ -323,7 +313,6 @@ const ResearchDetail = () => {
         </div>
       </div>
 
-      {/* FULL DOCUMENT CARD */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
         <div className="p-4">
           <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Full Document</h2>
@@ -344,14 +333,12 @@ const ResearchDetail = () => {
         </div>
       </div>
 
-      {/* SIMILAR PAPERS */}
       {paper.status === 'approved' && (
         <div className="mx-4">
           <SimilarPapers paperId={paper._id} />
         </div>
       )}
 
-      {/* MODALS */}
       {showPDF && (paper.pdfUrl || paper.fileUrl) && (
         <ProtectedPDFViewer 
           pdfUrl={paper.pdfUrl || paper.fileUrl}
@@ -371,16 +358,16 @@ const ResearchDetail = () => {
           onSuccess={() => { setShowReviewModal(false); fetchPaper(); }} 
         />
       )}
+
+      {showAwardsModal && isAdmin && (
+        <AwardsModal 
+          paper={paper} 
+          onClose={() => setShowAwardsModal(false)} 
+          onSuccess={fetchPaper} 
+        />
+      )}
     </div>
   );
 };
-
-{showAwardsModal && user?.role === 'admin' && (
-  <AwardsModal 
-    paper={paper} 
-    onClose={() => setShowAwardsModal(false)} 
-    onSuccess={fetchPaper} 
-  />
-)}
 
 export default ResearchDetail;
