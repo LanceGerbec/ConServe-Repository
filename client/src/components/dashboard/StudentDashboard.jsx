@@ -1,4 +1,4 @@
-// client/src/components/dashboard/StudentDashboard.jsx - FINAL OPTIMIZED
+// client/src/components/dashboard/StudentDashboard.jsx - HORIZONTAL STATS OPTIMIZED
 import { useState, useEffect, useRef } from 'react';
 import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -84,17 +84,18 @@ const StudentDashboard = () => {
   const filteredSubmissions = submissions.filter(p => p.title?.toLowerCase().includes(search.toLowerCase()));
   const filteredBookmarks = bookmarks.filter(b => b.research?.title?.toLowerCase().includes(search.toLowerCase()));
 
+  // ✅ NEW HORIZONTAL STAT CARD
   const StatCard = ({ icon: Icon, label, value, color, onClick }) => (
-    <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border-2 border-gray-100 dark:border-gray-700 ${onClick ? 'active:scale-95 cursor-pointer' : ''} transition-all`}>
-      <div className="flex items-center gap-4 mb-3">
-        <div className={`w-14 h-14 ${color} rounded-xl flex items-center justify-center shadow-md`}>
-          <Icon className="text-white" size={22} />
+    <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''} transition-all`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
+          <Icon className="text-white" size={20} />
         </div>
-        <div className="text-3xl font-bold text-navy dark:text-accent">{value}</div>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</p>
-        {onClick && <ChevronRight className="text-gray-400" size={18} />}
+        <div className="flex-1 min-w-0">
+          <div className="text-2xl font-bold text-navy dark:text-accent">{value}</div>
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{label}</p>
+        </div>
+        {onClick && <ChevronRight className="text-gray-400 flex-shrink-0" size={18} />}
       </div>
     </div>
   );
@@ -195,7 +196,7 @@ const StudentDashboard = () => {
           {activeTab === 'overview' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <StatCard icon={Upload} label="My Submissions" value={stats.submissions} color="bg-gradient-to-br from-blue-500 to-blue-600" onClick={() => scrollToSection(submissionsRef, 'submissions')} />
                 <StatCard icon={Eye} label="Total Views" value={stats.views} color="bg-gradient-to-br from-green-500 to-green-600" />
               </div>
