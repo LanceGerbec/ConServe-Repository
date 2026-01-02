@@ -1,6 +1,6 @@
-// client/src/components/dashboard/AdminDashboard.jsx - ENHANCED WITH DELETE & VIEW MODES
+// client/src/components/dashboard/AdminDashboard.jsx - OPTIMIZED HORIZONTAL STATS
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Calendar, User as UserIcon, Trash2, Grid, List, MoreVertical } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
@@ -14,15 +14,19 @@ import ConfirmModal from '../common/ConfirmModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const StatCard = memo(({ icon: Icon, label, value, color }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border-2 border-gray-100 dark:border-gray-700">
-    <div className="flex items-center gap-4 mb-3">
-      <div className={`w-14 h-14 ${color} rounded-xl flex items-center justify-center shadow-md`}>
-        <Icon className="text-white" size={22} />
+// ✅ HORIZONTAL STAT CARD (like StudentDashboard)
+const StatCard = memo(({ icon: Icon, label, value, color, onClick }) => (
+  <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 transition-all ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''}`}>
+    <div className="flex items-center gap-3">
+      <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
+        <Icon className="text-white" size={20} />
       </div>
-      <div className="text-3xl font-bold text-navy dark:text-accent">{value}</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-2xl font-bold text-navy dark:text-accent">{value}</div>
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{label}</p>
+      </div>
+      {onClick && <ChevronRight className="text-gray-400 flex-shrink-0" size={18} />}
     </div>
-    <div className="text-sm text-gray-700 dark:text-gray-300 font-semibold">{label}</div>
   </div>
 ));
 
@@ -37,7 +41,7 @@ const ViewToggle = memo(({ mode, onChange }) => (
   </div>
 ));
 
-const BulkActionsBar = memo(({ count, onDelete, onCancel, type }) => (
+const BulkActionsBar = memo(({ count, onDelete, onCancel }) => (
   <div className="fixed top-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-navy dark:bg-gray-800 text-white p-4 rounded-xl shadow-2xl z-50 animate-slide-up border-2 border-white/20">
     <div className="flex items-center justify-between gap-3">
       <span className="font-bold">✓ {count} selected</span>
@@ -45,9 +49,7 @@ const BulkActionsBar = memo(({ count, onDelete, onCancel, type }) => (
         <button onClick={onDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm flex items-center gap-1.5 transition active:scale-95">
           <Trash2 size={16} />Delete
         </button>
-        <button onClick={onCancel} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-bold text-sm transition active:scale-95">
-          Cancel
-        </button>
+        <button onClick={onCancel} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-bold text-sm transition active:scale-95">Cancel</button>
       </div>
     </div>
   </div>
@@ -55,17 +57,11 @@ const BulkActionsBar = memo(({ count, onDelete, onCancel, type }) => (
 
 const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }) => {
   const isSelf = user._id === currentUserId;
-  const isLastAdmin = user.role === 'admin';
-  
   return (
     <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
       <div className="flex items-start justify-between mb-2">
         <input type="checkbox" checked={selected} onChange={() => onSelect(user._id)} disabled={isSelf} className="w-4 h-4 rounded accent-navy" />
-        {!isSelf && (
-          <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600">
-            <Trash2 size={16} />
-          </button>
-        )}
+        {!isSelf && <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>}
       </div>
       <h3 className="font-bold text-gray-900 dark:text-white mb-1">{user.firstName} {user.lastName}</h3>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate">{user.email}</p>
@@ -81,7 +77,6 @@ const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }
 
 const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId }) => {
   const isSelf = user._id === currentUserId;
-  
   return (
     <div className={`flex items-center gap-3 p-3 rounded-lg transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
       <input type="checkbox" checked={selected} onChange={() => onSelect(user._id)} disabled={isSelf} className="w-4 h-4 rounded accent-navy flex-shrink-0" />
@@ -95,11 +90,7 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
           <span className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
             {user.isApproved ? 'APPROVED' : 'PENDING'}
           </span>
-          {!isSelf && (
-            <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600 flex-shrink-0">
-              <Trash2 size={14} />
-            </button>
-          )}
+          {!isSelf && <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600 flex-shrink-0"><Trash2 size={14} /></button>}
         </div>
       </div>
     </div>
@@ -110,13 +101,9 @@ const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview }) =
   <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
     <div className="flex items-start justify-between mb-2">
       <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy" />
-      <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600">
-        <Trash2 size={16} />
-      </button>
+      <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
     </div>
-    <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>
-      {paper.title}
-    </h3>
+    <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{paper.abstract}</p>
     <div className="flex items-center justify-between">
       <span className="text-xs text-gray-500">{paper.submittedBy?.firstName}</span>
@@ -132,21 +119,15 @@ const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview }) =>
     <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy flex-shrink-0" />
     <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 items-center">
       <div className="truncate">
-        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>
-          {paper.title}
-        </p>
+        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>{paper.title}</p>
         <p className="text-xs text-gray-500">{paper.submittedBy?.firstName}</p>
       </div>
-      <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
-        <Eye size={12} />{paper.views || 0}
-      </div>
+      <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2"><Eye size={12} />{paper.views || 0}</div>
       <div className="flex items-center justify-end gap-2">
         <span className={`px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
           {paper.status?.toUpperCase()}
         </span>
-        <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600 flex-shrink-0">
-          <Trash2 size={14} />
-        </button>
+        <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600 flex-shrink-0"><Trash2 size={14} /></button>
       </div>
     </div>
   </div>
@@ -159,10 +140,10 @@ const PendingUserCard = memo(({ user, onApprove, onReject }) => (
     <p className="text-xs text-gray-500 mb-3">ID: {user.studentId} • {user.role}</p>
     <div className="flex gap-2">
       <button onClick={() => onApprove(user._id)} className="flex-1 bg-green-500 text-white px-4 py-2.5 rounded-xl hover:bg-green-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
-        <CheckCircle size={16} /> Approve
+        <CheckCircle size={16} />Approve
       </button>
       <button onClick={() => onReject(user._id)} className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-xl hover:bg-red-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
-        <XCircle size={16} /> Reject
+        <XCircle size={16} />Reject
       </button>
     </div>
   </div>
@@ -174,7 +155,7 @@ const PendingResearchCard = memo(({ paper, onReview }) => (
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
     <p className="text-xs text-gray-500 mb-3 line-clamp-2">{paper.abstract}</p>
     <button onClick={() => onReview(paper)} className="w-full bg-blue-500 text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
-      <Eye size={16} /> Review
+      <Eye size={16} />Review
     </button>
   </div>
 ));
@@ -188,10 +169,7 @@ const AdminDashboard = () => {
   const [paperViewMode, setPaperViewMode] = useState('grid');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedPapers, setSelectedPapers] = useState([]);
-  const [stats, setStats] = useState({ 
-    users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, 
-    research: { total: 0, pending: 0, approved: 0, rejected: 0 } 
-  });
+  const [stats, setStats] = useState({ users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: { total: 0, pending: 0, approved: 0, rejected: 0 } });
   const [allUsers, setAllUsers] = useState([]);
   const [allResearch, setAllResearch] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -204,9 +182,7 @@ const AdminDashboard = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
 
-  const showToast = useCallback((msg, type = 'success') => 
-    setToast({ show: true, message: msg, type }), []
-  );
+  const showToast = useCallback((msg, type = 'success') => setToast({ show: true, message: msg, type }), []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -220,9 +196,7 @@ const AdminDashboard = () => {
   const fetchPaperForReview = async (paperId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/research/${paperId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API_URL}/research/${paperId}`, { headers: { Authorization: `Bearer ${token}` }});
       if (res.ok) {
         const data = await res.json();
         setSelectedPaper(data.paper);
@@ -237,38 +211,28 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-
       const [userStatsRes, researchStatsRes, pendingUsersRes, pendingResearchRes] = await Promise.all([
         fetch(`${API_URL}/users/stats`, { headers }),
         fetch(`${API_URL}/research/stats`, { headers }),
         fetch(`${API_URL}/users?status=pending`, { headers }),
         fetch(`${API_URL}/research?status=pending`, { headers })
       ]);
-
       const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([
         userStatsRes.json(), researchStatsRes.json(), pendingUsersRes.json(), pendingResearchRes.json()
       ]);
-
-      setStats({
-        users: userStats || { totalUsers: 0, pendingApproval: 0, activeUsers: 0 },
-        research: researchStats || { total: 0, pending: 0, approved: 0, rejected: 0 }
-      });
-
+      setStats({ users: userStats || { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: researchStats || { total: 0, pending: 0, approved: 0, rejected: 0 }});
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
-
       if (activeTab === 'users') {
         const usersRes = await fetch(`${API_URL}/users`, { headers });
         const usersData = await usersRes.json();
         setAllUsers(usersData.users || []);
       }
-      
       if (activeTab === 'research') {
         const researchRes = await fetch(`${API_URL}/research`, { headers });
         const researchData = await researchRes.json();
         setAllResearch(researchData.papers || []);
       }
-
       if (activeTab === 'bookmarks') {
         const bookmarksRes = await fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers });
         const bookmarksData = await bookmarksRes.json();
@@ -300,35 +264,22 @@ const AdminDashboard = () => {
     setSelectedPapers(selectedPapers.length === allResearch.length ? [] : allResearch.map(p => p._id));
   }, [allResearch, selectedPapers]);
 
-  const handleDeleteUser = useCallback((userId) => {
-    setConfirmModal({ isOpen: true, type: 'user', ids: [userId] });
-  }, []);
-
-  const handleDeletePaper = useCallback((paperId) => {
-    setConfirmModal({ isOpen: true, type: 'paper', ids: [paperId] });
-  }, []);
-
-  const handleBulkDeleteUsers = useCallback(() => {
-    setConfirmModal({ isOpen: true, type: 'user', ids: selectedUsers });
-  }, [selectedUsers]);
-
-  const handleBulkDeletePapers = useCallback(() => {
-    setConfirmModal({ isOpen: true, type: 'paper', ids: selectedPapers });
-  }, [selectedPapers]);
+  const handleDeleteUser = useCallback((userId) => { setConfirmModal({ isOpen: true, type: 'user', ids: [userId] }); }, []);
+  const handleDeletePaper = useCallback((paperId) => { setConfirmModal({ isOpen: true, type: 'paper', ids: [paperId] }); }, []);
+  const handleBulkDeleteUsers = useCallback(() => { setConfirmModal({ isOpen: true, type: 'user', ids: selectedUsers }); }, [selectedUsers]);
+  const handleBulkDeletePapers = useCallback(() => { setConfirmModal({ isOpen: true, type: 'paper', ids: selectedPapers }); }, [selectedPapers]);
 
   const confirmDelete = useCallback(async () => {
     const { type, ids } = confirmModal;
     try {
       const token = localStorage.getItem('token');
       const endpoint = type === 'user' ? 'users' : 'research';
-      
       for (const id of ids) {
         await fetch(`${API_URL}/${endpoint}/${id}${type === 'user' ? '/reject' : ''}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      
       showToast(`✅ Deleted ${ids.length} ${type}(s)`);
       setSelectedUsers([]);
       setSelectedPapers([]);
@@ -395,15 +346,8 @@ const AdminDashboard = () => {
     }
   }, [showToast]);
 
-  const filteredUsers = allUsers.filter(u => 
-    search ? (u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
-              u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
-              u.email?.toLowerCase().includes(search.toLowerCase())) : true
-  );
-
-  const filteredResearch = allResearch.filter(p => 
-    search ? p.title?.toLowerCase().includes(search.toLowerCase()) : true
-  );
+  const filteredUsers = allUsers.filter(u => search ? (u.firstName?.toLowerCase().includes(search.toLowerCase()) || u.lastName?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())) : true);
+  const filteredResearch = allResearch.filter(p => search ? p.title?.toLowerCase().includes(search.toLowerCase()) : true);
 
   if (loading) {
     return (
@@ -435,19 +379,9 @@ const AdminDashboard = () => {
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />}
-      
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
-        onConfirm={confirmDelete}
-        title={`Delete ${confirmModal.ids.length} ${confirmModal.type}(s)?`}
-        message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal.type}(s). This cannot be undone.`}
-        confirmText="Delete"
-        type="danger"
-      />
-
-      {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} type="user" />}
-      {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} type="paper" />}
+      <ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })} onConfirm={confirmDelete} title={`Delete ${confirmModal.ids.length} ${confirmModal.type}(s)?`} message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal.type}(s). This cannot be undone.`} confirmText="Delete" type="danger" />
+      {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
+      {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
         <div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
@@ -465,15 +399,7 @@ const AdminDashboard = () => {
         <div className="px-4 mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {tabs.map(tab => (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
-                  activeTab === tab.id 
-                    ? 'bg-navy text-white shadow-lg scale-105' 
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
-                }`}
-              >
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
                 {tab.label}
                 {tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">{tab.badge}</span>}
               </button>
@@ -484,15 +410,14 @@ const AdminDashboard = () => {
         <div className="px-4 space-y-6">
           {activeTab === 'overview' && (
             <>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
               </div>
 
               <div className="space-y-6">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Users size={20} className="text-blue-600" />
-                    Pending Users ({pendingUsers.length})
+                    <Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})
                   </h2>
                   {pendingUsers.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
@@ -505,8 +430,7 @@ const AdminDashboard = () => {
 
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <FileText size={20} className="text-green-600" />
-                    Pending Research ({pendingResearch.length})
+                    <FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
                   </h2>
                   {pendingResearch.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
@@ -525,8 +449,7 @@ const AdminDashboard = () => {
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Users size={20} className="text-blue-600" />
-                    All Users ({filteredUsers.length})
+                    <Users size={20} className="text-blue-600" />All Users ({filteredUsers.length})
                   </h2>
                   <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
                 </div>
@@ -563,8 +486,7 @@ const AdminDashboard = () => {
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FileText size={20} className="text-green-600" />
-                    All Papers ({filteredResearch.length})
+                    <FileText size={20} className="text-green-600" />All Papers ({filteredResearch.length})
                   </h2>
                   <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
                 </div>
@@ -600,8 +522,7 @@ const AdminDashboard = () => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Bookmark size={20} className="text-purple-600" />
-                  My Bookmarks ({bookmarks.length})
+                  <Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
                 </h2>
               </div>
               <div className="p-4">
@@ -636,16 +557,7 @@ const AdminDashboard = () => {
       </div>
 
       {showReviewModal && selectedPaper && (
-        <AdminReviewModal
-          paper={selectedPaper}
-          onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }}
-          onSuccess={() => { 
-            fetchData(); 
-            setShowReviewModal(false); 
-            setSelectedPaper(null); 
-            showToast('✅ Review submitted'); 
-          }}
-        />
+        <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
       )}
     </>
   );
