@@ -1,3 +1,4 @@
+// server/src/controllers/analyticsController.js
 import Research from '../models/Research.js';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
@@ -99,15 +100,12 @@ export const deleteActivityLog = async (req, res) => {
 export const clearAllLogs = async (req, res) => {
   try {
     const result = await AuditLog.deleteMany({});
-    await AuditLog.create({
-      user: req.user._id,
-      action: 'ALL_LOGS_CLEARED',
-      resource: 'AuditLog',
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      details: { deletedCount: result.deletedCount }
+    
+    // Don't create audit log if all logs are deleted (would create infinite loop)
+    res.json({ 
+      message: 'All activity logs cleared successfully', 
+      count: result.deletedCount 
     });
-    res.json({ message: 'All activity logs cleared successfully', count: result.deletedCount });
   } catch (error) {
     console.error('Clear all logs error:', error);
     res.status(500).json({ error: 'Failed to clear logs' });
@@ -116,7 +114,10 @@ export const clearAllLogs = async (req, res) => {
 
 export const clearMyLogs = async (req, res) => {
   try {
+    // First delete all logs for this user
     const result = await AuditLog.deleteMany({ user: req.user._id });
+    
+    // Then create a single audit log entry for this action
     await AuditLog.create({
       user: req.user._id,
       action: 'MY_LOGS_CLEARED',
@@ -125,7 +126,11 @@ export const clearMyLogs = async (req, res) => {
       userAgent: req.get('user-agent'),
       details: { deletedCount: result.deletedCount }
     });
-    res.json({ message: 'Your activity logs cleared successfully', count: result.deletedCount });
+    
+    res.json({ 
+      message: 'Your activity logs cleared successfully', 
+      count: result.deletedCount 
+    });
   } catch (error) {
     console.error('Clear my logs error:', error);
     res.status(500).json({ error: 'Failed to clear your logs' });
