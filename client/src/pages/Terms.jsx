@@ -98,7 +98,7 @@ const Terms = () => {
           href="mailto:conserve@neust.edu.ph" 
           className="inline-block bg-white text-navy px-6 py-2.5 rounded-lg font-bold hover:bg-gray-100 transition text-sm"
         >
-          conserve@neust.edu.ph
+          conserve2025@gmail.com
         </a>
       </div>
 
