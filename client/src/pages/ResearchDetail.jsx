@@ -1,12 +1,13 @@
 // client/src/pages/ResearchDetail.jsx - MOBILE OPTIMIZED
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
 import ReviewForm from '../components/review/ReviewForm';
 import SimilarPapers from '../components/research/SimilarPapers';
+import AwardsModal from '../components/admin/AwardsModal';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -19,6 +20,7 @@ const ResearchDetail = () => {
   const [showCitation, setShowCitation] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => { fetchPaper(); }, [id]);
@@ -251,6 +253,16 @@ const ResearchDetail = () => {
             </div>
           )}
 
+          {user?.role === 'admin' && (
+  <button 
+    onClick={() => setShowAwardsModal(true)} 
+    className="flex items-center justify-center gap-2 px-3 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-semibold transition col-span-2"
+  >
+    <Award size={16} />
+    Manage Awards
+  </button>
+)}
+
           {/* ABSTRACT */}
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
             <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Abstract</h2>
@@ -258,6 +270,34 @@ const ResearchDetail = () => {
               {paper.abstract}
             </p>
           </div>
+
+          {/* AWARDS */}
+{paper.awards?.length > 0 && (
+  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+    <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+      <Award size={18} className="text-yellow-600" />
+      Awards & Recognition
+    </h2>
+    <div className="flex flex-wrap gap-2">
+      {paper.awards.map((award, i) => {
+        const colorMap = {
+          gold: 'bg-yellow-100 text-yellow-800 border-yellow-500',
+          silver: 'bg-gray-100 text-gray-800 border-gray-500',
+          bronze: 'bg-orange-100 text-orange-800 border-orange-500',
+          blue: 'bg-blue-100 text-blue-800 border-blue-500',
+          green: 'bg-green-100 text-green-800 border-green-500',
+          purple: 'bg-purple-100 text-purple-800 border-purple-500'
+        };
+        return (
+          <div key={i} className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border-2 ${colorMap[award.color] || colorMap.gold} font-bold text-sm`}>
+            <Award size={16} />
+            {award.name}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
 
           {/* KEYWORDS */}
           {paper.keywords?.length > 0 && (
@@ -334,5 +374,13 @@ const ResearchDetail = () => {
     </div>
   );
 };
+
+{showAwardsModal && user?.role === 'admin' && (
+  <AwardsModal 
+    paper={paper} 
+    onClose={() => setShowAwardsModal(false)} 
+    onSuccess={fetchPaper} 
+  />
+)}
 
 export default ResearchDetail;

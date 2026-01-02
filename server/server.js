@@ -19,6 +19,7 @@ import teamRoutes from './src/routes/team.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
 import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
 import searchRoutes from './src/routes/search.routes.js';
+import awardsRoutes from './src/routes/awards.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
 
@@ -191,6 +192,8 @@ console.log('✅ Bulk Upload routes registered');
 
 app.use('/api/search', searchRoutes);
 console.log('✅ Search routes registered');
+
+app.use('/api/research', awardsRoutes);
 
 // Rate limiting for all API routes
 app.use('/api', apiLimiter);

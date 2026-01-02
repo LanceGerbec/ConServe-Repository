@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, BookOpen, Eye, Calendar, User, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, BookOpen, Eye, Calendar, User, X, ChevronLeft, ChevronRight, Award } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const ResearchList = () => {
@@ -310,6 +310,30 @@ const ResearchList = () => {
                     )}
                   </div>
                 )}
+
+                {paper.awards?.length > 0 && (
+  <div className="flex flex-wrap gap-1.5 mb-3">
+    {paper.awards.slice(0, 2).map((award, i) => {
+      const colorMap = {
+        gold: 'bg-yellow-100 text-yellow-800',
+        silver: 'bg-gray-100 text-gray-800',
+        bronze: 'bg-orange-100 text-orange-800',
+        blue: 'bg-blue-100 text-blue-800',
+        green: 'bg-green-100 text-green-800',
+        purple: 'bg-purple-100 text-purple-800'
+      };
+      return (
+        <span key={i} className={`text-xs ${colorMap[award.color] || colorMap.gold} px-2 py-1 rounded-full font-bold flex items-center gap-1`}>
+          <Award size={10} />
+          {award.name}
+        </span>
+      );
+    })}
+    {paper.awards.length > 2 && (
+      <span className="text-xs text-gray-500">+{paper.awards.length - 2}</span>
+    )}
+  </div>
+)}
 
                 <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">

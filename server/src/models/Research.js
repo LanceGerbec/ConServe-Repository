@@ -17,7 +17,11 @@ const researchSchema = new mongoose.Schema({
   submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   revisionNotes: String,
-  awards: [String],
+awards: [{
+  name: { type: String, required: true },
+  color: { type: String, default: 'gold' },
+  addedAt: { type: Date, default: Date.now }
+}],
   publishedDate: Date,
   approvedDate: Date,
   views: { type: Number, default: 0 },

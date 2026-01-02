@@ -1,13 +1,13 @@
 // client/src/components/dashboard/AdminDashboard.jsx - OPTIMIZED HORIZONTAL STATS
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
 import ActivityLogs from '../analytics/ActivityLogs';
 import SettingsManagement from '../admin/SettingsManagement';
 import ValidIdsManagement from '../admin/ValidIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
+import AwardsModal from '../admin/AwardsModal';
 import TeamManagement from '../admin/TeamManagement';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
@@ -99,10 +99,10 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
 
 const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview }) => (
   <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
-    <div className="flex items-start justify-between mb-2">
-      <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy" />
-      <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
-    </div>
+   <div className="flex gap-1">
+  <button onClick={() => onReview(paper)} className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition text-blue-600" title="Manage Awards"><Award size={14} /></button>
+  <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
+</div>
     <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{paper.abstract}</p>
     <div className="flex items-center justify-between">
@@ -177,6 +177,7 @@ const AdminDashboard = () => {
   const [bookmarks, setBookmarks] = useState([]);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', ids: [] });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -562,6 +563,10 @@ const AdminDashboard = () => {
     </>
   );
 };
+
+{showAwardsModal && selectedPaper && (
+  <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); showToast('✅ Awards updated'); }} />
+)}
 
 AdminDashboard.displayName = 'AdminDashboard';
 StatCard.displayName = 'StatCard';
