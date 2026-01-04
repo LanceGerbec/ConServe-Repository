@@ -24,7 +24,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(isMobile ? 0.5 : 1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
@@ -380,6 +380,26 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setPdf(doc);
         setTotalPages(doc.numPages);
         setLoading(false);
+
+      if (isMobile) {
+        setTimeout(() => {
+          if (containerRef.current && canvasRef.current) {
+            const containerWidth = containerRef.current.clientWidth - 48; // Account for padding
+            const canvasWidth = canvasRef.current.offsetWidth;
+            const fitScale = containerWidth / canvasWidth;
+            
+            // Clamp between 0.5 and 1.5 for mobile
+            const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
+            setScale(autoScale);
+            
+            console.log('📱 Auto-fit mobile:');
+            console.log('   Container width:', containerWidth);
+            console.log('   Canvas width:', canvasWidth);
+            console.log('   Calculated scale:', autoScale);
+          }
+        }, 200); // Wait for render to complete
+      }
+
       } catch (err) { 
         setError(err.message || 'Load failed'); 
         setLoading(false); 
@@ -531,6 +551,24 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         
         setRendered(true);
         renderLockRef.current = false;
+
+ if (isMobile && currentPage === 1) {
+        setTimeout(() => {
+          if (containerRef.current && canvasRef.current) {
+            const containerWidth = containerRef.current.clientWidth - 48;
+            const canvasWidth = canvasRef.current.offsetWidth;
+            const fitScale = containerWidth / canvasWidth;
+            const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
+            
+            // Only update if significantly different from current scale
+            if (Math.abs(scale - autoScale) > 0.1) {
+              setScale(autoScale);
+              console.log('📱 Re-adjusted scale after render:', autoScale);
+            }
+          }
+        }, 100);
+      }
+        
       } catch (err) {
         console.error('Render error:', err);
         setError(`Render failed: ${err.message}`);
