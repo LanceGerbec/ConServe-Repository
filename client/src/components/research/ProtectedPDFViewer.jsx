@@ -1,3 +1,4 @@
+// client/src/components/research/ProtectedPDFViewer.jsx
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +43,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const lastHideTime = useRef(0);
   const visibilityCount = useRef(0);
   const lastTap = useRef(0);
+  const renderLockRef = useRef(false);
+  const renderTaskRef = useRef(null);
+  const scaleDebounceRef = useRef(null);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
@@ -74,7 +78,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // 🔥 HYBRID ZOOM: Double-tap handler
+  // Double-tap zoom handler
   useEffect(() => {
     if (!isMobile || !canvasRef.current) return;
 
@@ -83,21 +87,19 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       if (now - lastTap.current < 300) {
         e.preventDefault();
         const currentIndex = ZOOM_LEVELS.indexOf(scale);
-        const targetScale = currentIndex <= 1 ? ZOOM_LEVELS[4] : ZOOM_LEVELS[1]; // Toggle 1x ↔ 2x
+        const targetScale = currentIndex <= 1 ? ZOOM_LEVELS[4] : ZOOM_LEVELS[1];
         setScale(targetScale);
         showToast(`🔍 ${Math.round(targetScale * 100)}%`, 'success');
-        
-        // Haptic feedback
         if (navigator.vibrate) navigator.vibrate(30);
       }
       lastTap.current = now;
     };
 
-    canvasRef.current.addEventListener('touchend', handleDoubleTap);
-    return () => canvasRef.current?.removeEventListener('touchend', handleDoubleTap);
+    const canvas = canvasRef.current;
+    canvas.addEventListener('touchend', handleDoubleTap);
+    return () => canvas?.removeEventListener('touchend', handleDoubleTap);
   }, [scale, isMobile]);
 
-  // 🔥 ZOOM CONTROLS: +/- buttons
   const zoomIn = () => {
     const currentIndex = ZOOM_LEVELS.indexOf(scale);
     if (currentIndex < ZOOM_LEVELS.length - 1) {
@@ -127,7 +129,16 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast('🔄 Reset', 'success');
   };
 
-  // Mobile Screenshot Detection
+  const fitToWidth = () => {
+    if (!pdf || !containerRef.current) return;
+    const containerWidth = containerRef.current.clientWidth - 48;
+    const pageWidth = 612;
+    const newScale = Math.min(containerWidth / pageWidth, 2.5);
+    setScale(newScale);
+    showToast(`🔄 Fit to Width`, 'success');
+  };
+
+  // Mobile screenshot detection
   useEffect(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
     if (!isMobile) return;
@@ -387,141 +398,173 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE, isMobile]);
 
+  // 🔥 FIXED RENDERING - NO SQUISHING, NO CRASHES
   useEffect(() => {
-    if (!pdf || !canvasRef.current) return;
-    const render = async () => {
-      try {
-        const page = await pdf.getPage(currentPage);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', { alpha: false });
-        
-        const dpr = window.devicePixelRatio || 1;
-        const vp = page.getViewport({ scale });
-        
-        const displayWidth = vp.width;
-        const displayHeight = vp.height;
-        
-        canvas.width = displayWidth * dpr;
-        canvas.height = displayHeight * dpr;
-        canvas.style.width = displayWidth + 'px';
-        canvas.style.height = displayHeight + 'px';
-        
-        ctx.scale(dpr, dpr);
-        
-        await page.render({ 
-          canvasContext: ctx, 
-          viewport: vp,
-          intent: 'display'
-        }).promise;
-        
-        const now = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
-        
-        const badgeW = Math.min(280 * scale, displayWidth * 0.4);
-        const badgeH = Math.min(100 * scale, displayHeight * 0.15);
-        const badgeFont1 = Math.max(10, 14 * scale);
-        const badgeFont2 = Math.max(8, 12 * scale);
-        
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, 0, badgeW, badgeH);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${badgeFont1}px Inter, monospace`;
-        ctx.fillText(`🔒 PROTECTED DOCUMENT`, 10 * scale, 25 * scale);
-        ctx.font = `${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 10 * scale, 45 * scale);
-        ctx.fillText(`${time}`, 10 * scale, 65 * scale);
-        ctx.fillText(`Session: ${sid}`, 10 * scale, 85 * scale);
-        ctx.restore();
+    if (!pdf || !canvasRef.current || renderLockRef.current) return;
 
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(displayWidth - badgeW * 0.8, 0, badgeW * 0.8, badgeH);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'right';
-        ctx.font = `bold ${badgeFont1}px Inter, monospace`;
-        ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 10 * scale, 25 * scale);
-        ctx.font = `${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`IP: ${userIP}`, displayWidth - 10 * scale, 45 * scale);
-        ctx.fillText(`${date}`, displayWidth - 10 * scale, 65 * scale);
-        ctx.fillText(`View Only`, displayWidth - 10 * scale, 85 * scale);
-        ctx.restore();
+    // Debounce scale changes
+    clearTimeout(scaleDebounceRef.current);
+    scaleDebounceRef.current = setTimeout(() => {
+      renderPage();
+    }, 150);
 
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, displayHeight - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'left';
-        ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`ConServe Repository`, 10 * scale, displayHeight - 55 * scale);
-        ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
-        ctx.fillText(`NEUST College of Nursing`, 10 * scale, displayHeight - 35 * scale);
-        ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10 * scale, displayHeight - 15 * scale);
-        ctx.restore();
-
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(displayWidth - badgeW * 0.9, displayHeight - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'right';
-        ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 10 * scale, displayHeight - 55 * scale);
-        ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
-        ctx.fillText(`${user?.email || 'Confidential'}`, displayWidth - 10 * scale, displayHeight - 35 * scale);
-        ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 10 * scale, displayHeight - 15 * scale);
-        ctx.restore();
-        
-        ctx.save();
-        ctx.translate(displayWidth / 2, displayHeight / 2);
-        ctx.rotate(-35 * Math.PI / 180);
-        
-        const centerFont1 = Math.max(18, 50 * scale);
-        const centerFont2 = Math.max(16, 40 * scale);
-        const centerFont3 = Math.max(14, 35 * scale);
-        const centerFont4 = Math.max(12, 30 * scale);
-        const centerFont5 = Math.max(10, 25 * scale);
-        const centerFont6 = Math.max(9, 22 * scale);
-        
-        ctx.globalAlpha = 0.22;
-        ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.textAlign = 'center';
-        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100 * scale);
-        
-        ctx.font = `bold ${centerFont2}px Inter, monospace`;
-        ctx.globalAlpha = 0.20;
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30 * scale);
-        
-        ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
-        ctx.globalAlpha = 0.18;
-        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35 * scale);
-        
-        ctx.font = `${centerFont4}px Inter, sans-serif`;
-        ctx.globalAlpha = 0.16;
-        ctx.fillText(`${date} • ${time}`, 0, 90 * scale);
-        
-        ctx.font = `bold ${centerFont5}px Inter, monospace`;
-        ctx.globalAlpha = 0.14;
-        ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140 * scale);
-        
-        ctx.font = `${centerFont6}px Inter, sans-serif`;
-        ctx.globalAlpha = 0.12;
-        ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185 * scale);
-        
-        ctx.restore();
-        
-      } catch (err) { 
-        setError(`Render failed: ${err.message}`); 
-      }
-    };
-    render();
+    return () => clearTimeout(scaleDebounceRef.current);
   }, [pdf, currentPage, scale, user, userIP, totalPages]);
+
+  const renderPage = async () => {
+    if (renderLockRef.current) return;
+    renderLockRef.current = true;
+
+    try {
+      // Cancel previous render
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+
+      const page = await pdf.getPage(currentPage);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      
+      const dpr = window.devicePixelRatio || 1;
+      const vp = page.getViewport({ scale });
+      
+      const displayWidth = vp.width;
+      const displayHeight = vp.height;
+      
+      canvas.width = displayWidth * dpr;
+      canvas.height = displayHeight * dpr;
+      canvas.style.width = displayWidth + 'px';
+      canvas.style.height = displayHeight + 'px';
+      
+      ctx.scale(dpr, dpr);
+      
+      const renderTask = page.render({ 
+        canvasContext: ctx, 
+        viewport: vp,
+        intent: 'display'
+      });
+      
+      renderTaskRef.current = renderTask;
+      await renderTask.promise;
+      renderTaskRef.current = null;
+      
+      // 🔥 FIXED WATERMARKS - NO SQUISHING
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      // ✅ FIXED: Badge sizes are now constant regardless of zoom
+      const badgeW = isMobile ? 200 : 280;
+      const badgeH = isMobile ? 70 : 100;
+      const badgeFont1 = isMobile ? 11 : 14;
+      const badgeFont2 = isMobile ? 9 : 12;
+      
+      // Top-left badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, 0, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${badgeFont1}px Inter, monospace`;
+      ctx.fillText(`🔒 PROTECTED DOCUMENT`, 10, 25);
+      ctx.font = `${badgeFont2}px Inter, monospace`;
+      ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 10, 45);
+      ctx.fillText(`${time}`, 10, 65);
+      if (!isMobile) ctx.fillText(`Session: ${sid}`, 10, 85);
+      ctx.restore();
+
+      // Top-right badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(displayWidth - badgeW, 0, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.font = `bold ${badgeFont1}px Inter, monospace`;
+      ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 10, 25);
+      ctx.font = `${badgeFont2}px Inter, monospace`;
+      ctx.fillText(`IP: ${userIP}`, displayWidth - 10, 45);
+      ctx.fillText(`${date}`, displayWidth - 10, 65);
+      if (!isMobile) ctx.fillText(`View Only`, displayWidth - 10, 85);
+      ctx.restore();
+
+      // Bottom-left badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, displayHeight - badgeH, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${badgeFont2}px Inter, monospace`;
+      ctx.fillText(`ConServe Repository`, 10, displayHeight - 55);
+      ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
+      ctx.fillText(`NEUST College of Nursing`, 10, displayHeight - 35);
+      ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10, displayHeight - 15);
+      ctx.restore();
+
+      // Bottom-right badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(displayWidth - badgeW, displayHeight - badgeH, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.font = `bold ${badgeFont2}px Inter, monospace`;
+      ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 10, displayHeight - 55);
+      ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
+      ctx.fillText(`${user?.email || 'Confidential'}`, displayWidth - 10, displayHeight - 35);
+      ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 10, displayHeight - 15);
+      ctx.restore();
+      
+      // ✅ FIXED: Center watermark scales with canvas dimensions, not zoom
+      const centerFont1 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.05);
+      const centerFont2 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.04);
+      const centerFont3 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.035);
+      const centerFont4 = Math.max(12, Math.min(displayWidth, displayHeight) * 0.03);
+      const centerFont5 = Math.max(10, Math.min(displayWidth, displayHeight) * 0.025);
+      const centerFont6 = Math.max(9, Math.min(displayWidth, displayHeight) * 0.022);
+      
+      ctx.save();
+      ctx.translate(displayWidth / 2, displayHeight / 2);
+      ctx.rotate(-35 * Math.PI / 180);
+      
+      ctx.globalAlpha = 0.22;
+      ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.textAlign = 'center';
+      ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100);
+      
+      ctx.font = `bold ${centerFont2}px Inter, monospace`;
+      ctx.globalAlpha = 0.20;
+      ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30);
+      
+      ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
+      ctx.globalAlpha = 0.18;
+      ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35);
+      
+      ctx.font = `${centerFont4}px Inter, sans-serif`;
+      ctx.globalAlpha = 0.16;
+      ctx.fillText(`${date} • ${time}`, 0, 90);
+      
+      ctx.font = `bold ${centerFont5}px Inter, monospace`;
+      ctx.globalAlpha = 0.14;
+      ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140);
+      
+      ctx.font = `${centerFont6}px Inter, sans-serif`;
+      ctx.globalAlpha = 0.12;
+      ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185);
+      
+      ctx.restore();
+      
+    } catch (err) {
+      if (err.name !== 'RenderingCancelledException') {
+        setError(`Render failed: ${err.message}`);
+      }
+    } finally {
+      renderLockRef.current = false;
+    }
+  };
 
   useEffect(() => {
     const prevent = (e) => { 
@@ -554,31 +597,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     );
   }, []);
 
-  const fitToWidth = () => {
-    if (!pdf || !containerRef.current) return;
-    const containerWidth = containerRef.current.clientWidth - 48;
-    const pageWidth = 612;
-    const newScale = Math.min(containerWidth / pageWidth, 2.5);
-    setScale(newScale);
-    showToast(`🔄 Fit to Width`, 'success');
-  };
-
   useEffect(() => {
     if (isMobile) return;
 
     const handleKey = (e) => {
-      if (e.key === '[') {
-        zoomOut();
-      }
-      if (e.key === ']') {
-        zoomIn();
-      }
-      if (e.key === '0') {
-        resetZoom();
-      }
-      if (e.key === 'f' || e.key === 'F') {
-        fitToWidth();
-      }
+      if (e.key === '[') zoomOut();
+      if (e.key === ']') zoomIn();
+      if (e.key === '0') resetZoom();
+      if (e.key === 'f' || e.key === 'F') fitToWidth();
     };
 
     const handleWheel = (e) => {
@@ -644,7 +670,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}
       
-      {/* 🔥 ZOOM LEVEL INDICATOR */}
       <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
         🔍 {Math.round(scale * 100)}%
       </div>
@@ -660,9 +685,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
                 <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
               </div>
               <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
-              <p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
-              <p className="text-gray-400 text-sm mb-6">
-                Violation #{violations} of {MAX_VIOLATIONS}
+<p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
+<p className="text-gray-400 text-sm mb-6">
+Violation #{violations} of {MAX_VIOLATIONS}
 {violations>=MAX_VIOLATIONS&&' - CLOSING'}
 </p>
 <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
@@ -672,7 +697,8 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
 </div>
 </div>
 </div>
-)}<div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
+)}
+<div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <Shield className="text-blue-200 flex-shrink-0" size={18}/>
         <div className="min-w-0 flex-1">
@@ -682,11 +708,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       </div>
       <div className="flex items-center gap-2">
         {!isMobile && (
-          <>
-            <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
-              <Maximize2 size={16}/>
-            </button>
-          </>
+          <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
+            <Maximize2 size={16}/>
+          </button>
         )}
         <div className="w-px h-6 bg-blue-400/30"></div>
         <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
@@ -713,7 +737,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     </div>
     
     <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 border-t-2 border-blue-700">
-      {/* 🔥 MOBILE: Show zoom controls + page nav */}
       {isMobile && (
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1">
@@ -758,6 +781,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       </div>
     </div>
   </div>
-</>);
+</>
+);
 };
 export default ProtectedPDFViewer;
