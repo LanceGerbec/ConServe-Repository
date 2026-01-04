@@ -26,6 +26,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [scale, setScale] = useState(1.3);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const renderTimeoutRef = useRef(null);
   const [violations, setViolations] = useState(0);
   const [userIP, setUserIP] = useState('Unknown');
   const [isBlocked, setIsBlocked] = useState(false);
@@ -482,17 +483,30 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE]);
 
-  useEffect(() => {
-    if (!pdf || !canvasRef.current) return;
+useEffect(() => {
+  if (!pdf || !canvasRef.current) return;
+  
+  if (renderTimeoutRef.current) clearTimeout(renderTimeoutRef.current);
+  
+  renderTimeoutRef.current = setTimeout(async () => {
     const render = async () => {
       try {
         const page = await pdf.getPage(currentPage);
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d', { alpha: false });
-        const vp = page.getViewport({ scale });
-        canvas.height = vp.height; 
+        
+        const dpr = window.devicePixelRatio || 1;
+        const vp = page.getViewport({ scale: scale * dpr });
+        
+        canvas.height = vp.height;
         canvas.width = vp.width;
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        canvas.style.width = `${vp.width / dpr}px`;
+        canvas.style.height = `${vp.height / dpr}px`;
+        
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+        
+        await page.render({ canvasContext: ctx, viewport: page.getViewport({ scale }) }).promise;
         
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -600,7 +614,12 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       }
     };
     render();
-  }, [pdf, currentPage, scale, user, userIP, totalPages]);
+  }, 50);
+  
+  return () => {
+    if (renderTimeoutRef.current) clearTimeout(renderTimeoutRef.current);
+  };
+}, [pdf, currentPage, scale, user, userIP, totalPages]);
 
   useEffect(() => {
     const prevent = (e) => { 
@@ -710,13 +729,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} disabled={scale<=0.5} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <button onClick={()=>setScale(s=>Math.max(0.5,s-0.1))} disabled={scale<=0.5} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
               <ZoomOut size={18}/>
             </button>
             <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono bg-white/10 rounded py-1.5 font-bold">
               {Math.round(scale*100)}%
             </span>
-            <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <button onClick={()=>setScale(s=>Math.min(3,s+0.1))} disabled={scale>=3} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
               <ZoomIn size={18}/>
             </button>
             <button onClick={fitToWidth} className="p-2 bg-blue-500 hover:bg-blue-600 rounded text-white">
