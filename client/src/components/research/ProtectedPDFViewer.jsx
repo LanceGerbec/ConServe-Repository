@@ -24,7 +24,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [scale, setScale] = useState(isMobile ? 0.5 : 1);
+  const [scale, setScale] = useState(0.5); // 🔥 CHANGED: Start at 50% for mobile auto-fit
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
@@ -52,7 +52,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const MAX_VIOLATIONS = 5;
   const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const BASE_SCALE = isMobile ? 1.5 : 1.3; // Fixed render scale
+  const BASE_SCALE = isMobile ? 1.5 : 1.3;
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
 
@@ -79,7 +79,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Double-tap zoom
   useEffect(() => {
     if (!isMobile || !wrapperRef.current) return;
 
@@ -139,7 +138,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast(`🔄 Fit to Width`, 'success');
   };
 
-  // Mobile screenshot detection
   useEffect(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
     if (!isMobile) return;
@@ -351,95 +349,92 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
+  // 🔥 UPDATED: Load PDF with auto-fit
   useEffect(() => {
-  const loadPDF = async () => {
-    try {
-      const pdfjs = await initPdfJs();
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('Auth required');
-      
-      const fullUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE}${pdfUrl}`;
-      const res = await fetch(fullUrl, { 
-        headers: { 
-          'Authorization': `Bearer ${token}`, 
-          'Accept': 'application/pdf' 
-        } 
-      });
-      
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('Session expired');
-        if (res.status === 404) throw new Error('PDF not found');
-        throw new Error(`Error ${res.status}`);
-      }
-      
-      const blob = await res.blob();
-      if (blob.size === 0) throw new Error('Empty file');
-      
-      const arr = await blob.arrayBuffer();
-      const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
-      setPdf(doc);
-      setTotalPages(doc.numPages);
-      setLoading(false);
-
-      // 🔥 AUTO-FIT TO WIDTH ON MOBILE
-      if (isMobile) {
-        setTimeout(() => {
-          if (containerRef.current && canvasRef.current) {
-            const containerWidth = containerRef.current.clientWidth - 48; // Account for padding
-            const canvasWidth = canvasRef.current.offsetWidth;
-            const fitScale = containerWidth / canvasWidth;
-            
-            // Clamp between 0.5 and 1.5 for mobile
-            const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
-            setScale(autoScale);
-            
-            console.log('📱 Auto-fit mobile:');
-            console.log('   Container width:', containerWidth);
-            console.log('   Canvas width:', canvasWidth);
-            console.log('   Calculated scale:', autoScale);
-          }
-        }, 200); // Wait for render to complete
-      }
-      
-    } catch (err) { 
-      setError(err.message || 'Load failed'); 
-      setLoading(false); 
-    }
-  };
-  if (pdfUrl) loadPDF();
-}, [pdfUrl, API_BASE, isMobile]);
-
-  // 🔥 FIXED: Render PDF ONCE at native resolution, zoom via CSS
-useEffect(() => {
-  if (!pdf || !canvasRef.current || renderLockRef.current) return;
-  
-  setRendered(false);
-  renderLockRef.current = true;
-
-  const renderPage = async () => {
-    try {
-      const page = await pdf.getPage(currentPage);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d', { alpha: false });
-      
-      const dpr = window.devicePixelRatio || 1;
-      
-      const vp = page.getViewport({ scale: BASE_SCALE });
-      
-      canvas.width = vp.width * dpr;
-      canvas.height = vp.height * dpr;
-      canvas.style.width = vp.width + 'px';
-      canvas.style.height = vp.height + 'px';
-      
-      ctx.scale(dpr, dpr);
-      
-      await page.render({ 
-        canvasContext: ctx, 
-        viewport: vp,
-        intent: 'display'
-      }).promise;
+    const loadPDF = async () => {
+      try {
+        const pdfjs = await initPdfJs();
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Auth required');
         
-        // Draw watermarks at FIXED sizes
+        const fullUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE}${pdfUrl}`;
+        const res = await fetch(fullUrl, { 
+          headers: { 
+            'Authorization': `Bearer ${token}`, 
+            'Accept': 'application/pdf' 
+          } 
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) throw new Error('Session expired');
+          if (res.status === 404) throw new Error('PDF not found');
+          throw new Error(`Error ${res.status}`);
+        }
+        
+        const blob = await res.blob();
+        if (blob.size === 0) throw new Error('Empty file');
+        
+        const arr = await blob.arrayBuffer();
+        const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
+        setPdf(doc);
+        setTotalPages(doc.numPages);
+        setLoading(false);
+
+        // 🔥 AUTO-FIT TO WIDTH ON MOBILE
+        if (isMobile) {
+          setTimeout(() => {
+            if (containerRef.current && canvasRef.current) {
+              const containerWidth = containerRef.current.clientWidth - 48;
+              const canvasWidth = canvasRef.current.offsetWidth;
+              const fitScale = containerWidth / canvasWidth;
+              
+              const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
+              setScale(autoScale);
+              
+              console.log('📱 Auto-fit mobile:');
+              console.log('   Container width:', containerWidth);
+              console.log('   Canvas width:', canvasWidth);
+              console.log('   Calculated scale:', autoScale);
+            }
+          }, 200);
+        }
+      } catch (err) { 
+        setError(err.message || 'Load failed'); 
+        setLoading(false); 
+      }
+    };
+    if (pdfUrl) loadPDF();
+  }, [pdfUrl, API_BASE, isMobile]);
+
+  // 🔥 UPDATED: Render with auto-fit adjustment
+  useEffect(() => {
+    if (!pdf || !canvasRef.current || renderLockRef.current) return;
+    
+    setRendered(false);
+    renderLockRef.current = true;
+
+    const renderPage = async () => {
+      try {
+        const page = await pdf.getPage(currentPage);
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        const dpr = window.devicePixelRatio || 1;
+        const vp = page.getViewport({ scale: BASE_SCALE });
+        
+        canvas.width = vp.width * dpr;
+        canvas.height = vp.height * dpr;
+        canvas.style.width = vp.width + 'px';
+        canvas.style.height = vp.height + 'px';
+        
+        ctx.scale(dpr, dpr);
+        
+        await page.render({ 
+          canvasContext: ctx, 
+          viewport: vp,
+          intent: 'display'
+        }).promise;
+        
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -448,7 +443,6 @@ useEffect(() => {
         const displayWidth = vp.width;
         const displayHeight = vp.height;
         
-        // Fixed badge sizes
         const badgeW = isMobile ? 180 : 280;
         const badgeH = isMobile ? 65 : 100;
         const badgeFont1 = isMobile ? 10 : 14;
@@ -509,23 +503,23 @@ useEffect(() => {
         ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 8, displayHeight - 16);
         ctx.restore();
         
-        // Center watermark (scales with canvas)
-         const centerFont1 = Math.max(28, Math.min(displayWidth, displayHeight) * 0.08);  // Was 0.04, now 0.08 (2x larger)
-        const centerFont2 = Math.max(24, Math.min(displayWidth, displayHeight) * 0.07);  // Was 0.035, now 0.07 (2x larger)
-        const centerFont3 = Math.max(20, Math.min(displayWidth, displayHeight) * 0.06);  // Was 0.03, now 0.06 (2x larger)
-        const centerFont4 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.05);  // Was 0.025, now 0.05 (2x larger)
-        const centerFont5 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.045); // Was 0.022, now 0.045 (2x larger)
-        const centerFont6 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.04);  // Was 0.02, now 0.04 (2x larger)
+        // 🔥 MUCH LARGER CENTER WATERMARK
+        const centerFont1 = Math.max(28, Math.min(displayWidth, displayHeight) * 0.08);
+        const centerFont2 = Math.max(24, Math.min(displayWidth, displayHeight) * 0.07);
+        const centerFont3 = Math.max(20, Math.min(displayWidth, displayHeight) * 0.06);
+        const centerFont4 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.05);
+        const centerFont5 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.045);
+        const centerFont6 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.04);
         
         ctx.save();
         ctx.translate(displayWidth / 2, displayHeight / 2);
         ctx.rotate(-35 * Math.PI / 180);
         
-        ctx.globalAlpha = 0.28; // More visible
+        ctx.globalAlpha = 0.28;
         ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
         ctx.fillStyle = '#1e3a8a';
         ctx.textAlign = 'center';
-        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'}`, 0, -120); // Increased spacing
+        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'}`, 0, -120);
         
         ctx.font = `bold ${centerFont2}px Inter, monospace`;
         ctx.globalAlpha = 0.26;
@@ -552,32 +546,32 @@ useEffect(() => {
         setRendered(true);
         renderLockRef.current = false;
 
- if (isMobile && currentPage === 1) {
-        setTimeout(() => {
-          if (containerRef.current && canvasRef.current) {
-            const containerWidth = containerRef.current.clientWidth - 48;
-            const canvasWidth = canvasRef.current.offsetWidth;
-            const fitScale = containerWidth / canvasWidth;
-            const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
-            
-            // Only update if significantly different from current scale
-            if (Math.abs(scale - autoScale) > 0.1) {
-              setScale(autoScale);
-              console.log('📱 Re-adjusted scale after render:', autoScale);
+        // 🔥 RE-ADJUST AFTER FIRST RENDER ON MOBILE
+        if (isMobile && currentPage === 1) {
+          setTimeout(() => {
+            if (containerRef.current && canvasRef.current) {
+              const containerWidth = containerRef.current.clientWidth - 48;
+              const canvasWidth = canvasRef.current.offsetWidth;
+              const fitScale = containerWidth / canvasWidth;
+              const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
+              
+              if (Math.abs(scale - autoScale) > 0.1) {
+                setScale(autoScale);
+                console.log('📱 Re-adjusted scale after render:', autoScale);
+              }
             }
-          }
-        }, 100);
-      }
-        
+          }, 100);
+        }
+
       } catch (err) {
-      console.error('Render error:', err);
-      setError(`Render failed: ${err.message}`);
-      renderLockRef.current = false;
-    }
-  };
-  
-  renderPage();
-}, [pdf, currentPage, user, userIP, totalPages, isMobile]); // Added isMobile dependency
+        console.error('Render error:', err);
+        setError(`Render failed: ${err.message}`);
+        renderLockRef.current = false;
+      }
+    };
+    
+    renderPage();
+  }, [pdf, currentPage, user, userIP, totalPages, isMobile, scale]);
 
   useEffect(() => {
     const prevent = (e) => { 
@@ -688,35 +682,35 @@ useEffect(() => {
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}
       
-      <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
-        🔍 {Math.round(scale * 100)}%
+      <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py -1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
+🔍 {Math.round(scale * 100)}%
+</div>
+<div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
+    {isBlocked && (
+      <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
+        <div className="text-center max-w-lg p-8">
+          <div className="relative mb-6">
+            <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
+              <Shield size={64} className="text-white"/>
+            </div>
+            <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
+          </div>
+          <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
+          <p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
+          <p className="text-gray-400 text-sm mb-6">
+            Violation #{violations} of {MAX_VIOLATIONS}
+            {violations>=MAX_VIOLATIONS&&' - CLOSING'}
+          </p>
+          <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
+            <p className="font-mono">🚨 Logged</p>
+            <p className="font-mono mt-1">📍 {userIP}</p>
+            <p className="font-mono mt-1">👤 {user?.email}</p>
+          </div>
+        </div>
       </div>
+    )}
 
-      <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
-        {isBlocked && (
-          <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
-            <div className="text-center max-w-lg p-8">
-              <div className="relative mb-6">
-                <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
-                  <Shield size={64} className="text-white"/>
-                </div>
-                <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
-              </div>
-              <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
-              <p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
-              <p className="text-gray-400 text-sm mb-6">
-                Violation #{violations} of {MAX_VIOLATIONS}
-                {violations>=MAX_VIOLATIONS&&' - CLOSING'}
-              </p>
-              <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
-<p className="font-mono">🚨 Logged</p>
-<p className="font-mono mt-1">📍 {userIP}</p>
-<p className="font-mono mt-1">👤 {user?.email}</p>
-</div>
-</div>
-</div>
-)}
-<div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
+    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <Shield className="text-blue-200 flex-shrink-0" size={18}/>
         <div className="min-w-0 flex-1">
@@ -737,7 +731,6 @@ useEffect(() => {
       </div>
     </div>
 
-    {/* 🔥 KEY FIX: Wrapper applies CSS transform for zoom */}
     <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 flex items-start justify-center">
       <div 
         ref={wrapperRef}
