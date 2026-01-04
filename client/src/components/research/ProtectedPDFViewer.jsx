@@ -546,22 +546,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setRendered(true);
         renderLockRef.current = false;
 
-        // 🔥 RE-ADJUST AFTER FIRST RENDER ON MOBILE
-        if (isMobile && currentPage === 1) {
-          setTimeout(() => {
-            if (containerRef.current && canvasRef.current) {
-              const containerWidth = containerRef.current.clientWidth - 48;
-              const canvasWidth = canvasRef.current.offsetWidth;
-              const fitScale = containerWidth / canvasWidth;
-              const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
-              
-              if (Math.abs(scale - autoScale) > 0.1) {
-                setScale(autoScale);
-                console.log('📱 Re-adjusted scale after render:', autoScale);
-              }
-            }
-          }, 100);
-        }
 
       } catch (err) {
         console.error('Render error:', err);
@@ -571,7 +555,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
     
     renderPage();
-  }, [pdf, currentPage, user, userIP, totalPages, isMobile, scale]);
+  }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
 
   useEffect(() => {
     const prevent = (e) => { 
