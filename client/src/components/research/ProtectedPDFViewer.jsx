@@ -24,7 +24,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [scale, setScale] = useState(1.3);
+  const [scale, setScale] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
@@ -34,8 +34,10 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30 * 60);
   const [toast, setToast] = useState({ show: false, message: '', type: 'warning' });
+  const [rendered, setRendered] = useState(false);
   
   const canvasRef = useRef(null);
+  const wrapperRef = useRef(null);
   const containerRef = useRef(null);
   const sessionTimerRef = useRef(null);
   const countdownRef = useRef(null);
@@ -44,14 +46,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const visibilityCount = useRef(0);
   const lastTap = useRef(0);
   const renderLockRef = useRef(false);
-  const renderTaskRef = useRef(null);
-  const scaleDebounceRef = useRef(null);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 5;
-  const ZOOM_LEVELS = [0.8, 1, 1.3, 1.6, 2, 2.5, 3];
+  const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const BASE_SCALE = isMobile ? 1.5 : 1.3; // Fixed render scale
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
 
@@ -78,16 +79,16 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Double-tap zoom handler
+  // Double-tap zoom
   useEffect(() => {
-    if (!isMobile || !canvasRef.current) return;
+    if (!isMobile || !wrapperRef.current) return;
 
     const handleDoubleTap = (e) => {
       const now = Date.now();
       if (now - lastTap.current < 300) {
         e.preventDefault();
         const currentIndex = ZOOM_LEVELS.indexOf(scale);
-        const targetScale = currentIndex <= 1 ? ZOOM_LEVELS[4] : ZOOM_LEVELS[1];
+        const targetScale = currentIndex <= 2 ? ZOOM_LEVELS[5] : ZOOM_LEVELS[2];
         setScale(targetScale);
         showToast(`🔍 ${Math.round(targetScale * 100)}%`, 'success');
         if (navigator.vibrate) navigator.vibrate(30);
@@ -95,9 +96,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       lastTap.current = now;
     };
 
-    const canvas = canvasRef.current;
-    canvas.addEventListener('touchend', handleDoubleTap);
-    return () => canvas?.removeEventListener('touchend', handleDoubleTap);
+    const wrapper = wrapperRef.current;
+    wrapper.addEventListener('touchend', handleDoubleTap);
+    return () => wrapper?.removeEventListener('touchend', handleDoubleTap);
   }, [scale, isMobile]);
 
   const zoomIn = () => {
@@ -105,7 +106,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (currentIndex < ZOOM_LEVELS.length - 1) {
       const newScale = ZOOM_LEVELS[currentIndex + 1];
       setScale(newScale);
-      showToast(`🔍 Zoom ${Math.round(newScale * 100)}%`, 'success');
+      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
       if (navigator.vibrate) navigator.vibrate(20);
     } else {
       showToast('🔍 Max zoom reached', 'warning');
@@ -117,7 +118,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (currentIndex > 0) {
       const newScale = ZOOM_LEVELS[currentIndex - 1];
       setScale(newScale);
-      showToast(`🔍 Zoom ${Math.round(newScale * 100)}%`, 'success');
+      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
       if (navigator.vibrate) navigator.vibrate(20);
     } else {
       showToast('🔍 Min zoom reached', 'warning');
@@ -125,16 +126,16 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
   const resetZoom = () => {
-    setScale(isMobile ? 1.3 : 1);
+    setScale(1);
     showToast('🔄 Reset', 'success');
   };
 
   const fitToWidth = () => {
-    if (!pdf || !containerRef.current) return;
+    if (!pdf || !containerRef.current || !canvasRef.current) return;
     const containerWidth = containerRef.current.clientWidth - 48;
-    const pageWidth = 612;
-    const newScale = Math.min(containerWidth / pageWidth, 2.5);
-    setScale(newScale);
+    const canvasWidth = canvasRef.current.offsetWidth;
+    const newScale = containerWidth / canvasWidth;
+    setScale(Math.min(Math.max(newScale, ZOOM_LEVELS[0]), ZOOM_LEVELS[ZOOM_LEVELS.length - 1]));
     showToast(`🔄 Fit to Width`, 'success');
   };
 
@@ -144,13 +145,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (!isMobile) return;
 
     const hideContent = () => {
-      if (canvasRef.current) {
-        canvasRef.current.style.opacity = '0';
-        canvasRef.current.style.filter = 'blur(50px)';
+      if (wrapperRef.current) {
+        wrapperRef.current.style.opacity = '0';
+        wrapperRef.current.style.filter = 'blur(50px)';
         setTimeout(() => {
-          if (canvasRef.current) {
-            canvasRef.current.style.opacity = '1';
-            canvasRef.current.style.filter = 'none';
+          if (wrapperRef.current) {
+            wrapperRef.current.style.opacity = '1';
+            wrapperRef.current.style.filter = 'none';
           }
         }, 2000);
       }
@@ -379,192 +380,166 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setPdf(doc);
         setTotalPages(doc.numPages);
         setLoading(false);
-
-        if (isMobile) {
-          setTimeout(() => {
-            if (containerRef.current) {
-              const containerWidth = containerRef.current.clientWidth - 32;
-              const pageWidth = 612;
-              const autoScale = Math.min(containerWidth / pageWidth, 1.5);
-              setScale(autoScale);
-            }
-          }, 100);
-        }
       } catch (err) { 
         setError(err.message || 'Load failed'); 
         setLoading(false); 
       }
     };
     if (pdfUrl) loadPDF();
-  }, [pdfUrl, API_BASE, isMobile]);
+  }, [pdfUrl, API_BASE]);
 
-  // 🔥 FIXED RENDERING - NO SQUISHING, NO CRASHES
+  // 🔥 FIXED: Render PDF ONCE at native resolution, zoom via CSS
   useEffect(() => {
     if (!pdf || !canvasRef.current || renderLockRef.current) return;
-
-    // Debounce scale changes
-    clearTimeout(scaleDebounceRef.current);
-    scaleDebounceRef.current = setTimeout(() => {
-      renderPage();
-    }, 150);
-
-    return () => clearTimeout(scaleDebounceRef.current);
-  }, [pdf, currentPage, scale, user, userIP, totalPages]);
-
-  const renderPage = async () => {
-    if (renderLockRef.current) return;
+    
+    setRendered(false);
     renderLockRef.current = true;
 
-    try {
-      // Cancel previous render
-      if (renderTaskRef.current) {
-        renderTaskRef.current.cancel();
-      }
+    const renderPage = async () => {
+      try {
+        const page = await pdf.getPage(currentPage);
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        const dpr = window.devicePixelRatio || 1;
+        
+        // 🎯 KEY FIX: Always render at BASE_SCALE (fixed quality)
+        const vp = page.getViewport({ scale: BASE_SCALE });
+        
+        canvas.width = vp.width * dpr;
+        canvas.height = vp.height * dpr;
+        canvas.style.width = vp.width + 'px';
+        canvas.style.height = vp.height + 'px';
+        
+        ctx.scale(dpr, dpr);
+        
+        await page.render({ 
+          canvasContext: ctx, 
+          viewport: vp,
+          intent: 'display'
+        }).promise;
+        
+        // Draw watermarks at FIXED sizes
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
+        
+        const displayWidth = vp.width;
+        const displayHeight = vp.height;
+        
+        // Fixed badge sizes
+        const badgeW = isMobile ? 180 : 280;
+        const badgeH = isMobile ? 65 : 100;
+        const badgeFont1 = isMobile ? 10 : 14;
+        const badgeFont2 = isMobile ? 8 : 12;
+        
+        // Top-left badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(0, 0, badgeW, badgeH);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${badgeFont1}px Inter, monospace`;
+        ctx.fillText(`🔒 PROTECTED`, 8, 22);
+        ctx.font = `${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 8, 40);
+        ctx.fillText(`${time}`, 8, 55);
+        ctx.restore();
 
-      const page = await pdf.getPage(currentPage);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d', { alpha: false });
-      
-      const dpr = window.devicePixelRatio || 1;
-      const vp = page.getViewport({ scale });
-      
-      const displayWidth = vp.width;
-      const displayHeight = vp.height;
-      
-      canvas.width = displayWidth * dpr;
-      canvas.height = displayHeight * dpr;
-      canvas.style.width = displayWidth + 'px';
-      canvas.style.height = displayHeight + 'px';
-      
-      ctx.scale(dpr, dpr);
-      
-      const renderTask = page.render({ 
-        canvasContext: ctx, 
-        viewport: vp,
-        intent: 'display'
-      });
-      
-      renderTaskRef.current = renderTask;
-      await renderTask.promise;
-      renderTaskRef.current = null;
-      
-      // 🔥 FIXED WATERMARKS - NO SQUISHING
-      const now = new Date();
-      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
-      
-      // ✅ FIXED: Badge sizes are now constant regardless of zoom
-      const badgeW = isMobile ? 200 : 280;
-      const badgeH = isMobile ? 70 : 100;
-      const badgeFont1 = isMobile ? 11 : 14;
-      const badgeFont2 = isMobile ? 9 : 12;
-      
-      // Top-left badge
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = '#1e3a8a';
-      ctx.fillRect(0, 0, badgeW, badgeH);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${badgeFont1}px Inter, monospace`;
-      ctx.fillText(`🔒 PROTECTED DOCUMENT`, 10, 25);
-      ctx.font = `${badgeFont2}px Inter, monospace`;
-      ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 10, 45);
-      ctx.fillText(`${time}`, 10, 65);
-      if (!isMobile) ctx.fillText(`Session: ${sid}`, 10, 85);
-      ctx.restore();
+        // Top-right badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(displayWidth - badgeW, 0, badgeW, badgeH);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'right';
+        ctx.font = `bold ${badgeFont1}px Inter, monospace`;
+        ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 8, 22);
+        ctx.font = `${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`IP: ${userIP}`, displayWidth - 8, 40);
+        ctx.fillText(`${date}`, displayWidth - 8, 55);
+        ctx.restore();
 
-      // Top-right badge
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = '#1e3a8a';
-      ctx.fillRect(displayWidth - badgeW, 0, badgeW, badgeH);
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'right';
-      ctx.font = `bold ${badgeFont1}px Inter, monospace`;
-      ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 10, 25);
-      ctx.font = `${badgeFont2}px Inter, monospace`;
-      ctx.fillText(`IP: ${userIP}`, displayWidth - 10, 45);
-      ctx.fillText(`${date}`, displayWidth - 10, 65);
-      if (!isMobile) ctx.fillText(`View Only`, displayWidth - 10, 85);
-      ctx.restore();
+        // Bottom-left badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(0, displayHeight - badgeH, badgeW, badgeH);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.font = `bold ${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`ConServe Repository`, 8, displayHeight - 48);
+        ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
+        ctx.fillText(`NEUST College of Nursing`, 8, displayHeight - 32);
+        ctx.fillText(`© ${now.getFullYear()} - All Rights`, 8, displayHeight - 16);
+        ctx.restore();
 
-      // Bottom-left badge
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = '#1e3a8a';
-      ctx.fillRect(0, displayHeight - badgeH, badgeW, badgeH);
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'left';
-      ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-      ctx.fillText(`ConServe Repository`, 10, displayHeight - 55);
-      ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
-      ctx.fillText(`NEUST College of Nursing`, 10, displayHeight - 35);
-      ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10, displayHeight - 15);
-      ctx.restore();
-
-      // Bottom-right badge
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = '#1e3a8a';
-      ctx.fillRect(displayWidth - badgeW, displayHeight - badgeH, badgeW, badgeH);
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'right';
-      ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-      ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 10, displayHeight - 55);
-      ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
-      ctx.fillText(`${user?.email || 'Confidential'}`, displayWidth - 10, displayHeight - 35);
-      ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 10, displayHeight - 15);
-      ctx.restore();
-      
-      // ✅ FIXED: Center watermark scales with canvas dimensions, not zoom
-      const centerFont1 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.05);
-      const centerFont2 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.04);
-      const centerFont3 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.035);
-      const centerFont4 = Math.max(12, Math.min(displayWidth, displayHeight) * 0.03);
-      const centerFont5 = Math.max(10, Math.min(displayWidth, displayHeight) * 0.025);
-      const centerFont6 = Math.max(9, Math.min(displayWidth, displayHeight) * 0.022);
-      
-      ctx.save();
-      ctx.translate(displayWidth / 2, displayHeight / 2);
-      ctx.rotate(-35 * Math.PI / 180);
-      
-      ctx.globalAlpha = 0.22;
-      ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
-      ctx.fillStyle = '#1e3a8a';
-      ctx.textAlign = 'center';
-      ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100);
-      
-      ctx.font = `bold ${centerFont2}px Inter, monospace`;
-      ctx.globalAlpha = 0.20;
-      ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30);
-      
-      ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
-      ctx.globalAlpha = 0.18;
-      ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35);
-      
-      ctx.font = `${centerFont4}px Inter, sans-serif`;
-      ctx.globalAlpha = 0.16;
-      ctx.fillText(`${date} • ${time}`, 0, 90);
-      
-      ctx.font = `bold ${centerFont5}px Inter, monospace`;
-      ctx.globalAlpha = 0.14;
-      ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140);
-      
-      ctx.font = `${centerFont6}px Inter, sans-serif`;
-      ctx.globalAlpha = 0.12;
-      ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185);
-      
-      ctx.restore();
-      
-    } catch (err) {
-      if (err.name !== 'RenderingCancelledException') {
+        // Bottom-right badge
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(displayWidth - badgeW, displayHeight - badgeH, badgeW, badgeH);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'right';
+        ctx.font = `bold ${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 8, displayHeight - 48);
+        ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
+        ctx.fillText(`${user?.email || 'Confidential'}`, displayWidth - 8, displayHeight - 32);
+        ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 8, displayHeight - 16);
+        ctx.restore();
+        
+        // Center watermark (scales with canvas)
+        const centerFont1 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.04);
+        const centerFont2 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.035);
+        const centerFont3 = Math.max(12, Math.min(displayWidth, displayHeight) * 0.03);
+        const centerFont4 = Math.max(10, Math.min(displayWidth, displayHeight) * 0.025);
+        const centerFont5 = Math.max(9, Math.min(displayWidth, displayHeight) * 0.022);
+        const centerFont6 = Math.max(8, Math.min(displayWidth, displayHeight) * 0.02);
+        
+        ctx.save();
+        ctx.translate(displayWidth / 2, displayHeight / 2);
+        ctx.rotate(-35 * Math.PI / 180);
+        
+        ctx.globalAlpha = 0.22;
+        ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'}`, 0, -80);
+        
+        ctx.font = `bold ${centerFont2}px Inter, monospace`;
+        ctx.globalAlpha = 0.20;
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -25);
+        
+        ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
+        ctx.globalAlpha = 0.18;
+        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 30);
+        
+        ctx.font = `${centerFont4}px Inter, sans-serif`;
+        ctx.globalAlpha = 0.16;
+        ctx.fillText(`${date} • ${time}`, 0, 75);
+        
+        ctx.font = `bold ${centerFont5}px Inter, monospace`;
+        ctx.globalAlpha = 0.14;
+        ctx.fillText(`Session: ${sid}`, 0, 115);
+        
+        ctx.font = `${centerFont6}px Inter, sans-serif`;
+        ctx.globalAlpha = 0.12;
+        ctx.fillText(`Page ${currentPage}/${totalPages}`, 0, 150);
+        
+        ctx.restore();
+        
+        setRendered(true);
+        renderLockRef.current = false;
+      } catch (err) {
+        console.error('Render error:', err);
         setError(`Render failed: ${err.message}`);
+        renderLockRef.current = false;
       }
-    } finally {
-      renderLockRef.current = false;
-    }
-  };
+    };
+    
+    renderPage();
+  }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
 
   useEffect(() => {
     const prevent = (e) => { 
@@ -611,7 +586,12 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        setScale(s => Math.min(3, Math.max(0.5, s + delta)));
+        const currentIndex = ZOOM_LEVELS.findIndex(z => Math.abs(z - scale) < 0.01);
+        if (delta > 0 && currentIndex < ZOOM_LEVELS.length - 1) {
+          setScale(ZOOM_LEVELS[currentIndex + 1]);
+        } else if (delta < 0 && currentIndex > 0) {
+          setScale(ZOOM_LEVELS[currentIndex - 1]);
+        }
       }
     };
 
@@ -622,7 +602,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [isMobile]);
+  }, [isMobile, scale]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -685,12 +665,12 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
                 <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
               </div>
               <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
-<p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
-<p className="text-gray-400 text-sm mb-6">
-Violation #{violations} of {MAX_VIOLATIONS}
-{violations>=MAX_VIOLATIONS&&' - CLOSING'}
-</p>
-<div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
+              <p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
+              <p className="text-gray-400 text-sm mb-6">
+                Violation #{violations} of {MAX_VIOLATIONS}
+                {violations>=MAX_VIOLATIONS&&' - CLOSING'}
+              </p>
+              <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
 <p className="font-mono">🚨 Logged</p>
 <p className="font-mono mt-1">📍 {userIP}</p>
 <p className="font-mono mt-1">👤 {user?.email}</p>
@@ -719,21 +699,30 @@ Violation #{violations} of {MAX_VIOLATIONS}
       </div>
     </div>
 
-    <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
-      <canvas 
-        ref={canvasRef}
-        className="shadow-2xl border-2 border-blue-700 rounded-lg transition-transform duration-300" 
+    {/* 🔥 KEY FIX: Wrapper applies CSS transform for zoom */}
+    <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 flex items-start justify-center">
+      <div 
+        ref={wrapperRef}
         style={{
-          maxWidth:'100%',
-          height:'auto',
-          imageRendering:'crisp-edges',
-          filter:isBlocked?'blur(50px) brightness(0.3)':'none',
-          pointerEvents:isBlocked?'none':'auto',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-          WebkitTouchCallout: 'none'
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+          transition: 'transform 0.2s ease-out',
+          filter: isBlocked ? 'blur(50px) brightness(0.3)' : 'none',
+          opacity: rendered ? 1 : 0,
+          pointerEvents: isBlocked ? 'none' : 'auto'
         }}
-      />
+      >
+        <canvas 
+          ref={canvasRef}
+          className="shadow-2xl border-2 border-blue-700 rounded-lg" 
+          style={{
+            display: 'block',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none'
+          }}
+        />
+      </div>
     </div>
     
     <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 border-t-2 border-blue-700">
