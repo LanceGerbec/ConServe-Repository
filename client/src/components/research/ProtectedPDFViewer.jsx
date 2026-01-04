@@ -490,42 +490,42 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.restore();
         
         // Center watermark (scales with canvas)
-        const centerFont1 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.04);
-        const centerFont2 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.035);
-        const centerFont3 = Math.max(12, Math.min(displayWidth, displayHeight) * 0.03);
-        const centerFont4 = Math.max(10, Math.min(displayWidth, displayHeight) * 0.025);
-        const centerFont5 = Math.max(9, Math.min(displayWidth, displayHeight) * 0.022);
-        const centerFont6 = Math.max(8, Math.min(displayWidth, displayHeight) * 0.02);
+         const centerFont1 = Math.max(20, Math.min(displayWidth, displayHeight) * 0.055); // Was 0.04, now 0.055
+        const centerFont2 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.048); // Was 0.035, now 0.048
+        const centerFont3 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.042); // Was 0.03, now 0.042
+        const centerFont4 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.035); // Was 0.025, now 0.035
+        const centerFont5 = Math.max(12, Math.min(displayWidth, displayHeight) * 0.03);  // Was 0.022, now 0.03
+        const centerFont6 = Math.max(10, Math.min(displayWidth, displayHeight) * 0.026); // Was 0.02, now 0.026
         
         ctx.save();
         ctx.translate(displayWidth / 2, displayHeight / 2);
         ctx.rotate(-35 * Math.PI / 180);
         
-        ctx.globalAlpha = 0.22;
+        ctx.globalAlpha = 0.24; // Slightly more visible (was 0.22)
         ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
         ctx.fillStyle = '#1e3a8a';
         ctx.textAlign = 'center';
-        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'}`, 0, -80);
+        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'}`, 0, -90); // Adjusted spacing
         
         ctx.font = `bold ${centerFont2}px Inter, monospace`;
-        ctx.globalAlpha = 0.20;
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -25);
+        ctx.globalAlpha = 0.22; // Slightly more visible (was 0.20)
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30);
         
         ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
-        ctx.globalAlpha = 0.18;
-        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 30);
+        ctx.globalAlpha = 0.20; // Slightly more visible (was 0.18)
+        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35);
         
         ctx.font = `${centerFont4}px Inter, sans-serif`;
-        ctx.globalAlpha = 0.16;
-        ctx.fillText(`${date} • ${time}`, 0, 75);
+        ctx.globalAlpha = 0.18; // Slightly more visible (was 0.16)
+        ctx.fillText(`${date} • ${time}`, 0, 85);
         
         ctx.font = `bold ${centerFont5}px Inter, monospace`;
-        ctx.globalAlpha = 0.14;
-        ctx.fillText(`Session: ${sid}`, 0, 115);
+        ctx.globalAlpha = 0.16; // Slightly more visible (was 0.14)
+        ctx.fillText(`Session: ${sid}`, 0, 130);
         
         ctx.font = `${centerFont6}px Inter, sans-serif`;
-        ctx.globalAlpha = 0.12;
-        ctx.fillText(`Page ${currentPage}/${totalPages}`, 0, 150);
+        ctx.globalAlpha = 0.14; // Slightly more visible (was 0.12)
+        ctx.fillText(`Page ${currentPage}/${totalPages}`, 0, 165);
         
         ctx.restore();
         
