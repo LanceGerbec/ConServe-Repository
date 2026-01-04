@@ -352,35 +352,36 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
   useEffect(() => {
-    const loadPDF = async () => {
-      try {
-        const pdfjs = await initPdfJs();
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Auth required');
-        
-        const fullUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE}${pdfUrl}`;
-        const res = await fetch(fullUrl, { 
-          headers: { 
-            'Authorization': `Bearer ${token}`, 
-            'Accept': 'application/pdf' 
-          } 
-        });
-        
-        if (!res.ok) {
-          if (res.status === 401) throw new Error('Session expired');
-          if (res.status === 404) throw new Error('PDF not found');
-          throw new Error(`Error ${res.status}`);
-        }
-        
-        const blob = await res.blob();
-        if (blob.size === 0) throw new Error('Empty file');
-        
-        const arr = await blob.arrayBuffer();
-        const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
-        setPdf(doc);
-        setTotalPages(doc.numPages);
-        setLoading(false);
+  const loadPDF = async () => {
+    try {
+      const pdfjs = await initPdfJs();
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Auth required');
+      
+      const fullUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE}${pdfUrl}`;
+      const res = await fetch(fullUrl, { 
+        headers: { 
+          'Authorization': `Bearer ${token}`, 
+          'Accept': 'application/pdf' 
+        } 
+      });
+      
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired');
+        if (res.status === 404) throw new Error('PDF not found');
+        throw new Error(`Error ${res.status}`);
+      }
+      
+      const blob = await res.blob();
+      if (blob.size === 0) throw new Error('Empty file');
+      
+      const arr = await blob.arrayBuffer();
+      const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
+      setPdf(doc);
+      setTotalPages(doc.numPages);
+      setLoading(false);
 
+      // 🔥 AUTO-FIT TO WIDTH ON MOBILE
       if (isMobile) {
         setTimeout(() => {
           if (containerRef.current && canvasRef.current) {
@@ -399,45 +400,44 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           }
         }, 200); // Wait for render to complete
       }
-
-      } catch (err) { 
-        setError(err.message || 'Load failed'); 
-        setLoading(false); 
-      }
-    };
-    if (pdfUrl) loadPDF();
-  }, [pdfUrl, API_BASE]);
+      
+    } catch (err) { 
+      setError(err.message || 'Load failed'); 
+      setLoading(false); 
+    }
+  };
+  if (pdfUrl) loadPDF();
+}, [pdfUrl, API_BASE, isMobile]);
 
   // 🔥 FIXED: Render PDF ONCE at native resolution, zoom via CSS
-  useEffect(() => {
-    if (!pdf || !canvasRef.current || renderLockRef.current) return;
-    
-    setRendered(false);
-    renderLockRef.current = true;
+useEffect(() => {
+  if (!pdf || !canvasRef.current || renderLockRef.current) return;
+  
+  setRendered(false);
+  renderLockRef.current = true;
 
-    const renderPage = async () => {
-      try {
-        const page = await pdf.getPage(currentPage);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', { alpha: false });
-        
-        const dpr = window.devicePixelRatio || 1;
-        
-        // 🎯 KEY FIX: Always render at BASE_SCALE (fixed quality)
-        const vp = page.getViewport({ scale: BASE_SCALE });
-        
-        canvas.width = vp.width * dpr;
-        canvas.height = vp.height * dpr;
-        canvas.style.width = vp.width + 'px';
-        canvas.style.height = vp.height + 'px';
-        
-        ctx.scale(dpr, dpr);
-        
-        await page.render({ 
-          canvasContext: ctx, 
-          viewport: vp,
-          intent: 'display'
-        }).promise;
+  const renderPage = async () => {
+    try {
+      const page = await pdf.getPage(currentPage);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      
+      const dpr = window.devicePixelRatio || 1;
+      
+      const vp = page.getViewport({ scale: BASE_SCALE });
+      
+      canvas.width = vp.width * dpr;
+      canvas.height = vp.height * dpr;
+      canvas.style.width = vp.width + 'px';
+      canvas.style.height = vp.height + 'px';
+      
+      ctx.scale(dpr, dpr);
+      
+      await page.render({ 
+        canvasContext: ctx, 
+        viewport: vp,
+        intent: 'display'
+      }).promise;
         
         // Draw watermarks at FIXED sizes
         const now = new Date();
@@ -570,14 +570,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       }
         
       } catch (err) {
-        console.error('Render error:', err);
-        setError(`Render failed: ${err.message}`);
-        renderLockRef.current = false;
-      }
-    };
-    
-    renderPage();
-  }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
+      console.error('Render error:', err);
+      setError(`Render failed: ${err.message}`);
+      renderLockRef.current = false;
+    }
+  };
+  
+  renderPage();
+}, [pdf, currentPage, user, userIP, totalPages, isMobile]); // Added isMobile dependency
 
   useEffect(() => {
     const prevent = (e) => { 
