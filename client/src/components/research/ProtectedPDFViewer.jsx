@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Maximize2, Shield, AlertCircle } from 'lucide-react';
-import { usePinch } from '@use-gesture/react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
 
@@ -32,17 +31,17 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(30 * 60);
   const [toast, setToast] = useState({ show: false, message: '', type: 'warning' });
   
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const sessionTimerRef = useRef(null);
+  const countdownRef = useRef(null);
   const startTimeRef = useRef(Date.now());
   const screenshotAttempts = useRef(0);
   const lastHideTime = useRef(0);
   const visibilityCount = useRef(0);
-  const lastTap = useRef(0);
-  const isPinching = useRef(false);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
@@ -73,35 +72,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // 🎯 ADVANCED PINCH-TO-ZOOM with Security
-  const bind = usePinch(
-    ({ offset: [d], active, event }) => {
-      // Allow 2-finger pinch ONLY (security)
-      if (event?.touches?.length > 2) {
-        blockContent('📱 3+ Fingers Blocked');
-        return;
-      }
-
-      isPinching.current = active;
-      
-      if (active) {
-        // Calculate new scale based on pinch distance
-        const newScale = Math.min(3, Math.max(0.5, scale * (1 + d / 200)));
-        setScale(newScale);
-      }
-    },
-    {
-      scaleBounds: { min: 0.5, max: 3 },
-      rubberband: true,
-      preventDefault: true,
-      eventOptions: { passive: false }
-    }
-  );
-
-  // Mobile Screenshot Detection with Pinch Exception
+  // Mobile Screenshot Detection
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
     
     if (!isMobile) return;
@@ -123,7 +96,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       const detectVisibility = () => {
         const now = Date.now();
         visibilityCount.current++;
-        if (document.hidden && !isPinching.current) {
+        if (document.hidden) {
           hideContent();
           blockContent('📱 Screenshot Blocked');
           lastHideTime.current = now;
@@ -132,13 +105,10 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       };
 
       const detectBlur = () => {
-        if (!isPinching.current) {
-          hideContent();
-          blockContent('📱 Screenshot Blocked');
-        }
+        hideContent();
+        blockContent('📱 Screenshot Blocked');
       };
 
-      // 🔒 SECURITY: Allow 2-finger pinch, block 3+
       const detectTouch = (e) => {
         if (e.touches?.length > 2) {
           e.preventDefault();
@@ -194,51 +164,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       };
     }
 
-    if (isIOS) {
-      let volumeUp = false, power = false, buttonTime = 0;
-      
-      const detectIOS = (e) => {
-        const key = e.key || e.keyCode;
-        const now = Date.now();
-        
-        if (['VolumeUp', 175, 'AudioVolumeUp'].includes(key)) {
-          volumeUp = true;
-          buttonTime = now;
-        }
-        if (['Power', 116, 223].includes(key)) power = true;
-        
-        if ((volumeUp && power) || (now - buttonTime < 300 && volumeUp)) {
-          e.preventDefault();
-          e.stopPropagation();
-          hideContent();
-          blockContent('📱 iOS Screenshot BLOCKED');
-          document.body.style.opacity = '0';
-          screenshotAttempts.current += 2;
-          setTimeout(() => {
-            document.body.style.opacity = '1';
-            volumeUp = power = false;
-          }, 3000);
-          return false;
-        }
-        
-        setTimeout(() => { volumeUp = power = false; }, 500);
-      };
-
-      document.addEventListener('keydown', detectIOS, { passive: false });
-      document.addEventListener('keyup', detectIOS, { passive: false });
-      window.addEventListener('blur', () => { 
-        if (!isPinching.current) {
-          hideContent(); 
-          blockContent('📱 Screenshot Blocked'); 
-        }
-      });
-
-      return () => {
-        document.removeEventListener('keydown', detectIOS);
-        document.removeEventListener('keyup', detectIOS);
-      };
-    }
-
     const preventAll = (e) => { 
       e.preventDefault();
       e.stopPropagation();
@@ -265,12 +190,31 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       .catch(()=>setUserIP('Protected')); 
   }, []);
 
+  // Session Timer
   useEffect(() => { 
     sessionTimerRef.current = setTimeout(() => { 
       setSessionExpired(true); 
       setTimeout(onClose, 3000); 
-    }, SESSION_DURATION); 
+    }, SESSION_DURATION);
     return () => clearTimeout(sessionTimerRef.current); 
+  }, []);
+
+  // Countdown Timer
+  useEffect(() => {
+    countdownRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        const newTime = Math.max(0, prev - 1);
+        
+        // Warnings
+        if (newTime === 300) showToast('⏰ 5 minutes remaining', 'warning');
+        if (newTime === 120) showToast('⏰ 2 minutes remaining', 'warning');
+        if (newTime === 60) showToast('⏰ 1 minute remaining', 'error');
+        
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownRef.current);
   }, []);
 
   // Desktop Screenshot Detection
@@ -300,16 +244,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   // Visibility/Focus Detection
   useEffect(() => {
     const handleVis = () => { 
-      if (document.hidden && !isPinching.current) { 
+      if (document.hidden) { 
         blockContent('⚠️ Tab Changed'); 
         setTimeout(() => { if (!document.hidden && violations < MAX_VIOLATIONS) setIsBlocked(false); }, 2000); 
       } 
     };
     const handleBlur = () => { 
-      if (!isPinching.current) {
-        blockContent('⚠️ Focus Lost'); 
-        setTimeout(() => { if (violations < MAX_VIOLATIONS) setIsBlocked(false); }, 1500); 
-      }
+      blockContent('⚠️ Focus Lost'); 
+      setTimeout(() => { if (violations < MAX_VIOLATIONS) setIsBlocked(false); }, 1500); 
     };
     document.addEventListener('visibilitychange', handleVis);
     window.addEventListener('blur', handleBlur);
@@ -382,6 +324,15 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
         setPdf(doc);
         setTotalPages(doc.numPages);
+
+        // Auto-fit for mobile
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && containerRef.current) {
+          const containerWidth = containerRef.current.clientWidth - 32;
+          const pageWidth = 612;
+          const autoScale = containerWidth / pageWidth;
+          setScale(autoScale);
+        }
+
         setLoading(false);
       } catch (err) { 
         setError(err.message || 'Load failed'); 
@@ -391,7 +342,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE]);
 
-  // 🔥 FIXED CANVAS RENDERING
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
     const render = async () => {
@@ -486,17 +436,17 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 10 * scale, displayHeight - 15 * scale);
         ctx.restore();
         
-        // Centered Diagonal Watermark
+        // Centered Diagonal Watermark (SMALLER)
         ctx.save();
         ctx.translate(displayWidth / 2, displayHeight / 2);
         ctx.rotate(-35 * Math.PI / 180);
         
-        const centerFont1 = Math.max(24, 72 * scale);
-        const centerFont2 = Math.max(20, 56 * scale);
-        const centerFont3 = Math.max(16, 48 * scale);
-        const centerFont4 = Math.max(14, 40 * scale);
-        const centerFont5 = Math.max(12, 32 * scale);
-        const centerFont6 = Math.max(10, 28 * scale);
+        const centerFont1 = Math.max(18, 50 * scale);
+        const centerFont2 = Math.max(16, 40 * scale);
+        const centerFont3 = Math.max(14, 35 * scale);
+        const centerFont4 = Math.max(12, 30 * scale);
+        const centerFont5 = Math.max(10, 25 * scale);
+        const centerFont6 = Math.max(9, 22 * scale);
         
         ctx.globalAlpha = 0.22;
         ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
@@ -565,7 +515,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     );
   }, []);
 
-  // Fit to Width
+  // Desktop Fit to Width
   const fitToWidth = () => {
     if (!pdf || !containerRef.current) return;
     const containerWidth = containerRef.current.clientWidth - 48;
@@ -575,17 +525,11 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast(`🔄 Fit to Width`, 'success');
   };
 
-  // Double-tap = Fit to Width
-  const handleCanvasTouch = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 300) {
-      fitToWidth();
-    }
-    lastTap.current = now;
-  };
-
-  // 🎯 Desktop Keyboard & Mouse Wheel Zoom
+  // Desktop Keyboard & Mouse Wheel Zoom
   useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) return; // Disable for mobile
+
     const handleKey = (e) => {
       if (e.key === '[') {
         setScale(s => Math.max(0.5, s - 0.25));
@@ -604,7 +548,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       }
     };
 
-    // 🎯 Ctrl+Wheel Zoom (Desktop)
     const handleWheel = (e) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -621,6 +564,19 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       window.removeEventListener('wheel', handleWheel);
     };
   }, []);
+
+  // Format Timer
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getTimerColor = () => {
+    if (timeRemaining > 600) return 'bg-green-500/30 border-green-400/50';
+    if (timeRemaining > 300) return 'bg-yellow-500/30 border-yellow-400/50';
+    return 'bg-red-500/30 border-red-400/50 animate-pulse';
+  };
 
   if (loading) return (
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
@@ -652,8 +608,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     </div>
   );
 
-  const elapsed = Math.floor((Date.now() - startTimeRef.current) / 60000);
-  const remaining = Math.max(0, 30 - elapsed);
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   return (
     <>
@@ -683,7 +638,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           </div>
         )}
 
-        {/* 🎯 DARKER BLUE HEADER */}
         <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Shield className="text-blue-200 flex-shrink-0" size={18}/>
@@ -693,90 +647,64 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            
-            {/* 🎯 ZOOM INDICATOR */}
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg border border-white/20">
-              <span className="text-white text-xs font-bold">{Math.round(scale * 100)}%</span>
-            </div>
-
-            {/* 🎯 MOBILE: Fit Button + Zoom % */}
-            <div className="flex md:hidden items-center gap-1">
-              <button onClick={fitToWidth} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold border border-white/20">
-                Fit
-              </button>
-              <div className="px-2 py-1 bg-white/10 rounded text-white text-xs font-bold border border-white/20">
-                {Math.round(scale * 100)}%
-              </div>
-            </div>
-
-            {/* 🎯 DESKTOP: Fit Button */}
-            <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit to Width (F)">
-              <Maximize2 size={16}/>
-            </button>
-            
-            <div className="w-px h-6 bg-blue-400/30"></div>
-            <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
-              <X size={16}/>
-            </button>
-          </div>
-        </div>
-        
-        {/* 🎯 CANVAS WITH PINCH-TO-ZOOM */}
-        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 touch-none" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
-          <canvas 
-            ref={canvasRef}
-            {...bind()}
-            onTouchStart={handleCanvasTouch}
-            className="shadow-2xl border-2 border-blue-700 rounded-lg" 
-            style={{
-              maxWidth:'100%',
-              height:'auto',
-              imageRendering:'crisp-edges',
-              filter:isBlocked?'blur(50px) brightness(0.3)':'none',
-              pointerEvents:isBlocked?'none':'auto',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              WebkitTouchCallout: 'none',
-              touchAction: 'none'
-            }}
-          />
-        </div>
-        
-        {/* 🎯 DARKER BLUE FOOTER */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-t-2 border-blue-700">
-          <div className="flex items-center gap-1 md:gap-2">
-            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronLeft size={16}/>
-            </button>
-            <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
-              Page {currentPage}/{totalPages}
-            </span>
-            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronRight size={16}/>
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-white text-xs font-bold bg-white/10 px-2 py-1 rounded border border-white/20">
-              ⏱️ {remaining}m
-            </div>
-            <div className="hidden md:block text-white text-xs font-bold bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
-              🔒 PROTECTED
-            </div>
-            {violations>0&&(
-              <div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">
-                ⚠️ {violations}/{MAX_VIOLATIONS}
-              </div>
+            {!isMobile && (
+              <>
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg border border-white/20">
+                  <span className="text-white text-xs font-bold">{Math.round(scale * 100)}%</span>
+                </div>
+                <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit to Width (F)">
+                  <Maximize2 size={16}/>
+                </button>
+              </>
             )}
-          </div>
-        </div>
-
-        {/* 🎯 MOBILE HINT */}
-        <div className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-xs font-bold animate-pulse pointer-events-none">
-          👆 Pinch to zoom
-        </div>
+            <div className="w-px h-6 bg-blue-400/30"></div>
+            <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 
+hover:bg-red-600 rounded text-white"> <X size={16}/> </button> </div> </div>
+<div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
+      <canvas 
+        ref={canvasRef}
+        className="shadow-2xl border-2 border-blue-700 rounded-lg" 
+        style={{
+          maxWidth:'100%',
+          height:'auto',
+          imageRendering:'crisp-edges',
+          filter:isBlocked?'blur(50px) brightness(0.3)':'none',
+          pointerEvents:isBlocked?'none':'auto',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none'
+        }}
+      />
+    </div>
+    
+    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-t-2 border-blue-700">
+      <div className="flex items-center gap-1 md:gap-2">
+        <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+          <ChevronLeft size={16}/>
+        </button>
+        <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
+          Page {currentPage}/{totalPages}
+        </span>
+        <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+          <ChevronRight size={16}/>
+        </button>
       </div>
-    </>
-  );
+      <div className="flex items-center gap-2">
+        <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()}`}>
+          ⏱️ {formatTime(timeRemaining)}
+        </div>
+        <div className="hidden md:block text-white text-xs font-bold bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
+          🔒 PROTECTED
+        </div>
+        {violations>0&&(
+          <div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">
+            ⚠️ {violations}/{MAX_VIOLATIONS}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</>
+);
 };
-
 export default ProtectedPDFViewer;
