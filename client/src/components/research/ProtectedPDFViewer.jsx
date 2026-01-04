@@ -324,16 +324,20 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const doc = await pdfjs.getDocument({ data: arr, verbosity: 0 }).promise;
         setPdf(doc);
         setTotalPages(doc.numPages);
+        setLoading(false);
 
-        // Auto-fit for mobile
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && containerRef.current) {
-          const containerWidth = containerRef.current.clientWidth - 32;
-          const pageWidth = 612;
-          const autoScale = containerWidth / pageWidth;
-          setScale(autoScale);
+        // Auto-fit for mobile (DELAYED to ensure container is ready)
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          setTimeout(() => {
+            if (containerRef.current) {
+              const containerWidth = containerRef.current.clientWidth - 32;
+              const pageWidth = 612;
+              const autoScale = Math.min(containerWidth / pageWidth, 1.5);
+              setScale(autoScale);
+            }
+          }, 100);
         }
 
-        setLoading(false);
       } catch (err) { 
         setError(err.message || 'Load failed'); 
         setLoading(false); 
