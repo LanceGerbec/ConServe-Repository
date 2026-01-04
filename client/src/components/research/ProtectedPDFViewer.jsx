@@ -45,7 +45,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 5;
 
-  // 🔥 ZOOM PRESETS
   const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
@@ -73,7 +72,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Mobile Screenshot Detection
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -400,7 +398,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE]);
 
-  // 🔥 ENHANCED RENDERING WITH HIGH-DPI + SCALE-RESPONSIVE WATERMARKS
+  // 🔥 ENHANCED RENDERING - REMOVED SOLUTION 4, FIXED MOBILE COMPRESSION
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
     const render = async () => {
@@ -411,12 +409,15 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         
         // 🔥 HIGH-DPI RENDERING
         const dpr = window.devicePixelRatio || 1;
-        const vp = page.getViewport({ scale: scale * dpr });
+        const vp = page.getViewport({ scale });
         
-        canvas.width = vp.width;
-        canvas.height = vp.height;
-        canvas.style.width = (vp.width / dpr) + 'px';
-        canvas.style.height = (vp.height / dpr) + 'px';
+        // 🔥 FIX MOBILE COMPRESSION: Don't multiply by DPR for canvas dimensions
+        canvas.width = vp.width * dpr;
+        canvas.height = vp.height * dpr;
+        canvas.style.width = vp.width + 'px';
+        canvas.style.height = vp.height + 'px';
+        
+        ctx.scale(dpr, dpr);
         
         await page.render({ 
           canvasContext: ctx, 
@@ -424,25 +425,16 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           intent: 'display'
         }).promise;
         
-        // Scale context for watermark drawing
-        ctx.scale(dpr, dpr);
-        
-        const displayWidth = vp.width / dpr;
-        const displayHeight = vp.height / dpr;
-        
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
         
         // 🔥 SCALE-RESPONSIVE WATERMARK SIZES
-        const badgeW = Math.min(280 * scale, displayWidth * 0.4);
-        const badgeH = Math.min(100 * scale, displayHeight * 0.15);
+        const badgeW = Math.min(280 * scale, vp.width * 0.4);
+        const badgeH = Math.min(100 * scale, vp.height * 0.15);
         const badgeFont1 = Math.max(10, 14 * scale);
         const badgeFont2 = Math.max(8, 12 * scale);
-        
-        // 🔥 SOLUTION 4: EXTRA WATERMARK DENSITY AT LOW ZOOM
-        const useMultiWatermark = scale < 1.0;
         
         // Top-Left Badge
         ctx.save();
@@ -462,98 +454,84 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(displayWidth - badgeW * 0.8, 0, badgeW * 0.8, badgeH);
+        ctx.fillRect(vp.width - badgeW * 0.8, 0, badgeW * 0.8, badgeH);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'right';
         ctx.font = `bold ${badgeFont1}px Inter, monospace`;
-        ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 10 * scale, 25 * scale);
+        ctx.fillText(`Page ${currentPage}/${totalPages}`, vp.width - 10 * scale, 25 * scale);
         ctx.font = `${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`IP: ${userIP}`, displayWidth - 10 * scale, 45 * scale);
-        ctx.fillText(`${date}`, displayWidth - 10 * scale, 65 * scale);
-        ctx.fillText(`View Only`, displayWidth - 10 * scale, 85 * scale);
+        ctx.fillText(`IP: ${userIP}`, vp.width - 10 * scale, 45 * scale);
+        ctx.fillText(`${date}`, vp.width - 10 * scale, 65 * scale);
+        ctx.fillText(`View Only`, vp.width - 10 * scale, 85 * scale);
         ctx.restore();
 
         // Bottom-Left Badge
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, displayHeight - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
+        ctx.fillRect(0, vp.height - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
         ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`ConServe Repository`, 10 * scale, displayHeight - 55 * scale);
+        ctx.fillText(`ConServe Repository`, 10 * scale, vp.height - 55 * scale);
         ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
-        ctx.fillText(`NEUST College of Nursing`, 10 * scale, displayHeight - 35 * scale);
-        ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10 * scale, displayHeight - 15 * scale);
+        ctx.fillText(`NEUST College of Nursing`, 10 * scale, vp.height - 35 * scale);
+        ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10 * scale, vp.height - 15 * scale);
         ctx.restore();
 
         // Bottom-Right Badge
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(displayWidth - badgeW * 0.9, displayHeight - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
+        ctx.fillRect(vp.width - badgeW * 0.9, vp.height - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'right';
         ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 10 * scale, displayHeight - 55 * scale);
+        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, vp.width - 10 * scale, vp.height - 55 * scale);
         ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
-        ctx.fillText(`${user?.email || 'Confidential'}`, displayWidth - 10 * scale, displayHeight - 35 * scale);
-        ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 10 * scale, displayHeight - 15 * scale);
+        ctx.fillText(`${user?.email || 'Confidential'}`, vp.width - 10 * scale, vp.height - 35 * scale);
+        ctx.fillText(`Unauthorized copy prohibited`, vp.width - 10 * scale, vp.height - 15 * scale);
         ctx.restore();
         
-        // 🔥 DIAGONAL WATERMARKS - SCALE RESPONSIVE
-        const drawDiagonalWatermark = (offsetX = 0, offsetY = 0) => {
-          ctx.save();
-          ctx.translate(displayWidth / 2 + offsetX, displayHeight / 2 + offsetY);
-          ctx.rotate(-35 * Math.PI / 180);
-          
-          const centerFont1 = Math.max(24, 72 * scale);
-          const centerFont2 = Math.max(20, 56 * scale);
-          const centerFont3 = Math.max(16, 48 * scale);
-          const centerFont4 = Math.max(14, 40 * scale);
-          const centerFont5 = Math.max(12, 32 * scale);
-          const centerFont6 = Math.max(10, 28 * scale);
-          
-          ctx.globalAlpha = 0.22;
-          ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
-          ctx.fillStyle = '#1e3a8a';
-          ctx.textAlign = 'center';
-          ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100 * scale);
-          
-          ctx.font = `bold ${centerFont2}px Inter, monospace`;
-          ctx.globalAlpha = 0.20;
-          ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30 * scale);
-          
-          ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
-          ctx.globalAlpha = 0.18;
-          ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35 * scale);
-          
-          ctx.font = `${centerFont4}px Inter, sans-serif`;
-          ctx.globalAlpha = 0.16;
-          ctx.fillText(`${date} • ${time}`, 0, 90 * scale);
-          
-          ctx.font = `bold ${centerFont5}px Inter, monospace`;
-          ctx.globalAlpha = 0.14;
-          ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140 * scale);
-          
-          ctx.font = `${centerFont6}px Inter, sans-serif`;
-          ctx.globalAlpha = 0.12;
-          ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185 * scale);
-          
-          ctx.restore();
-        };
+        // 🔥 SINGLE CENTERED DIAGONAL WATERMARK (Solution 4 REMOVED)
+        ctx.save();
+        ctx.translate(vp.width / 2, vp.height / 2);
+        ctx.rotate(-35 * Math.PI / 180);
         
-        // 🔥 SOLUTION 4: Multiple watermarks at low zoom for complete coverage
-        if (useMultiWatermark) {
-          const offsetX = displayWidth / 4;
-          const offsetY = displayHeight / 4;
-          drawDiagonalWatermark(-offsetX, -offsetY);
-          drawDiagonalWatermark(offsetX, -offsetY);
-          drawDiagonalWatermark(-offsetX, offsetY);
-          drawDiagonalWatermark(offsetX, offsetY);
-        } else {
-          drawDiagonalWatermark();
-        }
+        const centerFont1 = Math.max(24, 72 * scale);
+        const centerFont2 = Math.max(20, 56 * scale);
+        const centerFont3 = Math.max(16, 48 * scale);
+        const centerFont4 = Math.max(14, 40 * scale);
+        const centerFont5 = Math.max(12, 32 * scale);
+        const centerFont6 = Math.max(10, 28 * scale);
+        
+        ctx.globalAlpha = 0.22;
+        ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100 * scale);
+        
+        ctx.font = `bold ${centerFont2}px Inter, monospace`;
+        ctx.globalAlpha = 0.20;
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30 * scale);
+        
+        ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
+        ctx.globalAlpha = 0.18;
+        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35 * scale);
+        
+        ctx.font = `${centerFont4}px Inter, sans-serif`;
+        ctx.globalAlpha = 0.16;
+        ctx.fillText(`${date} • ${time}`, 0, 90 * scale);
+        
+        ctx.font = `bold ${centerFont5}px Inter, monospace`;
+        ctx.globalAlpha = 0.14;
+        ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140 * scale);
+        
+        ctx.font = `${centerFont6}px Inter, sans-serif`;
+        ctx.globalAlpha = 0.12;
+        ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185 * scale);
+        
+        ctx.restore();
         
       } catch (err) { 
         setError(`Render failed: ${err.message}`); 
@@ -593,21 +571,19 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     );
   }, []);
 
-  // 🔥 FIT TO WIDTH WITH PROPER SCALING
   const fitToWidth = () => {
     if (!pdf || !containerRef.current) return;
     const containerWidth = containerRef.current.clientWidth - 48;
-    const pageWidth = 612; // Standard PDF page width at scale 1
+    const pageWidth = 612;
     const newScale = Math.min(containerWidth / pageWidth, 2.5);
     setScale(newScale);
   };
 
-  // 🔥 DOUBLE-TAP TO RESET ZOOM (Mobile UX)
   const lastTap = useRef(0);
   const handleCanvasTouch = () => {
     const now = Date.now();
     if (now - lastTap.current < 300) {
-      setScale(1.0); // Reset to 100%
+      setScale(1.0);
       showToast('🔄 Reset to 100%', 'success');
     }
     lastTap.current = now;
@@ -668,36 +644,25 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
               <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
                 <p className="font-mono">🚨 Logged</p>
                 <p className="font-mono mt-1">📍 {userIP}</p>
-                <p className="font-mono mt-1">👤{user?.email}</p>
-</div>
-</div>
-</div>
-)}
-{/* 🔥 ENHANCED HEADER WITH ZOOM PRESETS */}
-    <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-b border-blue-400/20">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <Shield className="text-blue-300 flex-shrink-0" size={18}/>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
-          <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-1">
-        {/* Mobile: Compact Zoom */}
-        <div className="flex md:hidden items-center gap-1">
-          <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} disabled={scale<=0.5} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-            <ZoomOut size={14}/>
-          </button>
-          <span className="text-white text-xs px-2 py-1 min-w-[50px] text-center font-mono bg-white/10 rounded font-bold">
-            {Math.round(scale*100)}%
-          </span>
-          <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-            <ZoomIn size={14}/>
-          </button>
-        </div>
+                <p className="font-mono mt-1">👤 {user?.email}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Desktop: Zoom Presets */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-b border-blue-400/20">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Shield className="text-blue-300 flex-shrink-0" size={18}/>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
+              <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="flex md:hidden items-center gap-1">
+              <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))}
+  disabled={scale<=0.5} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50"> <ZoomOut size={14}/> </button> <span className="text-white text-xs px-2 py-1 min-w-[50px] text-center font-mono bg-white/10 rounded font-bold"> {Math.round(scale*100)}% </span> <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50"> <ZoomIn size={14}/> </button> </div>
+<div className="hidden md:flex items-center gap-1">
           {ZOOM_PRESETS.map(z => (
             <button 
               key={z}
@@ -723,7 +688,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       </div>
     </div>
     
-    {/* 🔥 ENHANCED CANVAS CONTAINER */}
     <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
       <canvas 
         ref={canvasRef} 
@@ -742,7 +706,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       />
     </div>
     
-    {/* 🔥 ENHANCED FOOTER */}
     <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-t border-blue-400/20">
       <div className="flex items-center gap-1 md:gap-2">
         <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
