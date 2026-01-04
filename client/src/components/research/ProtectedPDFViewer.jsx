@@ -45,6 +45,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 5;
 
+  // 🔥 ZOOM PRESETS
+  const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
 
   const blockContent = (reason) => {
@@ -54,7 +57,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast(`🚫 ${reason}`, 'error');
     screenshotAttempts.current++;
     
-    // Make entire screen blank on mobile to prevent any capture
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       document.body.style.opacity = '0';
       setTimeout(() => {
@@ -71,7 +73,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Enhanced Mobile Screenshot Detection with Aggressive Protection
+  // Mobile Screenshot Detection
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -79,7 +81,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     
     if (!isMobile) return;
 
-    // AGGRESSIVE: Hide content on ANY suspicious activity
     const hideContent = () => {
       if (canvasRef.current) {
         canvasRef.current.style.opacity = '0';
@@ -93,32 +94,23 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       }
     };
 
-    // Android Detection - ENHANCED
     if (isAndroid) {
-      let visibilityTimer = null;
-      
       const detectVisibility = () => {
         const now = Date.now();
         visibilityCount.current++;
-        
         if (document.hidden) {
           hideContent();
-          blockContent('📱 Screenshot Blocked (Hidden)');
+          blockContent('📱 Screenshot Blocked');
           lastHideTime.current = now;
-          
-          // Block for longer if rapid attempts
-          if (now - lastHideTime.current < 1000) {
-            screenshotAttempts.current += 2;
-          }
+          if (now - lastHideTime.current < 1000) screenshotAttempts.current += 2;
         }
       };
 
       const detectBlur = () => {
         hideContent();
-        blockContent('📱 Screenshot Blocked (Blur)');
+        blockContent('📱 Screenshot Blocked');
       };
 
-      // Aggressive multi-touch blocking
       const detectTouch = (e) => {
         if (e.touches?.length > 2 || e.touches?.length === 3) {
           e.preventDefault();
@@ -129,7 +121,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         }
       };
 
-      // Hardware button detection with immediate response
       let powerPressed = false, volumePressed = false, volumeTime = 0;
       const detectKeys = (e) => {
         const key = e.keyCode || e.key;
@@ -141,7 +132,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           volumeTime = now;
         }
         
-        // Immediate block if both pressed within 500ms
         if (powerPressed && volumePressed && now - volumeTime < 500) {
           e.preventDefault();
           e.stopPropagation();
@@ -159,7 +149,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setTimeout(() => { powerPressed = volumePressed = false; }, 600);
       };
 
-      // Detect screen recordings and overlays
       const detectRecording = () => {
         if (!document.hasFocus() || document.hidden) {
           hideContent();
@@ -167,7 +156,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         }
       };
 
-      // Detect Android gestures (3-finger swipe, etc)
       const detectGestures = (e) => {
         if (e.touches?.length >= 3) {
           e.preventDefault();
@@ -176,19 +164,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         }
       };
 
-      // Monitor battery and screen state changes (indicates screenshot)
-      const detectStateChange = () => {
-        if (document.visibilityState === 'hidden') {
-          hideContent();
-          blockContent('📱 State Change Blocked');
-        }
-      };
-
       document.addEventListener('visibilitychange', detectVisibility);
-      document.addEventListener('visibilitychange', detectStateChange);
       window.addEventListener('blur', detectBlur);
       window.addEventListener('pagehide', detectBlur);
-      window.addEventListener('freeze', detectBlur);
       document.addEventListener('keydown', detectKeys, { passive: false });
       document.addEventListener('keyup', detectKeys, { passive: false });
       document.addEventListener('touchstart', detectTouch, { passive: false });
@@ -198,10 +176,8 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
 
       return () => {
         document.removeEventListener('visibilitychange', detectVisibility);
-        document.removeEventListener('visibilitychange', detectStateChange);
         window.removeEventListener('blur', detectBlur);
         window.removeEventListener('pagehide', detectBlur);
-        window.removeEventListener('freeze', detectBlur);
         document.removeEventListener('keydown', detectKeys);
         document.removeEventListener('keyup', detectKeys);
         document.removeEventListener('touchstart', detectTouch);
@@ -210,7 +186,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       };
     }
 
-    // iOS Detection - ENHANCED
     if (isIOS) {
       let volumeUp = false, power = false, buttonTime = 0;
       
@@ -245,44 +220,23 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const now = Date.now();
         if (document.hidden) {
           hideContent();
-          if (now - lastHideTime.current < 800) {
-            blockContent('📱 iOS Screenshot Detected');
-          }
+          if (now - lastHideTime.current < 800) blockContent('📱 iOS Screenshot Detected');
           lastHideTime.current = now;
-        }
-      };
-
-      const detectIOSBlur = () => {
-        hideContent();
-        blockContent('📱 Screenshot Blocked');
-      };
-
-      // iOS specific - detect Control Center or notification pull
-      const detectIOSGestures = (e) => {
-        if (e.touches?.length > 1) {
-          e.preventDefault();
-          hideContent();
         }
       };
 
       document.addEventListener('keydown', detectIOS, { passive: false });
       document.addEventListener('keyup', detectIOS, { passive: false });
       document.addEventListener('visibilitychange', detectIOSVisibility);
-      window.addEventListener('blur', detectIOSBlur);
-      window.addEventListener('pagehide', detectIOSBlur);
-      document.addEventListener('touchstart', detectIOSGestures, { passive: false });
+      window.addEventListener('blur', () => { hideContent(); blockContent('📱 Screenshot Blocked'); });
 
       return () => {
         document.removeEventListener('keydown', detectIOS);
         document.removeEventListener('keyup', detectIOS);
         document.removeEventListener('visibilitychange', detectIOSVisibility);
-        window.removeEventListener('blur', detectIOSBlur);
-        window.removeEventListener('pagehide', detectIOSBlur);
-        document.removeEventListener('touchstart', detectIOSGestures);
       };
     }
 
-    // Universal Mobile Protection - ENHANCED
     const preventAll = (e) => { 
       e.preventDefault();
       e.stopPropagation();
@@ -301,53 +255,20 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       } 
     };
 
-    // CRITICAL: Prevent text selection and OCR attempts
-    const preventSelection = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      window.getSelection().removeAllRanges();
-      document.getSelection().empty();
-      return false;
-    };
-
-    ['contextmenu', 'selectstart', 'select', 'dragstart', 'longpress', 'touchhold'].forEach(ev => 
+    ['contextmenu', 'selectstart', 'select', 'dragstart', 'copy'].forEach(ev => 
       document.addEventListener(ev, preventAll, { passive: false })
     );
     
     document.addEventListener('touchstart', preventMulti, { passive: false });
-    document.addEventListener('touchmove', preventMulti, { passive: false });
-    document.addEventListener('mousedown', preventSelection, { passive: false });
-    document.addEventListener('mouseup', preventSelection, { passive: false });
-    document.addEventListener('copy', preventAll, { passive: false });
-    
-    // Aggressive CSS prevention
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
     document.body.style.webkitTouchCallout = 'none';
-    document.body.style.webkitUserDrag = 'none';
-    document.body.style.MozUserSelect = 'none';
-    document.body.style.msUserSelect = 'none';
-    
-    if (canvasRef.current) {
-      canvasRef.current.style.userSelect = 'none';
-      canvasRef.current.style.webkitUserSelect = 'none';
-      canvasRef.current.style.pointerEvents = 'none';
-    }
 
     return () => {
-      ['contextmenu', 'selectstart', 'select', 'dragstart', 'longpress', 'touchhold'].forEach(ev => 
+      ['contextmenu', 'selectstart', 'select', 'dragstart', 'copy'].forEach(ev => 
         document.removeEventListener(ev, preventAll)
       );
       document.removeEventListener('touchstart', preventMulti);
-      document.removeEventListener('touchmove', preventMulti);
-      document.removeEventListener('mousedown', preventSelection);
-      document.removeEventListener('mouseup', preventSelection);
-      document.removeEventListener('copy', preventAll);
-      
-      document.body.style.userSelect = '';
-      document.body.style.webkitUserSelect = '';
-      document.body.style.webkitTouchCallout = '';
-      document.body.style.webkitUserDrag = '';
     };
   }, [violations]);
 
@@ -366,7 +287,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     return () => clearTimeout(sessionTimerRef.current); 
   }, []);
 
-  // Desktop screenshot detection
   useEffect(() => {
     const detect = (e) => { 
       if (['PrintScreen', 44].includes(e.key || e.keyCode)) { 
@@ -390,7 +310,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
   }, [violations]);
 
-  // Tab/focus detection
   useEffect(() => {
     const handleVis = () => { 
       if (document.hidden) { 
@@ -410,7 +329,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
   }, [violations]);
 
-  // DevTools detection
   useEffect(() => {
     const detectDev = () => { 
       if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) { 
@@ -482,6 +400,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE]);
 
+  // 🔥 ENHANCED RENDERING WITH HIGH-DPI + SCALE-RESPONSIVE WATERMARKS
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
     const render = async () => {
@@ -489,112 +408,153 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const page = await pdf.getPage(currentPage);
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d', { alpha: false });
-        const vp = page.getViewport({ scale });
-        canvas.height = vp.height; 
+        
+        // 🔥 HIGH-DPI RENDERING
+        const dpr = window.devicePixelRatio || 1;
+        const vp = page.getViewport({ scale: scale * dpr });
+        
         canvas.width = vp.width;
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        canvas.height = vp.height;
+        canvas.style.width = (vp.width / dpr) + 'px';
+        canvas.style.height = (vp.height / dpr) + 'px';
+        
+        await page.render({ 
+          canvasContext: ctx, 
+          viewport: vp,
+          intent: 'display'
+        }).promise;
+        
+        // Scale context for watermark drawing
+        ctx.scale(dpr, dpr);
+        
+        const displayWidth = vp.width / dpr;
+        const displayHeight = vp.height / dpr;
         
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
         
-        // === CORNER BADGES ===
+        // 🔥 SCALE-RESPONSIVE WATERMARK SIZES
+        const badgeW = Math.min(280 * scale, displayWidth * 0.4);
+        const badgeH = Math.min(100 * scale, displayHeight * 0.15);
+        const badgeFont1 = Math.max(10, 14 * scale);
+        const badgeFont2 = Math.max(8, 12 * scale);
+        
+        // 🔥 SOLUTION 4: EXTRA WATERMARK DENSITY AT LOW ZOOM
+        const useMultiWatermark = scale < 1.0;
+        
         // Top-Left Badge
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, 0, 280, 100);
+        ctx.fillRect(0, 0, badgeW, badgeH);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px Inter, monospace';
-        ctx.fillText(`🔒 PROTECTED DOCUMENT`, 10, 25);
-        ctx.font = '12px Inter, monospace';
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 10, 45);
-        ctx.fillText(`${time}`, 10, 65);
-        ctx.fillText(`Session: ${sid}`, 10, 85);
+        ctx.font = `bold ${badgeFont1}px Inter, monospace`;
+        ctx.fillText(`🔒 PROTECTED DOCUMENT`, 10 * scale, 25 * scale);
+        ctx.font = `${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 10 * scale, 45 * scale);
+        ctx.fillText(`${time}`, 10 * scale, 65 * scale);
+        ctx.fillText(`Session: ${sid}`, 10 * scale, 85 * scale);
         ctx.restore();
 
         // Top-Right Badge
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(canvas.width - 220, 0, 220, 100);
+        ctx.fillRect(displayWidth - badgeW * 0.8, 0, badgeW * 0.8, badgeH);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'right';
-        ctx.font = 'bold 14px Inter, monospace';
-        ctx.fillText(`Page ${currentPage}/${totalPages}`, canvas.width - 10, 25);
-        ctx.font = '12px Inter, monospace';
-        ctx.fillText(`IP: ${userIP}`, canvas.width - 10, 45);
-        ctx.fillText(`${date}`, canvas.width - 10, 65);
-        ctx.fillText(`View Only`, canvas.width - 10, 85);
+        ctx.font = `bold ${badgeFont1}px Inter, monospace`;
+        ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 10 * scale, 25 * scale);
+        ctx.font = `${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`IP: ${userIP}`, displayWidth - 10 * scale, 45 * scale);
+        ctx.fillText(`${date}`, displayWidth - 10 * scale, 65 * scale);
+        ctx.fillText(`View Only`, displayWidth - 10 * scale, 85 * scale);
         ctx.restore();
 
         // Bottom-Left Badge
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, canvas.height - 80, 250, 80);
+        ctx.fillRect(0, displayHeight - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
-        ctx.font = 'bold 12px Inter, monospace';
-        ctx.fillText(`ConServe Repository`, 10, canvas.height - 55);
-        ctx.font = '11px Inter, monospace';
-        ctx.fillText(`NEUST College of Nursing`, 10, canvas.height - 35);
-        ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10, canvas.height - 15);
+        ctx.font = `bold ${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`ConServe Repository`, 10 * scale, displayHeight - 55 * scale);
+        ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
+        ctx.fillText(`NEUST College of Nursing`, 10 * scale, displayHeight - 35 * scale);
+        ctx.fillText(`© ${now.getFullYear()} - All Rights Reserved`, 10 * scale, displayHeight - 15 * scale);
         ctx.restore();
 
         // Bottom-Right Badge
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(canvas.width - 250, canvas.height - 80, 250, 80);
+        ctx.fillRect(displayWidth - badgeW * 0.9, displayHeight - badgeH * 0.8, badgeW * 0.9, badgeH * 0.8);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'right';
-        ctx.font = 'bold 12px Inter, monospace';
-        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, canvas.width - 10, canvas.height - 55);
-        ctx.font = '11px Inter, monospace';
-        ctx.fillText(`${user?.email || 'Confidential'}`, canvas.width - 10, canvas.height - 35);
-        ctx.fillText(`Unauthorized copy prohibited`, canvas.width - 10, canvas.height - 15);
+        ctx.font = `bold ${badgeFont2}px Inter, monospace`;
+        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 10 * scale, displayHeight - 55 * scale);
+        ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
+        ctx.fillText(`${user?.email || 'Confidential'}`, displayWidth - 10 * scale, displayHeight - 35 * scale);
+        ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 10 * scale, displayHeight - 15 * scale);
         ctx.restore();
         
-        // === SINGLE LARGE DIAGONAL WATERMARK (CENTER) ===
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-35 * Math.PI / 180);
+        // 🔥 DIAGONAL WATERMARKS - SCALE RESPONSIVE
+        const drawDiagonalWatermark = (offsetX = 0, offsetY = 0) => {
+          ctx.save();
+          ctx.translate(displayWidth / 2 + offsetX, displayHeight / 2 + offsetY);
+          ctx.rotate(-35 * Math.PI / 180);
+          
+          const centerFont1 = Math.max(24, 72 * scale);
+          const centerFont2 = Math.max(20, 56 * scale);
+          const centerFont3 = Math.max(16, 48 * scale);
+          const centerFont4 = Math.max(14, 40 * scale);
+          const centerFont5 = Math.max(12, 32 * scale);
+          const centerFont6 = Math.max(10, 28 * scale);
+          
+          ctx.globalAlpha = 0.22;
+          ctx.font = `bold ${centerFont1}px Inter, sans-serif`;
+          ctx.fillStyle = '#1e3a8a';
+          ctx.textAlign = 'center';
+          ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100 * scale);
+          
+          ctx.font = `bold ${centerFont2}px Inter, monospace`;
+          ctx.globalAlpha = 0.20;
+          ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30 * scale);
+          
+          ctx.font = `bold ${centerFont3}px Inter, sans-serif`;
+          ctx.globalAlpha = 0.18;
+          ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35 * scale);
+          
+          ctx.font = `${centerFont4}px Inter, sans-serif`;
+          ctx.globalAlpha = 0.16;
+          ctx.fillText(`${date} • ${time}`, 0, 90 * scale);
+          
+          ctx.font = `bold ${centerFont5}px Inter, monospace`;
+          ctx.globalAlpha = 0.14;
+          ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140 * scale);
+          
+          ctx.font = `${centerFont6}px Inter, sans-serif`;
+          ctx.globalAlpha = 0.12;
+          ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185 * scale);
+          
+          ctx.restore();
+        };
         
-        // Main user info with ID
-        ctx.globalAlpha = 0.22;
-        ctx.font = 'bold 72px Inter, sans-serif';
-        ctx.fillStyle = '#1e3a8a';
-        ctx.textAlign = 'center';
-        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'} ${user?.lastName || 'DOCUMENT'}`, 0, -100);
+        // 🔥 SOLUTION 4: Multiple watermarks at low zoom for complete coverage
+        if (useMultiWatermark) {
+          const offsetX = displayWidth / 4;
+          const offsetY = displayHeight / 4;
+          drawDiagonalWatermark(-offsetX, -offsetY);
+          drawDiagonalWatermark(offsetX, -offsetY);
+          drawDiagonalWatermark(-offsetX, offsetY);
+          drawDiagonalWatermark(offsetX, offsetY);
+        } else {
+          drawDiagonalWatermark();
+        }
         
-        // ID Number (NEW)
-        ctx.font = 'bold 56px Inter, monospace';
-        ctx.globalAlpha = 0.20;
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -30);
-        
-        // Email
-        ctx.font = 'bold 48px Inter, sans-serif';
-        ctx.globalAlpha = 0.18;
-        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 35);
-        
-        // Date and time
-        ctx.font = '40px Inter, sans-serif';
-        ctx.globalAlpha = 0.16;
-        ctx.fillText(`${date} • ${time}`, 0, 90);
-        
-        // Session ID and IP
-        ctx.font = 'bold 32px Inter, monospace';
-        ctx.globalAlpha = 0.14;
-        ctx.fillText(`Session: ${sid} | IP: ${userIP}`, 0, 140);
-        
-        // Page info
-        ctx.font = '28px Inter, sans-serif';
-        ctx.globalAlpha = 0.12;
-        ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185);
-        
-        ctx.restore();
       } catch (err) { 
         setError(`Render failed: ${err.message}`); 
       }
@@ -625,19 +585,32 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         return false;
       }
     };
-    ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart','drag','drop'].forEach(ev =>
+    ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
       document.addEventListener(ev, ev==='keydown'?preventKeys:prevent, { passive: false })
     );
-    return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart','drag','drop'].forEach(ev =>
+    return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
       document.removeEventListener(ev, ev==='keydown'?preventKeys:prevent)
     );
   }, []);
 
+  // 🔥 FIT TO WIDTH WITH PROPER SCALING
   const fitToWidth = () => {
-    if (!pdf || !containerRef.current || !canvasRef.current) return;
-    const w = containerRef.current.clientWidth - 48;
-    const pw = canvasRef.current.width / scale;
-    setScale(Math.min(w/pw, 2.5));
+    if (!pdf || !containerRef.current) return;
+    const containerWidth = containerRef.current.clientWidth - 48;
+    const pageWidth = 612; // Standard PDF page width at scale 1
+    const newScale = Math.min(containerWidth / pageWidth, 2.5);
+    setScale(newScale);
+  };
+
+  // 🔥 DOUBLE-TAP TO RESET ZOOM (Mobile UX)
+  const lastTap = useRef(0);
+  const handleCanvasTouch = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      setScale(1.0); // Reset to 100%
+      showToast('🔄 Reset to 100%', 'success');
+    }
+    lastTap.current = now;
   };
 
   if (loading) return (
@@ -695,86 +668,109 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
               <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
                 <p className="font-mono">🚨 Logged</p>
                 <p className="font-mono mt-1">📍 {userIP}</p>
-                <p className="font-mono mt-1">👤 {user?.email}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between border-b border-blue-400/20">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Shield className="text-blue-300" size={20}/>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-white font-bold text-sm truncate">🔒 {paperTitle}</h3>
-              <p className="text-blue-200 text-xs truncate">{user?.email} | {userIP}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} disabled={scale<=0.5} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ZoomOut size={18}/>
-            </button>
-            <span className="text-white text-sm px-3 min-w-[70px] text-center font-mono bg-white/10 rounded py-1.5 font-bold">
-              {Math.round(scale*100)}%
-            </span>
-            <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ZoomIn size={18}/>
-            </button>
-            <button onClick={fitToWidth} className="p-2 bg-blue-500 hover:bg-blue-600 rounded text-white">
-              <Maximize2 size={18}/>
-            </button>
-            <div className="w-px h-6 bg-blue-400/30 mx-1"></div>
-            <button onClick={onClose} className="p-2 bg-red-500 hover:bg-red-600 rounded text-white">
-              <X size={18}/>
-            </button>
-          </div>
-        </div>
-        
-        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
-          <canvas 
-            ref={canvasRef} 
-            className="shadow-2xl border border-blue-500/30 rounded-lg" 
-            style={{
-              maxWidth:'100%',
-              height:'auto',
-              imageRendering:'high-quality',
-              filter:isBlocked?'blur(50px) brightness(0.3)':'none',
-              pointerEvents:isBlocked?'none':'auto',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              WebkitTouchCallout: 'none'
-            }}
-          />
-        </div>
-        
-        <div className="bg-gradient-to-r from-navy to-accent px-4 py-3 flex items-center justify-between border-t border-blue-400/20">
-          <div className="flex items-center gap-2">
-            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronLeft size={18}/>
-            </button>
-            <span className="text-white text-sm px-4 min-w-[140px] text-center font-mono bg-white/10 rounded py-1.5 font-bold">
-              Page {currentPage}/{totalPages}
-            </span>
-            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronRight size={18}/>
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-white text-xs font-bold bg-white/10 px-3 py-1 rounded border border-white/20">
-              ⏱️ {remaining}m
-            </div>
-            <div className="text-white text-xs font-bold bg-blue-500/30 px-3 py-1 rounded border border-blue-400/50">
-              🔒 PROTECTED
-            </div>
-            {violations>0&&(
-              <div className="text-white text-xs font-bold bg-orange-500/30 px-3 py-1 rounded border border-orange-400/50 animate-pulse">
-                ⚠️ {violations}/{MAX_VIOLATIONS}
-              </div>
-            )}
-          </div>
+                <p className="font-mono mt-1">👤{user?.email}</p>
+</div>
+</div>
+</div>
+)}
+{/* 🔥 ENHANCED HEADER WITH ZOOM PRESETS */}
+    <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-b border-blue-400/20">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Shield className="text-blue-300 flex-shrink-0" size={18}/>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
+          <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
         </div>
       </div>
-    </>
-  );
-};
+      <div className="flex items-center gap-1">
+        {/* Mobile: Compact Zoom */}
+        <div className="flex md:hidden items-center gap-1">
+          <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} disabled={scale<=0.5} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <ZoomOut size={14}/>
+          </button>
+          <span className="text-white text-xs px-2 py-1 min-w-[50px] text-center font-mono bg-white/10 rounded font-bold">
+            {Math.round(scale*100)}%
+          </span>
+          <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <ZoomIn size={14}/>
+          </button>
+        </div>
 
+        {/* Desktop: Zoom Presets */}
+        <div className="hidden md:flex items-center gap-1">
+          {ZOOM_PRESETS.map(z => (
+            <button 
+              key={z}
+              onClick={() => setScale(z)}
+              className={`px-2 py-1 text-xs font-bold rounded transition ${
+                Math.abs(scale - z) < 0.1 
+                  ? 'bg-white text-navy' 
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              {Math.round(z*100)}%
+            </button>
+          ))}
+        </div>
+        
+        <button onClick={fitToWidth} className="p-1.5 md:p-2 bg-blue-500 hover:bg-blue-600 rounded text-white" title="Fit to Width">
+          <Maximize2 size={16}/>
+        </button>
+        <div className="w-px h-4 md:h-6 bg-blue-400/30 mx-1"></div>
+        <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
+          <X size={16}/>
+        </button>
+      </div>
+    </div>
+    
+    {/* 🔥 ENHANCED CANVAS CONTAINER */}
+    <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
+      <canvas 
+        ref={canvasRef} 
+        onTouchStart={handleCanvasTouch}
+        className="shadow-2xl border border-blue-500/30 rounded-lg" 
+        style={{
+          maxWidth:'100%',
+          height:'auto',
+          imageRendering:'crisp-edges',
+          filter:isBlocked?'blur(50px) brightness(0.3)':'none',
+          pointerEvents:isBlocked?'none':'auto',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none'
+        }}
+      />
+    </div>
+    
+    {/* 🔥 ENHANCED FOOTER */}
+    <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-t border-blue-400/20">
+      <div className="flex items-center gap-1 md:gap-2">
+        <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+          <ChevronLeft size={16}/>
+        </button>
+        <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
+          Page {currentPage}/{totalPages}
+        </span>
+        <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+          <ChevronRight size={16}/>
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="text-white text-xs font-bold bg-white/10 px-2 py-1 rounded border border-white/20">
+          ⏱️ {remaining}m
+        </div>
+        <div className="hidden md:block text-white text-xs font-bold bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
+          🔒 PROTECTED
+        </div>
+        {violations>0&&(
+          <div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">
+            ⚠️ {violations}/{MAX_VIOLATIONS}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</>
+);
+};
 export default ProtectedPDFViewer;
