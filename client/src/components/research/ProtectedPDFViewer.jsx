@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Shield, AlertCircle } from 'lucide-react';
+import { usePinch } from '@use-gesture/react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
 
@@ -41,14 +42,11 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const lastHideTime = useRef(0);
   const visibilityCount = useRef(0);
   const lastTap = useRef(0);
+  const isPinching = useRef(false);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 5;
-
-  // 🎯 SMART ZOOM PRESETS
-  const MOBILE_ZOOMS = [0.75, 1.0, 1.5];
-  const DESKTOP_ZOOMS = [0.5, 0.75, 1.0, 1.5, 2.0];
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
 
@@ -75,7 +73,32 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // Mobile Screenshot Detection
+  // 🎯 ADVANCED PINCH-TO-ZOOM with Security
+  const bind = usePinch(
+    ({ offset: [d], active, event }) => {
+      // Allow 2-finger pinch ONLY (security)
+      if (event?.touches?.length > 2) {
+        blockContent('📱 3+ Fingers Blocked');
+        return;
+      }
+
+      isPinching.current = active;
+      
+      if (active) {
+        // Calculate new scale based on pinch distance
+        const newScale = Math.min(3, Math.max(0.5, scale * (1 + d / 200)));
+        setScale(newScale);
+      }
+    },
+    {
+      scaleBounds: { min: 0.5, max: 3 },
+      rubberband: true,
+      preventDefault: true,
+      eventOptions: { passive: false }
+    }
+  );
+
+  // Mobile Screenshot Detection with Pinch Exception
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -100,7 +123,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       const detectVisibility = () => {
         const now = Date.now();
         visibilityCount.current++;
-        if (document.hidden) {
+        if (document.hidden && !isPinching.current) {
           hideContent();
           blockContent('📱 Screenshot Blocked');
           lastHideTime.current = now;
@@ -109,16 +132,19 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       };
 
       const detectBlur = () => {
-        hideContent();
-        blockContent('📱 Screenshot Blocked');
+        if (!isPinching.current) {
+          hideContent();
+          blockContent('📱 Screenshot Blocked');
+        }
       };
 
+      // 🔒 SECURITY: Allow 2-finger pinch, block 3+
       const detectTouch = (e) => {
-        if (e.touches?.length > 2 || e.touches?.length === 3) {
+        if (e.touches?.length > 2) {
           e.preventDefault();
           e.stopPropagation();
           hideContent();
-          blockContent('📱 Multi-Touch Blocked');
+          blockContent('📱 3+ Fingers Blocked');
           return false;
         }
       };
@@ -200,7 +226,12 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
 
       document.addEventListener('keydown', detectIOS, { passive: false });
       document.addEventListener('keyup', detectIOS, { passive: false });
-      window.addEventListener('blur', () => { hideContent(); blockContent('📱 Screenshot Blocked'); });
+      window.addEventListener('blur', () => { 
+        if (!isPinching.current) {
+          hideContent(); 
+          blockContent('📱 Screenshot Blocked'); 
+        }
+      });
 
       return () => {
         document.removeEventListener('keydown', detectIOS);
@@ -269,14 +300,16 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   // Visibility/Focus Detection
   useEffect(() => {
     const handleVis = () => { 
-      if (document.hidden) { 
+      if (document.hidden && !isPinching.current) { 
         blockContent('⚠️ Tab Changed'); 
         setTimeout(() => { if (!document.hidden && violations < MAX_VIOLATIONS) setIsBlocked(false); }, 2000); 
       } 
     };
     const handleBlur = () => { 
-      blockContent('⚠️ Focus Lost'); 
-      setTimeout(() => { if (violations < MAX_VIOLATIONS) setIsBlocked(false); }, 1500); 
+      if (!isPinching.current) {
+        blockContent('⚠️ Focus Lost'); 
+        setTimeout(() => { if (violations < MAX_VIOLATIONS) setIsBlocked(false); }, 1500); 
+      }
     };
     document.addEventListener('visibilitychange', handleVis);
     window.addEventListener('blur', handleBlur);
@@ -358,7 +391,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE]);
 
-  // 🔥 FIXED CANVAS RENDERING - NO MORE COMPRESSION
+  // 🔥 FIXED CANVAS RENDERING
   useEffect(() => {
     if (!pdf || !canvasRef.current) return;
     const render = async () => {
@@ -367,23 +400,17 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d', { alpha: false });
         
-        // 🎯 SOLUTION: Separate display vs render dimensions
         const dpr = window.devicePixelRatio || 1;
         const vp = page.getViewport({ scale });
         
-        // Display dimensions (what user sees)
         const displayWidth = vp.width;
         const displayHeight = vp.height;
         
-        // Render dimensions (internal canvas - high quality)
         canvas.width = displayWidth * dpr;
         canvas.height = displayHeight * dpr;
-        
-        // Apply display size (maintains aspect ratio)
         canvas.style.width = displayWidth + 'px';
         canvas.style.height = displayHeight + 'px';
         
-        // Scale context ONCE
         ctx.scale(dpr, dpr);
         
         await page.render({ 
@@ -397,7 +424,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
         
-        // 🎯 FIXED: Use display dimensions for watermarks (not DPR-scaled)
         const badgeW = Math.min(280 * scale, displayWidth * 0.4);
         const badgeH = Math.min(100 * scale, displayHeight * 0.15);
         const badgeFont1 = Math.max(10, 14 * scale);
@@ -539,7 +565,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     );
   }, []);
 
-  // 🎯 ENHANCED: Fit to Width
+  // Fit to Width
   const fitToWidth = () => {
     if (!pdf || !containerRef.current) return;
     const containerWidth = containerRef.current.clientWidth - 48;
@@ -549,7 +575,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast(`🔄 Fit to Width`, 'success');
   };
 
-  // 🎯 ENHANCED: Double-tap canvas = Fit to Width
+  // Double-tap = Fit to Width
   const handleCanvasTouch = () => {
     const now = Date.now();
     if (now - lastTap.current < 300) {
@@ -558,7 +584,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     lastTap.current = now;
   };
 
-  // 🎯 NEW: Keyboard Shortcuts
+  // 🎯 Desktop Keyboard & Mouse Wheel Zoom
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === '[') {
@@ -577,8 +603,23 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         fitToWidth();
       }
     };
+
+    // 🎯 Ctrl+Wheel Zoom (Desktop)
+    const handleWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setScale(s => Math.min(3, Math.max(0.5, s + delta)));
+      }
+    };
+
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('wheel', handleWheel);
+    };
   }, []);
 
   if (loading) return (
@@ -651,58 +692,40 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
               <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             
-            {/* 🎯 MOBILE ZOOM - 4 Essential Buttons */}
-            <div className="flex md:hidden items-center gap-1">
-              <button onClick={fitToWidth} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white text-xs px-2 font-bold">
-                Fit
-              </button>
-              {MOBILE_ZOOMS.map(z => (
-                <button 
-                  key={z}
-                  onClick={() => setScale(z)}
-                  className={`p-1.5 text-xs font-bold rounded transition px-2 ${
-                    Math.abs(scale - z) < 0.1 
-                      ? 'bg-white text-blue-900' 
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  {Math.round(z*100)}%
-                </button>
-              ))}
+            {/* 🎯 ZOOM INDICATOR */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg border border-white/20">
+              <span className="text-white text-xs font-bold">{Math.round(scale * 100)}%</span>
             </div>
 
-            {/* 🎯 DESKTOP ZOOM - 6 Presets */}
-            <div className="hidden md:flex items-center gap-1">
-              {DESKTOP_ZOOMS.map(z => (
-                <button 
-                  key={z}
-                  onClick={() => setScale(z)}
-                  className={`px-2 py-1 text-xs font-bold rounded transition ${
-                    Math.abs(scale - z) < 0.1 
-                      ? 'bg-white text-blue-900' 
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  {Math.round(z*100)}%
-                </button>
-              ))}
-              <button onClick={fitToWidth} className="p-1.5 md:p-2 bg-blue-500 hover:bg-blue-600 rounded text-white" title="Fit to Width (F)">
-                <Maximize2 size={16}/>
+            {/* 🎯 MOBILE: Fit Button + Zoom % */}
+            <div className="flex md:hidden items-center gap-1">
+              <button onClick={fitToWidth} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold border border-white/20">
+                Fit
               </button>
+              <div className="px-2 py-1 bg-white/10 rounded text-white text-xs font-bold border border-white/20">
+                {Math.round(scale * 100)}%
+              </div>
             </div>
+
+            {/* 🎯 DESKTOP: Fit Button */}
+            <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit to Width (F)">
+              <Maximize2 size={16}/>
+            </button>
             
-            <div className="w-px h-4 md:h-6 bg-blue-400/30 mx-1"></div>
+            <div className="w-px h-6 bg-blue-400/30"></div>
             <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
               <X size={16}/>
             </button>
           </div>
         </div>
         
-        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
+        {/* 🎯 CANVAS WITH PINCH-TO-ZOOM */}
+        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 touch-none" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
           <canvas 
-            ref={canvasRef} 
+            ref={canvasRef}
+            {...bind()}
             onTouchStart={handleCanvasTouch}
             className="shadow-2xl border-2 border-blue-700 rounded-lg" 
             style={{
@@ -713,7 +736,8 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
               pointerEvents:isBlocked?'none':'auto',
               userSelect: 'none',
               WebkitUserSelect: 'none',
-              WebkitTouchCallout: 'none'
+              WebkitTouchCallout: 'none',
+              touchAction: 'none'
             }}
           />
         </div>
@@ -744,6 +768,11 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* 🎯 MOBILE HINT */}
+        <div className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-xs font-bold animate-pulse pointer-events-none">
+          👆 Pinch to zoom
         </div>
       </div>
     </>
