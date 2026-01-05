@@ -20,3 +20,14 @@ export const apiLimiter = rateLimit({
   trustProxy: true, // ADD THIS
   skipSuccessfulRequests: true
 });
+
+// 🆕 RATE LIMITER FOR PASSWORD RESET
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // 3 requests per 15 minutes
+  message: 'Too many password reset attempts. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  trustProxy: true,
+  skipSuccessfulRequests: false
+});

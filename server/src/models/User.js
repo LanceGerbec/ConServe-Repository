@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
   
   twoFactorSecret: String,
   twoFactorEnabled: { type: Boolean, default: false },
+  passwordResetToken: String,
+  passwordResetExpires: Date,
   lastLogin: Date,
   loginAttempts: { type: Number, default: 0 },
   lockoutUntil: Date,

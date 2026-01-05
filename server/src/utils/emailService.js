@@ -243,6 +243,113 @@ export const sendWelcomeEmail = async (user) => {
   return result;
 };
 
+// ============================================
+// 🆕 PASSWORD RESET EMAIL
+// ============================================
+export const sendPasswordResetEmail = async (user, token) => {
+  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+  const resetUrl = `${CLIENT_URL}/reset-password?token=${token}`;
+
+  return await sendEmail({
+    to: user.email,
+    subject: '🔐 Password Reset Request - ConServe',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+      </head>
+      <body style="font-family:Arial,sans-serif;margin:0;padding:0;background:#f3f4f6">
+        <div style="max-width:600px;margin:20px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
+          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:40px;text-align:center">
+            <h1 style="margin:0;font-size:32px;font-weight:bold">🔐 Password Reset</h1>
+          </div>
+          <div style="padding:40px">
+            <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
+            <p style="font-size:16px;color:#374151;line-height:1.8">We received a request to reset your password for your ConServe account.</p>
+            
+            <div style="background:#fef3c7;padding:20px;border-left:4px solid #f59e0b;margin:30px 0;border-radius:8px">
+              <p style="margin:0;color:#92400e;font-size:14px;font-weight:bold">⏰ This link expires in 1 hour</p>
+              <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">If you didn't request this, please ignore this email.</p>
+            </div>
+
+            <div style="text-align:center;margin:35px 0">
+              <a href="${resetUrl}" style="display:inline-block;padding:16px 48px;background:#dc2626;color:white;text-decoration:none;border-radius:10px;font-weight:bold;font-size:18px;box-shadow:0 4px 6px rgba(220,38,38,0.3)">Reset Password</a>
+            </div>
+
+            <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:25px 0">
+              <p style="margin:0 0 10px 0;color:#374151;font-size:14px;font-weight:bold">Or copy this link:</p>
+              <p style="margin:0;color:#6b7280;font-size:12px;word-break:break-all">${resetUrl}</p>
+            </div>
+
+            <p style="font-size:14px;color:#6b7280;margin-top:30px">
+              Questions? Contact us at <a href="mailto:${ADMIN_EMAIL}" style="color:#2563eb;text-decoration:none">${ADMIN_EMAIL}</a>
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="font-size:13px;color:#9ca3af;margin:5px 0">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
+            <p style="font-size:13px;color:#9ca3af;margin:5px 0">Research Repository System</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  });
+};
+
+// ============================================
+// 🆕 PASSWORD RESET CONFIRMATION EMAIL
+// ============================================
+export const sendPasswordResetConfirmation = async (user) => {
+  return await sendEmail({
+    to: user.email,
+    subject: '✅ Password Successfully Reset - ConServe',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+      </head>
+      <body style="font-family:Arial,sans-serif;margin:0;padding:0;background:#f3f4f6">
+        <div style="max-width:600px;margin:20px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
+          <div style="background:linear-gradient(135deg,#10b981,#34d399);color:white;padding:40px;text-align:center">
+            <h1 style="margin:0;font-size:32px;font-weight:bold">✅ Password Reset Complete</h1>
+          </div>
+          <div style="padding:40px">
+            <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
+            <p style="font-size:16px;color:#374151;line-height:1.8">Your ConServe password has been successfully reset.</p>
+            
+            <div style="background:#d1fae5;padding:20px;border-left:4px solid #10b981;margin:30px 0;border-radius:8px">
+              <p style="margin:0;color:#065f46;font-size:14px;font-weight:bold">✓ Your account is secure</p>
+              <p style="margin:10px 0 0 0;color:#065f46;font-size:14px">You can now log in with your new password.</p>
+            </div>
+
+            <div style="text-align:center;margin:35px 0">
+              <a href="${CLIENT_URL}/login" style="display:inline-block;padding:16px 48px;background:#10b981;color:white;text-decoration:none;border-radius:10px;font-weight:bold;font-size:18px;box-shadow:0 4px 6px rgba(16,185,129,0.3)">Login to ConServe</a>
+            </div>
+
+            <div style="background:#fef3c7;padding:20px;border-left:4px solid #f59e0b;margin:30px 0;border-radius:8px">
+              <p style="margin:0;color:#92400e;font-size:14px;font-weight:bold">⚠️ Didn't reset your password?</p>
+              <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">Contact support immediately at ${ADMIN_EMAIL}</p>
+            </div>
+
+            <p style="font-size:14px;color:#6b7280;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
+              <strong>Time:</strong> ${new Date().toLocaleString()}<br>
+              <strong>IP Address:</strong> (logged for security)
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="font-size:13px;color:#9ca3af;margin:5px 0">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  });
+};
+
 export const sendAdminNewUserNotification = async (user) => {
   console.log('📧 Preparing admin notification for new user:', user.email);
   

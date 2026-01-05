@@ -1,7 +1,8 @@
 import express from 'express';
-import { register, login, logout, getCurrentUser } from '../controllers/authController.js';
+import { register, login, logout, getCurrentUser, forgotPassword, verifyResetToken, resetPassword } from '../controllers/authController.js';
 import { auth, authorize } from '../middleware/auth.js';
 import { sendEmail, testEmailConnection } from '../utils/emailService.js';
+import { passwordResetLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -9,6 +10,9 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', auth, logout);
 router.get('/me', auth, getCurrentUser);
+router.post('/forgot-password', passwordResetLimiter, forgotPassword);
+router.get('/verify-reset-token', verifyResetToken);
+router.post('/reset-password', resetPassword);
 
 // TEST EMAIL CONNECTION (Admin Only)
 router.get('/test-email-connection', auth, authorize('admin'), async (req, res) => {

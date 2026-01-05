@@ -46,6 +46,8 @@ function App() {
               <Route path="/login/faculty" element={<FacultyLogin />} />
               <Route path="/login/admin" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={lazy(() => import('./pages/ForgotPassword'))()} />
+              <Route path="/reset-password" element={lazy(() => import('./pages/ResetPassword'))()} />  
 
               <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
               <Route path="/explore" element={<ProtectedRoute><Layout><Explore /></Layout></ProtectedRoute>} />
