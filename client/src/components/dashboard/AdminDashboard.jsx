@@ -51,7 +51,10 @@ const SortButton = memo(({ label, active, direction, onClick }) => (
 const SortableHeader = memo(({ label, sortKey, currentSort, onSort }) => {
   const isActive = currentSort.key === sortKey;
   return (
-    <th onClick={() => onSort(sortKey)} className="px-4 py-3 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none transition">
+    <th 
+      onClick={() => onSort(sortKey)} 
+      className="px-4 py-3 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none transition bg-gray-50 dark:bg-gray-900"
+    >
       <div className="flex items-center gap-1">
         {label}
         {isActive ? (currentSort.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
@@ -618,22 +621,27 @@ message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-                    </th>
-                    <SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
-                    <SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
-                    <SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
-                    <SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
-                    <th className="px-4 py-3 text-right text-xs font-bold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-                </tbody>
-              </table>
+  <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
+    <tr>
+      <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+        <input 
+          type="checkbox" 
+          checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} 
+          onChange={handleSelectAllUsers} 
+          className="w-4 h-4 rounded accent-navy" 
+        />
+      </th>
+      <SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
+      <SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
+      <SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
+      <SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
+      <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
+    </tr>
+  </thead>
+  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+    {sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
+  </tbody>
+</table>
             )}
           </div>
         </div>
@@ -679,18 +687,18 @@ message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
-                    </th>
-                    <SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
-                    <SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
-                    <SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
-                    <SortableHeader label="Status" sortKey="status" currentSort={paperSortConfig} onSort={handlePaperSort} />
-                    <th className="px-4 py-3 text-right text-xs font-bold">Actions</th>
-                  </tr>
-                </thead>
+                <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
+  <tr>
+    <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+      <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+    </th>
+    <SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
+    <SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
+    <SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
+    <SortableHeader label="Status" sortKey="status" currentSort={paperSortConfig} onSort={handlePaperSort} />
+    <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
+  </tr>
+</thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
                 </tbody>
