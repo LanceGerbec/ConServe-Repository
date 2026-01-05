@@ -1,4 +1,4 @@
-// client/src/components/dashboard/AdminDashboard.jsx - WITH SORTING
+// client/src/components/dashboard/AdminDashboard.jsx - FIXED STICKY HEADER
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -51,10 +51,7 @@ const SortButton = memo(({ label, active, direction, onClick }) => (
 const SortableHeader = memo(({ label, sortKey, currentSort, onSort }) => {
   const isActive = currentSort.key === sortKey;
   return (
-    <th 
-      onClick={() => onSort(sortKey)} 
-      className="px-4 py-3 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none transition bg-gray-50 dark:bg-gray-900"
-    >
+    <th onClick={() => onSort(sortKey)} className="px-4 py-3 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none transition bg-gray-50 dark:bg-gray-900">
       <div className="flex items-center gap-1">
         {label}
         {isActive ? (currentSort.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
@@ -483,8 +480,8 @@ const AdminDashboard = () => {
   }
 
   const adminStats = [
-    { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-    { icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-gradient-to-br from-green-500 to-green-600' },
+    { icon: Users, label: 'Total Users', value: stats.users.totalUsers,color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
+{ icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-gradient-to-br from-green-500 to-green-600' },
 { icon: Shield, label: 'Pending', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-gradient-to-br from-yellow-500 to-yellow-600' },
 { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
 ];
@@ -499,20 +496,6 @@ const tabs = [
 { id: 'logs', label: 'Logs' },
 { id: 'settings', label: 'Settings' }
 ];
-const userSortOptions = [
-{ key: 'name', label: 'Name' },
-{ key: 'email', label: 'Email' },
-{ key: 'id', label: 'ID' },
-{ key: 'date', label: 'Date' },
-{ key: 'status', label: 'Status' }
-];
-const paperSortOptions = [
-{ key: 'title', label: 'Title' },
-{ key: 'author', label: 'Author' },
-{ key: 'date', label: 'Date' },
-{ key: 'views', label: 'Views' },
-{ key: 'status', label: 'Status' }
-];
 return (
 <>
 {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />}
@@ -521,238 +504,223 @@ message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal
 {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
 {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
 <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-    <div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-          <Shield size={24} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold">Admin Dashboard</h1>
-          <p className="text-sm text-blue-100 opacity-90">Welcome, {user?.firstName}</p>
-        </div>
-      </div>
-    </div>
-
-    <div className="px-4 mb-6">
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
-            {tab.label}
-            {tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">{tab.badge}</span>}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    <div className="px-4 space-y-6">
-      {activeTab === 'overview' && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})
-              </h2>
-              {pendingUsers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
-              </h2>
-              {pendingResearch.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {activeTab === 'users' && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
-              </h2>
-              <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
-            </div>
-            
-            {/* Sort Buttons - Grid View */}
-            {userViewMode === 'grid' && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {userSortOptions.map(opt => (
-                  <SortButton key={opt.key} label={opt.label} active={userSortConfig.key === opt.key} direction={userSortConfig.direction} onClick={() => handleUserSort(opt.key)} />
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 mb-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-            </div>
-          </div>
-          <div className="p-4 max-h-[600px] overflow-y-auto">
-            {sortedUsers.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">No users found</div>
-            ) : userViewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sortedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-              </div>
-            ) : (
-              <table className="w-full">
-  <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
-    <tr>
-      <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
-        <input 
-          type="checkbox" 
-          checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} 
-          onChange={handleSelectAllUsers} 
-          className="w-4 h-4 rounded accent-navy" 
-        />
-      </th>
-      <SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
-      <SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
-      <SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
-      <SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
-      <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
-    </tr>
-  </thead>
-  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-    {sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-  </tbody>
-</table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'research' && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <FileText size={20} className="text-green-600" />All Papers ({sortedPapers.length})
-              </h2>
-              <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
-            </div>
-            
-            {/* Sort Buttons - Grid View */}
-            {paperViewMode === 'grid' && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {paperSortOptions.map(opt => (
-                  <SortButton key={opt.key} label={opt.label} active={paperSortConfig.key === opt.key} direction={paperSortConfig.direction} onClick={() => handlePaperSort(opt.key)} />
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 mb-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-            </div>
-          </div>
-          <div className="p-4 max-h-[600px] overflow-y-auto">
-            {sortedPapers.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">No papers found</div>
-            ) : paperViewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sortedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
-  <tr>
-    <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
-      <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
-    </th>
-    <SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
-    <SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
-    <SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
-    <SortableHeader label="Status" sortKey="status" currentSort={paperSortConfig} onSort={handlePaperSort} />
-    <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
-  </tr>
+<div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
+<div className="flex items-center gap-3 mb-2">
+<div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+<Shield size={24} />
+</div>
+<div>
+<h1 className="text-xl font-bold">Admin Dashboard</h1>
+<p className="text-sm text-blue-100 opacity-90">Welcome, {user?.firstName}</p>
+</div>
+</div>
+</div>
+<div className="px-4 mb-6">
+<div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+{tabs.map(tab => (
+<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
+{tab.label}
+{tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">{tab.badge}</span>}
+</button>
+))}
+</div>
+</div>
+<div className="px-4 space-y-6">
+{activeTab === 'overview' && (
+<>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+{adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
+</div>
+<div className="space-y-6">
+<div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+<h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+<Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})
+</h2>
+{pendingUsers.length === 0 ? (
+<div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
+) : (
+<div className="space-y-3 max-h-96 overflow-y-auto">
+{pendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
+</div>
+)}
+</div>
+<div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+<h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+<FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
+</h2>
+{pendingResearch.length === 0 ? (
+<div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
+) : (
+<div className="space-y-3 max-h-96 overflow-y-auto">
+{pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
+</div>
+)}
+</div>
+</div>
+</>
+)}
+{activeTab === 'users' && (
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+<div className="p-5 border-b border-gray-200 dark:border-gray-700">
+<div className="flex items-center justify-between mb-4">
+<h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+<Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
+</h2>
+<ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+</div>
+<div className="flex items-center gap-3 mb-3">
+<div className="relative flex-1">
+<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+<input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+</div>
+</div>
+<div className="flex items-center gap-2">
+<input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
+<span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+</div>
+</div>
+{userViewMode === 'grid' ? (
+<div className="p-4">
+{sortedUsers.length === 0 ? (
+<div className="text-center py-12 text-gray-500">No users found</div>
+) : (
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+{sortedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
+</div>
+)}
+</div>
+) : (
+<div className="relative overflow-auto max-h-[600px]">
+<table className="w-full">
+<thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
+<tr>
+<th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+<input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
+</th>
+<SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
+<SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
+<SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
+<SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
+<th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
+</tr>
 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'bookmarks' && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
-            </h2>
-          </div>
-          <div className="p-4">
-            {bookmarks.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Bookmark size={32} className="text-gray-400" />
-                </div>
-                <p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {bookmarks.map(b => (
-                  <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                    <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
-                    <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'valid-ids' && <ValidIdsManagement />}
-      {activeTab === 'team' && <TeamManagement />}
-      {activeTab === 'analytics' && <AnalyticsDashboard />}
-      {activeTab === 'logs' && <ActivityLogs />}
-      {activeTab === 'settings' && <SettingsManagement />}
-    </div>
-  </div>
-
-  {showReviewModal && selectedPaper && (
-    <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
-  )}
-
-  {showAwardsModal && selectedPaper && (
-    <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
-  )}
+<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+{sortedUsers.length === 0 ? (
+<tr>
+<td colSpan="6" className="text-center py-12 text-gray-500">No users found</td>
+</tr>
+) : (
+sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)
+)}
+</tbody>
+</table>
+</div>
+)}
+</div>
+)}
+{activeTab === 'research' && (
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+<div className="p-5 border-b border-gray-200 dark:border-gray-700">
+<div className="flex items-center justify-between mb-4">
+<h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+<FileText size={20} className="text-green-600" />All Papers ({sortedPapers.length})
+</h2>
+<ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
+</div>
+<div className="flex items-center gap-3 mb-3">
+<div className="relative flex-1">
+<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+<input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+</div>
+</div>
+<div className="flex items-center gap-2">
+<input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+<span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+</div>
+</div>
+{paperViewMode === 'grid' ? (
+<div className="p-4">
+{sortedPapers.length === 0 ? (
+<div className="text-center py-12 text-gray-500">No papers found</div>
+) : (
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+{sortedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+</div>
+)}
+</div>
+) : (
+<div className="relative overflow-auto max-h-[600px]">
+<table className="w-full">
+<thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
+<tr>
+<th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+<input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+</th>
+<SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
+<SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
+<SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
+<SortableHeader label="Status" sortKey="status" currentSort={paperSortConfig} onSort={handlePaperSort} />
+<th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
+</tr>
+</thead>
+<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+{sortedPapers.length === 0 ? (
+<tr>
+<td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td>
+</tr>
+) : (
+sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
+)}
+</tbody>
+</table>
+</div>
+)}
+</div>
+)}
+{activeTab === 'bookmarks' && (
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+<div className="p-5 border-b border-gray-200 dark:border-gray-700">
+<h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+<Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
+</h2>
+</div>
+<div className="p-4">
+{bookmarks.length === 0 ? (
+<div className="text-center py-12">
+<div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+<Bookmark size={32} className="text-gray-400" />
+</div>
+<p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
+</div>
+) : (
+<div className="space-y-3">
+{bookmarks.map(b => (
+<div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+<h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
+<p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
+<button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
+</div>
+))}
+</div>
+)}
+</div>
+</div>
+)}
+{activeTab === 'valid-ids' && <ValidIdsManagement />}
+{activeTab === 'team' && <TeamManagement />}
+{activeTab === 'analytics' && <AnalyticsDashboard />}
+{activeTab === 'logs' && <ActivityLogs />}
+{activeTab === 'settings' && <SettingsManagement />}
+</div>
+</div>
+{showReviewModal && selectedPaper && (
+<AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
+)}
+{showAwardsModal && selectedPaper && (
+<AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
+)}
 </>
 );
 };
@@ -768,5 +736,4 @@ PaperGridCard.displayName = 'PaperGridCard';
 PaperListRow.displayName = 'PaperListRow';
 PendingUserCard.displayName = 'PendingUserCard';
 PendingResearchCard.displayName = 'PendingResearchCard';
-
 export default AdminDashboard;
