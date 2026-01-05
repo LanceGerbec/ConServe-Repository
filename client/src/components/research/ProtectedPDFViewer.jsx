@@ -87,126 +87,147 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // 🔥 ENHANCED MACBOOK SCREENSHOT PROTECTION
-  useEffect(() => {
-    if (!isMac) return;
+// ============================================
+// 🔒 MACOS SCREENSHOT PROTECTION (ENHANCED)
+// ============================================
 
-    const hideContent = () => {
-      if (wrapperRef.current) {
-        wrapperRef.current.style.opacity = '0';
-        wrapperRef.current.style.filter = 'blur(50px)';
-        setTimeout(() => {
-          if (wrapperRef.current) {
-            wrapperRef.current.style.opacity = '1';
-            wrapperRef.current.style.filter = 'none';
-          }
-        }, 2000);
-      }
-    };
+useEffect(() => {
+  const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMac) return;
 
-    // 🔥 MAC KEYBOARD SCREENSHOT DETECTION
-    const detectMacScreenshot = (e) => {
-      const isCmdShift3 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '3';
-      const isCmdShift4 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '4';
-      const isCmdShift5 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '5';
-      const isCmdShift6 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '6';
-      
-      // Track Cmd and Shift separately for more reliable detection
-      if (e.key === 'Meta' || e.metaKey) cmdPressed.current = true;
-      if (e.key === 'Shift' || e.shiftKey) shiftPressed.current = true;
-      
-      // Detect if both are pressed with number keys
-      const isScreenshotCombo = cmdPressed.current && shiftPressed.current && 
-        ['3', '4', '5', '6'].includes(e.key);
+  let screenshotAttempted = false;
 
-      if (isCmdShift3 || isCmdShift4 || isCmdShift5 || isCmdShift6 || isScreenshotCombo) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        hideContent();
-        blockContent('🖥️ MacBook Screenshot BLOCKED');
-        screenshotAttempts.current += 2;
-        
-        // Extra aggressive: blur the entire body
-        document.body.style.opacity = '0';
-        setTimeout(() => {
-          document.body.style.opacity = '1';
-        }, 2000);
-        
-        return false;
-      }
-    };
+  // LAYER 1: Enhanced Keyboard Detection
+  const detectMacScreenshot = (e) => {
+    const isCmdShift3 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '3';
+    const isCmdShift4 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '4';
+    const isCmdShift5 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '5';
+    const isCtrlCmdShift3 = e.ctrlKey && e.metaKey && e.shiftKey && e.key === '3';
+    const isCtrlCmdShift4 = e.ctrlKey && e.metaKey && e.shiftKey && e.key === '4';
 
-    const resetKeys = (e) => {
-      if (e.key === 'Meta' || !e.metaKey) cmdPressed.current = false;
-      if (e.key === 'Shift' || !e.shiftKey) shiftPressed.current = false;
-    };
-
-    // 🔥 DETECT SCREENSHOT APP OPENING (blur event)
-    const detectAppSwitch = () => {
-      hideContent();
-      blockContent('🖥️ MacBook Screenshot App Blocked');
-      screenshotAttempts.current++;
-    };
-
-    // 🔥 VISIBILITY CHANGE (switching to Screenshot.app)
-    const detectVisibility = () => {
-      if (document.hidden) {
-        hideContent();
-        blockContent('🖥️ MacBook App Switch Blocked');
-        lastHideTime.current = Date.now();
-      }
-    };
-
-    // 🔥 PREVENT DRAG AND DROP
-    const preventDrag = (e) => {
+    if (isCmdShift3 || isCmdShift4 || isCmdShift5 || isCtrlCmdShift3 || isCtrlCmdShift4) {
       e.preventDefault();
       e.stopPropagation();
-      blockContent('🖥️ Drag Blocked');
-      return false;
-    };
-
-    // 🔥 DETECT QUICKTIME / SCREEN RECORDING
-    const detectScreenRecording = () => {
-      // Check if window dimensions changed (recording toolbar)
-      const widthDiff = window.outerWidth - window.innerWidth;
-      const heightDiff = window.outerHeight - window.innerHeight;
+      screenshotAttempted = true;
       
-      if (widthDiff > 200 || heightDiff > 200) {
-        hideContent();
-        blockContent('🖥️ Screen Recording Detected');
+      // LAYER 3: Rapid Visual Disruption
+      if (canvasRef.current) {
+        canvasRef.current.style.filter = 'blur(50px) brightness(0.1)';
+        canvasRef.current.style.opacity = '0';
       }
-    };
+      
+      // LAYER 5: Clipboard Poisoning
+      const watermark = `🔒 PROTECTED DOCUMENT - ConServe Repository
+📍 Viewed by: ${user?.email || 'Unknown'}
+🆔 ID: ${user?.studentId || 'N/A'}
+📅 ${new Date().toLocaleString()}
+⚠️ Unauthorized copying is prohibited
+🚨 This action has been logged`;
+      
+      navigator.clipboard.writeText(watermark).catch(() => {});
+      
+      blockContent('💻 MacOS Screenshot BLOCKED');
+      screenshotAttempts.current += 2;
+      
+      // Restore after 3s
+      setTimeout(() => {
+        if (canvasRef.current && violations < MAX_VIOLATIONS) {
+          canvasRef.current.style.filter = 'none';
+          canvasRef.current.style.opacity = '1';
+          setIsBlocked(false);
+        }
+      }, 3000);
+      
+      return false;
+    }
+  };
 
-    // Add all event listeners
-    document.addEventListener('keydown', detectMacScreenshot, { capture: true, passive: false });
-    document.addEventListener('keyup', resetKeys, { capture: true, passive: false });
-    window.addEventListener('blur', detectAppSwitch);
-    document.addEventListener('visibilitychange', detectVisibility);
-    document.addEventListener('dragstart', preventDrag, { passive: false });
-    document.addEventListener('drop', preventDrag, { passive: false });
-    
-    const recordingInterval = setInterval(detectScreenRecording, 3000);
-
-    // 🔥 MONITOR FOR SCREENSHOT.APP IN DOCK
-    const monitorFocus = setInterval(() => {
-      if (!document.hasFocus()) {
-        hideContent();
-        blockContent('🖥️ Focus Lost - Screenshot Blocked');
+  // LAYER 2: Screenshot API Detection
+  const detectScreenshotAPI = () => {
+    // Monitor for screenshot.app invocation
+    if (document.hidden && !screenshotAttempted) {
+      screenshotAttempted = true;
+      
+      if (canvasRef.current) {
+        canvasRef.current.style.filter = 'blur(50px)';
+        canvasRef.current.style.opacity = '0';
       }
-    }, 500);
+      
+      blockContent('📸 Screenshot Detected');
+      screenshotAttempts.current++;
+      
+      setTimeout(() => {
+        screenshotAttempted = false;
+        if (canvasRef.current && violations < MAX_VIOLATIONS) {
+          canvasRef.current.style.filter = 'none';
+          canvasRef.current.style.opacity = '1';
+          setIsBlocked(false);
+        }
+      }, 2500);
+    }
+  };
 
-    return () => {
-      document.removeEventListener('keydown', detectMacScreenshot);
-      document.removeEventListener('keyup', resetKeys);
-      window.removeEventListener('blur', detectAppSwitch);
-      document.removeEventListener('visibilitychange', detectVisibility);
-      document.removeEventListener('dragstart', preventDrag);
-      document.removeEventListener('drop', preventDrag);
-      clearInterval(recordingInterval);
-      clearInterval(monitorFocus);
-    };
-  }, [violations, isMac]);
+  // LAYER 4: Screen Recording Detection
+  const detectScreenRecording = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        // Check if screen capture is active
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true }).catch(() => null);
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          blockContent('🎥 Recording Blocked');
+          screenshotAttempts.current += 3;
+          
+          if (canvasRef.current) {
+            canvasRef.current.style.filter = 'blur(50px)';
+          }
+          
+          setTimeout(() => {
+            if (canvasRef.current) canvasRef.current.style.filter = 'none';
+          }, 5000);
+        }
+      }
+    } catch (err) {
+      // Recording attempt detected
+      if (err.name === 'NotAllowedError') {
+        blockContent('🎥 Recording Attempt Blocked');
+      }
+    }
+  };
+
+  // ENHANCED: Detect visibility changes (screenshot.app causes brief hide)
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      detectScreenshotAPI();
+    }
+  };
+
+  // ENHANCED: Detect focus loss (screenshot.app steals focus)
+  const handleBlur = () => {
+    if (canvasRef.current) {
+      canvasRef.current.style.filter = 'blur(30px)';
+      setTimeout(() => {
+        if (canvasRef.current) canvasRef.current.style.filter = 'none';
+      }, 1000);
+    }
+  };
+
+  document.addEventListener('keydown', detectMacScreenshot, { passive: false });
+  document.addEventListener('keyup', detectMacScreenshot, { passive: false });
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('blur', handleBlur);
+
+  // Check for recording every 5s
+  const recordingCheck = setInterval(detectScreenRecording, 5000);
+
+  return () => {
+    document.removeEventListener('keydown', detectMacScreenshot);
+    document.removeEventListener('keyup', detectMacScreenshot);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('blur', handleBlur);
+    clearInterval(recordingCheck);
+  };
+}, [violations, user]);
 
   // Mobile protection (keep existing)
   useEffect(() => {
