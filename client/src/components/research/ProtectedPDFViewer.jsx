@@ -1,4 +1,4 @@
-// client/src/components/research/ProtectedPDFViewer.jsx - ENHANCED MACBOOK PROTECTION
+// client/src/components/research/ProtectedPDFViewer.jsx - ENHANCED VERSION
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -42,12 +42,8 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const sessionTimerRef = useRef(null);
   const countdownRef = useRef(null);
   const screenshotAttempts = useRef(0);
-  const lastHideTime = useRef(0);
-  const visibilityCount = useRef(0);
   const lastTap = useRef(0);
   const renderLockRef = useRef(false);
-  const cmdPressed = useRef(false);
-  const shiftPressed = useRef(false);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
@@ -87,297 +83,162 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-// ============================================
-// 🔒 MACOS SCREENSHOT PROTECTION (ENHANCED)
-// ============================================
+  // ============================================
+  // 🔒 ENHANCED MACOS PROTECTION (PRECISE)
+  // ============================================
+  useEffect(() => {
+    if (!isMac) return;
 
-useEffect(() => {
-  const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (!isMac) return;
+    let isScreenshotting = false;
 
-  let screenshotAttempted = false;
+    const detectExactScreenshot = (e) => {
+      // ONLY exact screenshot shortcuts
+      const isCmdShift3 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '3';
+      const isCmdShift4 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '4';
+      const isCmdShift5 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '5';
+      const isCtrlCmdShift3 = e.ctrlKey && e.metaKey && e.shiftKey && e.key === '3';
+      const isCtrlCmdShift4 = e.ctrlKey && e.metaKey && e.shiftKey && e.key === '4';
 
-  // LAYER 1: Enhanced Keyboard Detection
-  const detectMacScreenshot = (e) => {
-    const isCmdShift3 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '3';
-    const isCmdShift4 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '4';
-    const isCmdShift5 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '5';
-    const isCtrlCmdShift3 = e.ctrlKey && e.metaKey && e.shiftKey && e.key === '3';
-    const isCtrlCmdShift4 = e.ctrlKey && e.metaKey && e.shiftKey && e.key === '4';
+      const isScreenshotShortcut = isCmdShift3 || isCmdShift4 || isCmdShift5 || isCtrlCmdShift3 || isCtrlCmdShift4;
 
-    if (isCmdShift3 || isCmdShift4 || isCmdShift5 || isCtrlCmdShift3 || isCtrlCmdShift4) {
-      e.preventDefault();
-      e.stopPropagation();
-      screenshotAttempted = true;
-      
-      // LAYER 3: Rapid Visual Disruption
-      if (canvasRef.current) {
-        canvasRef.current.style.filter = 'blur(50px) brightness(0.1)';
-        canvasRef.current.style.opacity = '0';
-      }
-      
-      // LAYER 5: Clipboard Poisoning
-      const watermark = `🔒 PROTECTED DOCUMENT - ConServe Repository
+      if (isScreenshotShortcut) {
+        e.preventDefault();
+        e.stopPropagation();
+        isScreenshotting = true;
+        
+        // Instant blur
+        if (canvasRef.current) {
+          canvasRef.current.style.filter = 'blur(50px) brightness(0.1)';
+          canvasRef.current.style.opacity = '0';
+        }
+        
+        // Poison clipboard
+        const watermark = `🔒 PROTECTED DOCUMENT - ConServe Repository
 📍 Viewed by: ${user?.email || 'Unknown'}
 🆔 ID: ${user?.studentId || 'N/A'}
 📅 ${new Date().toLocaleString()}
 ⚠️ Unauthorized copying is prohibited
 🚨 This action has been logged`;
-      
-      navigator.clipboard.writeText(watermark).catch(() => {});
-      
-      blockContent('💻 MacOS Screenshot BLOCKED');
-      screenshotAttempts.current += 2;
-      
-      // Restore after 3s
-      setTimeout(() => {
-        if (canvasRef.current && violations < MAX_VIOLATIONS) {
-          canvasRef.current.style.filter = 'none';
-          canvasRef.current.style.opacity = '1';
-          setIsBlocked(false);
-        }
-      }, 3000);
-      
-      return false;
-    }
-  };
+        
+        navigator.clipboard.writeText(watermark).catch(() => {});
+        
+        blockContent('💻 MacOS Screenshot BLOCKED');
+        screenshotAttempts.current += 2;
+        
+        setTimeout(() => {
+          if (canvasRef.current && violations < MAX_VIOLATIONS) {
+            canvasRef.current.style.filter = 'none';
+            canvasRef.current.style.opacity = '1';
+            setIsBlocked(false);
+          }
+          isScreenshotting = false;
+        }, 3000);
+        
+        return false;
+      }
+    };
 
-  // LAYER 2: Screenshot API Detection
-  const detectScreenshotAPI = () => {
-    // Monitor for screenshot.app invocation
-    if (document.hidden && !screenshotAttempted) {
-      screenshotAttempted = true;
-      
+    // Monitor for screenshot.app invocation (brief hide)
+    const detectScreenshotApp = () => {
+      if (document.hidden && !isScreenshotting) {
+        isScreenshotting = true;
+        
+        if (canvasRef.current) {
+          canvasRef.current.style.filter = 'blur(50px)';
+          canvasRef.current.style.opacity = '0';
+        }
+        
+        blockContent('📸 Screenshot App Detected');
+        screenshotAttempts.current++;
+        
+        setTimeout(() => {
+          isScreenshotting = false;
+          if (canvasRef.current && violations < MAX_VIOLATIONS) {
+            canvasRef.current.style.filter = 'none';
+            canvasRef.current.style.opacity = '1';
+            setIsBlocked(false);
+          }
+        }, 2500);
+      }
+    };
+
+    document.addEventListener('keydown', detectExactScreenshot, { passive: false });
+    document.addEventListener('keyup', detectExactScreenshot, { passive: false });
+    document.addEventListener('visibilitychange', detectScreenshotApp);
+
+    return () => {
+      document.removeEventListener('keydown', detectExactScreenshot);
+      document.removeEventListener('keyup', detectExactScreenshot);
+      document.removeEventListener('visibilitychange', detectScreenshotApp);
+    };
+  }, [violations, user, isMac]);
+
+  // ============================================
+  // 🔒 ENHANCED iOS PROTECTION (PRECISE)
+  // ============================================
+  useEffect(() => {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isIOS) return;
+
+    let lastVisibilityTime = 0;
+    let isBlurring = false;
+    let blurTimeout = null;
+
+    // Detect ACTUAL iOS screenshot (Hardware button: Power + Volume Up)
+    const detectHardwareScreenshot = () => {
+      const now = Date.now();
+      const timeSinceLastVisibility = now - lastVisibilityTime;
+
+      // iOS screenshot causes 50-200ms visibility change
+      if (document.hidden && timeSinceLastVisibility > 100 && timeSinceLastVisibility < 500) {
+        triggerScreenshotBlur('📱 iOS Hardware Screenshot');
+      }
+
+      lastVisibilityTime = now;
+    };
+
+    // Detect page hide (iOS screenshot triggers this)
+    const detectPageHide = (e) => {
+      if (e.persisted === false) {
+        triggerScreenshotBlur('📱 Screenshot Detected');
+      }
+    };
+
+    // Blur on actual screenshot
+    const triggerScreenshotBlur = (reason) => {
+      if (isBlurring) return;
+      isBlurring = true;
+
       if (canvasRef.current) {
-        canvasRef.current.style.filter = 'blur(50px)';
+        canvasRef.current.style.transition = 'none';
+        canvasRef.current.style.filter = 'blur(50px) brightness(0.1)';
         canvasRef.current.style.opacity = '0';
       }
-      
-      blockContent('📸 Screenshot Detected');
+
+      // Black flash
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;background:black;z-index:9999;animation:fadeOut 2s forwards;';
+      document.body.appendChild(flash);
+
+      blockContent(reason);
       screenshotAttempts.current++;
-      
-      setTimeout(() => {
-        screenshotAttempted = false;
+
+      clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
         if (canvasRef.current && violations < MAX_VIOLATIONS) {
           canvasRef.current.style.filter = 'none';
           canvasRef.current.style.opacity = '1';
           setIsBlocked(false);
         }
+        
+        if (flash.parentNode) flash.remove();
+        isBlurring = false;
       }, 2500);
-    }
-  };
+    };
 
-  // LAYER 4: Screen Recording Detection
-  const detectScreenRecording = async () => {
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-        // Check if screen capture is active
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true }).catch(() => null);
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          blockContent('🎥 Recording Blocked');
-          screenshotAttempts.current += 3;
-          
-          if (canvasRef.current) {
-            canvasRef.current.style.filter = 'blur(50px)';
-          }
-          
-          setTimeout(() => {
-            if (canvasRef.current) canvasRef.current.style.filter = 'none';
-          }, 5000);
-        }
-      }
-    } catch (err) {
-      // Recording attempt detected
-      if (err.name === 'NotAllowedError') {
-        blockContent('🎥 Recording Attempt Blocked');
-      }
-    }
-  };
-
-  // ENHANCED: Detect visibility changes (screenshot.app causes brief hide)
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
-      detectScreenshotAPI();
-    }
-  };
-
-  // ENHANCED: Detect focus loss (screenshot.app steals focus)
-  const handleBlur = () => {
-    if (canvasRef.current) {
-      canvasRef.current.style.filter = 'blur(30px)';
-      setTimeout(() => {
-        if (canvasRef.current) canvasRef.current.style.filter = 'none';
-      }, 1000);
-    }
-  };
-
-  document.addEventListener('keydown', detectMacScreenshot, { passive: false });
-  document.addEventListener('keyup', detectMacScreenshot, { passive: false });
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  window.addEventListener('blur', handleBlur);
-
-  // Check for recording every 5s
-  const recordingCheck = setInterval(detectScreenRecording, 5000);
-
-  return () => {
-    document.removeEventListener('keydown', detectMacScreenshot);
-    document.removeEventListener('keyup', detectMacScreenshot);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    window.removeEventListener('blur', handleBlur);
-    clearInterval(recordingCheck);
-  };
-}, [violations, user]);
-
- // ============================================
-// 🔒 ENHANCED iOS SCREENSHOT PROTECTION
-// ============================================
-
-useEffect(() => {
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (!isIOS) return;
-
-  let lastInteractionTime = Date.now();
-  let suspiciousPatternCount = 0;
-  let blurTimeout = null;
-  let isBlurring = false;
-
-  // LAYER 1: Ultra-Fast Visibility Detection
-  const detectVisibilityChange = () => {
-    const now = Date.now();
-    const timeSinceLastInteraction = now - lastInteractionTime;
-
-    // iOS screenshot causes 50-200ms visibility change
-    if (document.hidden && timeSinceLastInteraction > 100 && timeSinceLastInteraction < 1000) {
-      triggerScreenshotBlur('📱 iOS Screenshot Detected');
-      suspiciousPatternCount++;
-    }
-
-    lastInteractionTime = now;
-  };
-
-  // LAYER 2: Blur Detection (iOS screenshot causes brief blur)
-  const detectBlur = () => {
-    const now = Date.now();
-    const timeSinceLastInteraction = now - lastInteractionTime;
-
-    if (timeSinceLastInteraction < 500) {
-      triggerScreenshotBlur('📸 Screenshot Attempt');
-      suspiciousPatternCount++;
-    }
-  };
-
-  // LAYER 3: Page Hide Detection (iOS background transition)
-  const detectPageHide = (e) => {
-    // iOS screenshot triggers pagehide momentarily
-    if (e.persisted === false) {
-      triggerScreenshotBlur('📱 Hardware Screenshot');
-      suspiciousPatternCount += 2;
-    }
-  };
-
-  // LAYER 4: Focus Loss Pattern Analysis
-  const detectFocusLoss = () => {
-    const now = Date.now();
-    const timeSinceLastInteraction = now - lastInteractionTime;
-
-    // Rapid focus loss = screenshot attempt
-    if (timeSinceLastInteraction < 300) {
-      triggerScreenshotBlur('⚠️ Suspicious Activity');
-      suspiciousPatternCount++;
-    }
-  };
-
-  // LAYER 5: Screen Recording Detection
-  const detectScreenRecording = () => {
-    // iOS screen recording changes pixel ratio
-    const originalRatio = window.devicePixelRatio;
-    
-    setInterval(() => {
-      if (window.devicePixelRatio !== originalRatio) {
-        triggerScreenshotBlur('🎥 Screen Recording Detected');
-        screenshotAttempts.current += 3;
-      }
-    }, 1000);
-  };
-
-  // LAYER 6: AssistiveTouch Detection (rapid touch patterns)
-  const detectAssistiveTouch = (e) => {
-    const now = Date.now();
-    
-    // AssistiveTouch creates artificial touch events
-    if (e.touches?.length === 1 && e.timeStamp - lastInteractionTime < 50) {
-      triggerScreenshotBlur('🔘 AssistiveTouch Screenshot');
-      suspiciousPatternCount++;
-    }
-    
-    lastInteractionTime = now;
-  };
-
-  // CORE: Screenshot Blur Function
-  const triggerScreenshotBlur = (reason) => {
-    if (isBlurring) return;
-    isBlurring = true;
-
-    // Instant visual disruption
-    if (canvasRef.current) {
-      canvasRef.current.style.transition = 'none';
-      canvasRef.current.style.filter = 'blur(50px) brightness(0.1) contrast(0.3)';
-      canvasRef.current.style.opacity = '0';
-      canvasRef.current.style.transform = 'scale(0.8)';
-    }
-
-    // Flash black overlay
-    const blackOverlay = document.createElement('div');
-    blackOverlay.style.cssText = `
-      position: fixed;
-      inset: 0;
-      background: black;
-      z-index: 9999;
-      animation: fadeOut 2s forwards;
-    `;
-    document.body.appendChild(blackOverlay);
-
-    // Log violation
-    blockContent(reason);
-    screenshotAttempts.current++;
-
-    // Restore content after 2.5s
-    clearTimeout(blurTimeout);
-    blurTimeout = setTimeout(() => {
-      if (canvasRef.current && violations < MAX_VIOLATIONS) {
-        canvasRef.current.style.filter = 'none';
-        canvasRef.current.style.opacity = '1';
-        canvasRef.current.style.transform = 'scale(1)';
-        setIsBlocked(false);
-      }
-      
-      if (blackOverlay.parentNode) {
-        blackOverlay.remove();
-      }
-      
-      isBlurring = false;
-
-      // Check for repeated attempts
-      if (suspiciousPatternCount >= 3) {
-        showToast('🚨 Multiple screenshot attempts detected!', 'error');
-        screenshotAttempts.current += 2;
-        suspiciousPatternCount = 0;
-      }
-    }, 2500);
-
-    // Dynamic watermark refresh (make screenshot useless)
-    setTimeout(() => {
-      if (pdf && canvasRef.current) {
-        // Force re-render with new timestamp
-        setCurrentPage(p => p);
-      }
-    }, 100);
-  };
-
-  // LAYER 7: Clipboard Poisoning (for screenshot paste)
-  const poisonClipboard = () => {
-    const watermark = `🔒 CONFIDENTIAL - DO NOT DISTRIBUTE
+    // Poison clipboard (makes screenshots useless)
+    const poisonClipboard = () => {
+      const watermark = `🔒 CONFIDENTIAL - DO NOT DISTRIBUTE
 
 📱 Document: ${paperTitle}
 👤 Viewer: ${user?.firstName} ${user?.lastName}
@@ -385,54 +246,30 @@ useEffect(() => {
 📧 Email: ${user?.email || 'N/A'}
 📍 IP: ${userIP}
 📅 Timestamp: ${new Date().toLocaleString()}
-🚨 Session: ${Math.random().toString(36).substring(2, 10).toUpperCase()}
 
-⚠️ WARNING: This document is protected by intellectual property laws.
-Unauthorized copying, distribution, or sharing is strictly prohibited.
-This action has been logged and may result in disciplinary action.
+⚠️ WARNING: Unauthorized copying is prohibited.
+© ${new Date().getFullYear()} ConServe - NEUST College of Nursing`;
 
-© ${new Date().getFullYear()} ConServe - NEUST College of Nursing
-All Rights Reserved`;
+      navigator.clipboard.writeText(watermark).catch(() => {});
+    };
 
-    navigator.clipboard.writeText(watermark).catch(() => {});
-  };
+    // Add animation
+    const style = document.createElement('style');
+    style.textContent = '@keyframes fadeOut{0%,70%{opacity:1}100%{opacity:0}}';
+    document.head.appendChild(style);
 
-  // Add CSS for flash animation
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes fadeOut {
-      0% { opacity: 1; }
-      70% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-  `;
-  document.head.appendChild(style);
+    document.addEventListener('visibilitychange', detectHardwareScreenshot);
+    window.addEventListener('pagehide', detectPageHide);
+    const clipboardInterval = setInterval(poisonClipboard, 2000);
 
-  // Attach all listeners
-  document.addEventListener('visibilitychange', detectVisibilityChange);
-  window.addEventListener('blur', detectBlur);
-  window.addEventListener('pagehide', detectPageHide);
-  window.addEventListener('focus', detectFocusLoss);
-  document.addEventListener('touchstart', detectAssistiveTouch, { passive: false });
-
-  // Poison clipboard every 2 seconds
-  const clipboardInterval = setInterval(poisonClipboard, 2000);
-
-  // Start screen recording detection
-  detectScreenRecording();
-
-  // Cleanup
-  return () => {
-    document.removeEventListener('visibilitychange', detectVisibilityChange);
-    window.removeEventListener('blur', detectBlur);
-    window.removeEventListener('pagehide', detectPageHide);
-    window.removeEventListener('focus', detectFocusLoss);
-    document.removeEventListener('touchstart', detectAssistiveTouch);
-    clearInterval(clipboardInterval);
-    clearTimeout(blurTimeout);
-    if (style.parentNode) style.remove();
-  };
-}, [pdf, violations, user, userIP, paperTitle]);
+    return () => {
+      document.removeEventListener('visibilitychange', detectHardwareScreenshot);
+      window.removeEventListener('pagehide', detectPageHide);
+      clearInterval(clipboardInterval);
+      clearTimeout(blurTimeout);
+      if (style.parentNode) style.remove();
+    };
+  }, [pdf, violations, user, userIP, paperTitle, isMobile]);
 
   // Double-tap zoom (mobile)
   useEffect(() => {
@@ -463,9 +300,7 @@ All Rights Reserved`;
       setScale(newScale);
       showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
       if (navigator.vibrate) navigator.vibrate(20);
-    } else {
-      showToast('🔍 Max zoom reached', 'warning');
-    }
+    } else showToast('🔍 Max zoom reached', 'warning');
   };
 
   const zoomOut = () => {
@@ -475,9 +310,7 @@ All Rights Reserved`;
       setScale(newScale);
       showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
       if (navigator.vibrate) navigator.vibrate(20);
-    } else {
-      showToast('🔍 Min zoom reached', 'warning');
-    }
+    } else showToast('🔍 Min zoom reached', 'warning');
   };
 
   const resetZoom = () => {
@@ -491,7 +324,7 @@ All Rights Reserved`;
     const canvasWidth = canvasRef.current.offsetWidth;
     const newScale = containerWidth / canvasWidth;
     setScale(Math.min(Math.max(newScale, ZOOM_LEVELS[0]), ZOOM_LEVELS[ZOOM_LEVELS.length - 1]));
-    showToast(`🔄 Fit to Width`, 'success');
+    showToast('🔄 Fit to Width', 'success');
   };
 
   useEffect(() => { 
@@ -522,11 +355,12 @@ All Rights Reserved`;
     return () => clearInterval(countdownRef.current);
   }, []);
 
+  // PrintScreen detection
   useEffect(() => {
     const detect = (e) => { 
       if (['PrintScreen', 44].includes(e.key || e.keyCode)) { 
         screenshotAttempts.current++; 
-        blockContent('💻 Screenshot Blocked'); 
+        blockContent('💻 PrintScreen Blocked'); 
         setTimeout(() => { if (screenshotAttempts.current < 3) setIsBlocked(false); }, 3000); 
       } 
     };
@@ -545,25 +379,7 @@ All Rights Reserved`;
     };
   }, [violations]);
 
-  useEffect(() => {
-    const handleVis = () => { 
-      if (document.hidden) { 
-        blockContent('⚠️ Tab Changed'); 
-        setTimeout(() => { if (!document.hidden && violations < MAX_VIOLATIONS) setIsBlocked(false); }, 2000); 
-      } 
-    };
-    const handleBlur = () => { 
-      blockContent('⚠️ Focus Lost'); 
-      setTimeout(() => { if (violations < MAX_VIOLATIONS) setIsBlocked(false); }, 1500); 
-    };
-    document.addEventListener('visibilitychange', handleVis);
-    window.addEventListener('blur', handleBlur);
-    return () => { 
-      document.removeEventListener('visibilitychange', handleVis); 
-      window.removeEventListener('blur', handleBlur); 
-    };
-  }, [violations]);
-
+  // DevTools detection
   useEffect(() => {
     const detectDev = () => { 
       if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) { 
@@ -597,6 +413,7 @@ All Rights Reserved`;
     }
   };
 
+  // Load PDF
   useEffect(() => {
     const loadPDF = async () => {
       try {
@@ -646,6 +463,7 @@ All Rights Reserved`;
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE, isMobile]);
 
+  // Render page with watermarks
   useEffect(() => {
     if (!pdf || !canvasRef.current || renderLockRef.current) return;
     
@@ -795,225 +613,237 @@ All Rights Reserved`;
     renderPage();
   }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
 
+  // Prevent context menu, copy, etc
   useEffect(() => {
     const prevent = (e) => { 
       e.preventDefault(); 
       e.stopPropagation(); 
-      logViolation('interaction'); 
-      showToast('🚫 Blocked', 'warning'); 
       return false; 
     };
     const preventKeys = (e) => {
       const blocked = [
         e.ctrlKey && ['s','p','c','a','u','f'].includes(e.key.toLowerCase()), 
         e.metaKey && ['s','p','c','a','u','f'].includes(e.key.toLowerCase()),
-        e.key === 'PrintScreen',
         e.key === 'F12',
-        e.ctrlKey && e.shiftKey
+        e.ctrlKey && e.shiftKey && !['3','4','5'].includes(e.key) // Allow screenshot detection keys
       ];
       if (blocked.some(Boolean)) {
         e.preventDefault();
-        blockContent('⌨️ Shortcut Blocked');
-setTimeout(() => setIsBlocked(false), 1500);
-return false;
-}
-};
-['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
-document.addEventListener(ev, ev==='keydown'?preventKeys:prevent, { passive: false })
-);
-return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
-document.removeEventListener(ev, ev==='keydown'?preventKeys:prevent)
-);
-}, []);
-useEffect(() => {
-if (isMobile) return;const handleKey = (e) => {
-  if (e.key === '[') zoomOut();
-  if (e.key === ']') zoomIn();
-  if (e.key === '0') resetZoom();
-  if (e.key === 'f' || e.key === 'F') fitToWidth();
-};
+        return false;
+      }
+    };
+    ['contextmenu','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
+      document.addEventListener(ev, prevent, { passive: false })
+    );
+    document.addEventListener('keydown', preventKeys, { passive: false });
+    return () => {
+      ['contextmenu','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
+        document.removeEventListener(ev, prevent)
+      );
+      document.removeEventListener('keydown', preventKeys);
+    };
+  }, []);
 
-const handleWheel = (e) => {
-  if (e.ctrlKey || e.metaKey) {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const currentIndex = ZOOM_LEVELS.findIndex(z => Math.abs(z - scale) < 0.01);
-    if (delta > 0 && currentIndex < ZOOM_LEVELS.length - 1) {
-      setScale(ZOOM_LEVELS[currentIndex + 1]);
-    } else if (delta < 0 && currentIndex > 0) {
-      setScale(ZOOM_LEVELS[currentIndex - 1]);
-    }
-  }
-};
+  // Keyboard shortcuts (desktop only)
+  useEffect(() => {
+    if (isMobile) return;
+    const handleKey = (e) => {
+      if (e.key === '[') zoomOut();
+      if (e.key === ']') zoomIn();
+      if (e.key === '0') resetZoom();
+      if (e.key === 'f' || e.key === 'F') fitToWidth();
+    };
 
-window.addEventListener('keydown', handleKey);
-window.addEventListener('wheel', handleWheel, { passive: false });
+    const handleWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const currentIndex = ZOOM_LEVELS.findIndex(z => Math.abs(z - scale) < 0.01);
+        if (delta > 0 && currentIndex < ZOOM_LEVELS.length - 1) {
+          setScale(ZOOM_LEVELS[currentIndex + 1]);
+        } else if (delta < 0 && currentIndex > 0) {
+          setScale(ZOOM_LEVELS[currentIndex - 1]);
+        }
+      }
+    };
 
-return () => {
-  window.removeEventListener('keydown', handleKey);
-  window.removeEventListener('wheel', handleWheel);
-};}, [isMobile, scale]);
-const formatTime = (seconds) => {
-const mins = Math.floor(seconds / 60);
-const secs = seconds % 60;
-return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
-const getTimerColor = () => {
-if (timeRemaining > 600) return 'bg-green-500/30 border-green-400/50';
-if (timeRemaining > 300) return 'bg-yellow-500/30 border-yellow-400/50';
-return 'bg-red-500/30 border-red-400/50 animate-pulse';
-};
-if (loading) return (
-<div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-<div className="text-center">
-<div className="relative">
-<div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
-<Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32}/>
-</div>
-<p className="text-white text-xl font-bold">Loading Protected Document</p>
-<p className="text-blue-400 text-sm mt-2">🔒 Initializing Security...</p>
-</div>
-</div>
-);
-if (error || sessionExpired) return (
-<div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
-<div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
-<AlertCircle className="mx-auto text-red-500 mb-4 animate-pulse" size={64}/>
-<h3 className="text-white text-2xl font-bold mb-3">
-{sessionExpired?'Session Expired':'Failed to Load'}
-</h3>
-<p className="text-gray-300 mb-6 text-sm">
-{sessionExpired?'Sessions expire after 30min':error}
-</p>
-<button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
-✕ Close
-</button>
-</div>
-</div>
-);
-return (
-<>
-{toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}<div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
-    🔍 {Math.round(scale * 100)}%
-  </div>
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('wheel', handleWheel, { passive: false });
 
-  <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
-    {isBlocked && (
-      <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
-        <div className="text-center max-w-lg p-8">
-          <div className="relative mb-6">
-            <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
-              <Shield size={64} className="text-white"/>
-            </div>
-            <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
-          </div>
-          <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
-          <p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
-          <p className="text-gray-400 text-sm mb-6">
-            Violation #{violations} of {MAX_VIOLATIONS}
-            {violations>=MAX_VIOLATIONS&&' - CLOSING'}
-          </p>
-          <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
-            <p className="font-mono">🚨 Logged</p>
-            <p className="font-mono mt-1">📍 {userIP}</p>
-            <p className="font-mono mt-1">👤 {user?.email}</p>
-          </div>
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, [isMobile, scale]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getTimerColor = () => {
+    if (timeRemaining > 600) return 'bg-green-500/30 border-green-400/50';
+    if (timeRemaining > 300) return 'bg-yellow-500/30 border-yellow-400/50';
+    return 'bg-red-500/30 border-red-400/50 animate-pulse';
+  };
+
+  if (loading) return (
+    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
+          <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32}/>
         </div>
+        <p className="text-white text-xl font-bold">Loading Protected Document</p>
+        <p className="text-blue-400 text-sm mt-2">🔒 Initializing Security...</p>
       </div>
-    )}
+    </div>
+  );
 
-    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <Shield className="text-blue-200 flex-shrink-0" size={18}/>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
-          <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {!isMobile && (
-          <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
-            <Maximize2 size={16}/>
-          </button>
-        )}
-        <div className="w-px h-6 bg-blue-400/30"></div>
-        <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
-          <X size={16}/>
+  if (error || sessionExpired) return (
+    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
+      <div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
+        <AlertCircle className="mx-auto text-red-500 mb-4 animate-pulse" size={64}/>
+        <h3 className="text-white text-2xl font-bold mb-3">
+          {sessionExpired?'Session Expired':'Failed to Load'}
+        </h3>
+        <p className="text-gray-300 mb-6 text-sm">
+          {sessionExpired?'Sessions expire after 30min':error}
+        </p>
+        <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
+          ✕ Close
         </button>
       </div>
     </div>
+  );
 
-    <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 flex items-start justify-center">
-      <div 
-        ref={wrapperRef}
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: 'top center',
-          transition: 'transform 0.2s ease-out',
-          filter: isBlocked ? 'blur(50px) brightness(0.3)' : 'none',
-          opacity: rendered ? 1 : 0,
-          pointerEvents: isBlocked ? 'none' : 'auto'
-        }}
-      >
-        <canvas 
-          ref={canvasRef}
-          className="shadow-2xl border-2 border-blue-700 rounded-lg" 
-          style={{
-            display: 'block',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            WebkitTouchCallout: 'none'
-          }}
-        />
+  return (
+    <>
+      {toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}
+      
+      <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
+        🔍 {Math.round(scale * 100)}%
       </div>
-    </div>
-    
-    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 border-t-2 border-blue-700">
-      {isMobile && (
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1">
-            <button onClick={zoomOut} disabled={ZOOM_LEVELS.indexOf(scale) === 0} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
-              <ZoomOut size={18}/>
-            </button>
-            <button onClick={resetZoom} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold active:scale-95 transition">
-              Reset
-            </button>
-            <button onClick={zoomIn} disabled={ZOOM_LEVELS.indexOf(scale) === ZOOM_LEVELS.length - 1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
-              <ZoomIn size={18}/>
-            </button>
-          </div>
-          <div className="text-white text-xs bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
-            💡 Double-tap to zoom
-          </div>
-        </div>
-      )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 md:gap-2">
-          <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-            <ChevronLeft size={16}/>
-          </button>
-          <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
-            Page {currentPage}/{totalPages}
-          </span>
-          <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-            <ChevronRight size={16}/>
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()}`}>
-            ⏱️ {formatTime(timeRemaining)}
+      <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
+        {isBlocked && (
+          <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
+            <div className="text-center max-w-lg p-8">
+              <div className="relative mb-6">
+                <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
+                  <Shield size={64} className="text-white"/>
+                </div>
+                <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
+              </div>
+              <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
+              <p className="text-red-400 text-xl font-semibold mb-3">{blockReason}</p>
+              <p className="text-gray-400 text-sm mb-6">
+                Violation #{violations} of {MAX_VIOLATIONS}
+                {violations>=MAX_VIOLATIONS&&' - CLOSING'}
+              </p>
+              <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
+                <p className="font-mono">🚨 Logged</p>
+                <p className="font-mono mt-1">📍 {userIP}</p>
+                <p className="font-mono mt-1">👤 {user?.email}</p>
+              </div>
+            </div>
           </div>
-          {violations>0&&(
-            <div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">
-              ⚠️ {violations}/{MAX_VIOLATIONS}
+        )}
+
+        <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Shield className="text-blue-200 flex-shrink-0" size={18}/>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
+              <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isMobile && (
+              <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
+                <Maximize2 size={16}/>
+              </button>
+            )}
+            <div className="w-px h-6 bg-blue-400/30"></div>
+            <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
+              <X size={16}/>
+            </button>
+          </div>
+        </div>
+
+        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 flex items-start justify-center">
+          <div 
+            ref={wrapperRef}
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: 'top center',
+              transition: 'transform 0.2s ease-out',
+              filter: isBlocked ? 'blur(50px) brightness(0.3)' : 'none',
+              opacity: rendered ? 1 : 0,
+              pointerEvents: isBlocked ? 'none' : 'auto'
+            }}
+          >
+            <canvas 
+              ref={canvasRef}
+              className="shadow-2xl border-2 border-blue-700 rounded-lg" 
+              style={{
+                display: 'block',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none'
+              }}
+            />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 border-t-2 border-blue-700">
+          {isMobile && (
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1">
+                <button onClick={zoomOut} disabled={ZOOM_LEVELS.indexOf(scale) === 0} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
+                  <ZoomOut size={18}/>
+                </button>
+                <button onClick={resetZoom} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold active:scale-95 transition">
+                  Reset
+                </button>
+                <button onClick={zoomIn} disabled={ZOOM_LEVELS.indexOf(scale) === ZOOM_LEVELS.length - 1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
+                  <ZoomIn size={18}/>
+                </button>
+              </div>
+              <div className="text-white text-xs bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
+                💡 Double-tap to zoom
+              </div>
             </div>
           )}
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 md:gap-2">
+              <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+                <ChevronLeft size={16}/>
+              </button>
+              <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
+                Page {currentPage}/{totalPages}
+              </span>
+              <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+                <ChevronRight size={16}/>
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()}`}>
+                ⏱️ {formatTime(timeRemaining)}
+              </div>
+              {violations>0&&(
+                <div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">
+                  ⚠️ {violations}/{MAX_VIOLATIONS}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</>
-);
+    </>
+  );
 };
+
 export default ProtectedPDFViewer;
