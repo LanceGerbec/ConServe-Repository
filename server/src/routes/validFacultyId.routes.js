@@ -41,6 +41,30 @@ router.patch('/:id', auth, authorize('admin'), async (req, res) => {
   }
 });
 
+// ✅ BULK DELETE UNUSED IDs
+router.post('/bulk-delete-unused', auth, authorize('admin'), async (req, res) => {
+  try {
+    const result = await ValidFacultyId.deleteMany({ isUsed: false });
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'BULK_DELETE_UNUSED_FACULTY_IDS',
+      resource: 'ValidFacultyId',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { deletedCount: result.deletedCount }
+    });
+
+    res.json({ 
+      message: `Deleted ${result.deletedCount} unused Faculty IDs`, 
+      deleted: result.deletedCount 
+    });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Failed to bulk delete' });
+  }
+});
+
 // Clean orphaned Faculty IDs
 router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
   try {

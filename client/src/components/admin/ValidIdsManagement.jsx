@@ -9,11 +9,13 @@ const ValidIdsManagement = () => {
   const [facultyIds, setFacultyIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cleaning, setCleaning] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [formData, setFormData] = useState({ id: '', fullName: '' });
@@ -65,6 +67,32 @@ const ValidIdsManagement = () => {
     }
   };
 
+  // ✅ NEW: BULK DELETE UNUSED IDs
+  const handleBulkDeleteUnused = async () => {
+    setBulkDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}/bulk-delete-unused`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`✅ Deleted ${data.deleted} unused IDs`);
+        setShowBulkDeleteModal(false);
+        fetchData();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed', 'error');
+      }
+    } catch (error) {
+      showToast('Error', 'error');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.id.trim() || !formData.fullName.trim()) {
@@ -96,7 +124,6 @@ const ValidIdsManagement = () => {
     }
   };
 
-  // ✅ NEW: EDIT HANDLER
   const handleEdit = async (e) => {
     e.preventDefault();
     if (!formData.id.trim() || !formData.fullName.trim()) {
@@ -107,7 +134,7 @@ const ValidIdsManagement = () => {
       const token = localStorage.getItem('token');
       const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
       const body = activeTab === 'student' 
-        ? { studentId: formData.id, fullName: formData.fullName, oldId: editTarget[activeTab === 'student' ? 'studentId' : 'facultyId'] }
+        ? { studentId: formData.id, fullName: formData.fullName, oldId: editTarget.studentId }
         : { facultyId: formData.id, fullName: formData.fullName, oldId: editTarget.facultyId };
       
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}/${editTarget._id}`, {
@@ -154,7 +181,6 @@ const ValidIdsManagement = () => {
     }
   };
 
-  // ✅ NEW: SORTING LOGIC
   const handleSort = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -195,6 +221,11 @@ const ValidIdsManagement = () => {
     return sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
   };
 
+  const getUnusedCount = () => {
+    const data = activeTab === 'student' ? studentIds : facultyIds;
+    return data.filter(item => !item.isUsed).length;
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
@@ -204,6 +235,7 @@ const ValidIdsManagement = () => {
   const currentData = getSortedData();
   const Icon = activeTab === 'student' ? UserCheck : Users;
   const idField = activeTab === 'student' ? 'studentId' : 'facultyId';
+  const unusedCount = getUnusedCount();
 
   return (
     <>
@@ -218,7 +250,8 @@ const ValidIdsManagement = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-3">
+          {/* ACTION BUTTONS - WITH BULK DELETE */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
             <button onClick={handleCleanOrphaned} disabled={cleaning} className="flex flex-col items-center gap-1 bg-orange-600 text-white px-2 py-2 rounded-lg hover:bg-orange-700 text-xs font-bold disabled:opacity-50">
               {cleaning ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
               <span className="hidden sm:inline">Clean</span>
@@ -230,6 +263,16 @@ const ValidIdsManagement = () => {
             <button onClick={() => setShowBulkModal(true)} className="flex flex-col items-center gap-1 bg-green-600 text-white px-2 py-2 rounded-lg hover:bg-green-700 text-xs font-bold">
               <Upload size={16} />
               <span className="hidden sm:inline">Bulk</span>
+            </button>
+            {/* ✅ NEW: BULK DELETE BUTTON */}
+            <button 
+              onClick={() => setShowBulkDeleteModal(true)} 
+              disabled={unusedCount === 0}
+              className="flex flex-col items-center gap-1 bg-red-600 text-white px-2 py-2 rounded-lg hover:bg-red-700 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              title={unusedCount === 0 ? 'No unused IDs' : `Delete ${unusedCount} unused IDs`}
+            >
+              <Trash2 size={16} />
+              <span className="hidden sm:inline">Del All</span>
             </button>
           </div>
 
@@ -250,49 +293,51 @@ const ValidIdsManagement = () => {
 
         {currentData.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border">
-            <Icon size={40} className="mx-auto text-gray-400 mb-3 opacity-30" /><p className="text-sm mb-3">No {activeTab} IDs</p>
+            <Icon size={40} className="mx-auto text-gray-400 mb-3 opacity-30" />
+            <p className="text-sm mb-3">No {activeTab} IDs</p>
             <button onClick={() => setShowBulkModal(true)} className="text-navy hover:underline font-bold text-xs">Upload IDs</button>
           </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
-            {/* MOBILE: CARD VIEW */}
-            <div className="block md:hidden divide-y">
-              {currentData.map((item) => (
-                <div key={item._id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-900">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="font-mono font-bold text-sm mb-1">{item[idField]}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{item.fullName}</div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
-                        {item.isUsed && <CheckCircle size={14} className="text-green-600" />}
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => { 
-                          if (item.isUsed) {
-                            showToast('Cannot edit used ID', 'warning');
-                            return;
-                          }
-                          setEditTarget(item); 
-                          setFormData({ id: item[idField], fullName: item.fullName }); 
-                          setShowEditModal(true); 
-                        }} 
-                        disabled={item.isUsed}
-                        className="text-blue-600 hover:text-blue-700 p-1.5 disabled:opacity-30"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1.5">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+          ) : (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
+        {/* MOBILE: CARD VIEW */}
+        <div className="block md:hidden divide-y">
+          {currentData.map((item) => (
+            <div key={item._id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-900">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="font-mono font-bold text-sm mb-1">{item[idField]}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{item.fullName}</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
+                    {item.isUsed && <CheckCircle size={14} className="text-green-600" />}
                   </div>
                 </div>
-              ))}
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => { 
+                      if (item.isUsed) {
+                        showToast('Cannot edit used ID', 'warning');
+                        return;
+                      }
+                      setEditTarget(item); 
+                      setFormData({ id: item[idField], fullName: item.fullName }); 
+                      setShowEditModal(true); 
+                    }} 
+                    disabled={item.isUsed}
+                    className="text-blue-600 hover:text-blue-700 p-1.5 disabled:opacity-30"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1.5">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
             </div>
-            {/* DESKTOP: TABLE VIEW WITH SORTING */}
+          ))}
+        </div>
+
+        {/* DESKTOP: TABLE VIEW WITH SORTING */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-900 border-b">
@@ -391,7 +436,7 @@ const ValidIdsManagement = () => {
     </div>
   )}
 
-  {/* ✅ NEW: EDIT MODAL */}
+  {/* EDIT MODAL */}
   {showEditModal && editTarget && (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-4">
@@ -449,7 +494,64 @@ const ValidIdsManagement = () => {
     </div>
   )}
 
+  {/* ✅ NEW: BULK DELETE CONFIRMATION MODAL */}
+  {showBulkDeleteModal && (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full border-2 border-red-500">
+        <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <Trash2 size={20} className="text-white" />
+            </div>
+            <h3 className="text-base font-bold text-white">Bulk Delete Unused IDs?</h3>
+          </div>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+            <p className="text-xs font-bold text-red-800 mb-2">⚠️ WARNING: This will permanently delete:</p>
+            <div className="space-y-1 text-xs text-red-700">
+              <div className="flex items-center gap-2">
+                <Trash2 size={14} />
+                <span className="font-bold">{unusedCount} unused {activeTab} IDs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle size={14} className="text-green-600" />
+                <span>Used IDs will be preserved</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
+            <p className="text-xs font-bold text-yellow-800">⚡ This action CANNOT be undone!</p>
+          </div>
+
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowBulkDeleteModal(false)} 
+              className="flex-1 px-4 py-2 border-2 rounded-lg font-bold text-sm"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleBulkDeleteUnused}
+              disabled={bulkDeleting}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center justify-center gap-1 text-sm disabled:opacity-50"
+            >
+              {bulkDeleting ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
+              )}
+              {bulkDeleting ? 'Deleting...' : `Delete ${unusedCount}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
   {showBulkModal && <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Uploaded!'); }} />}
-</>);
+</>
+);
 };
 export default ValidIdsManagement;
