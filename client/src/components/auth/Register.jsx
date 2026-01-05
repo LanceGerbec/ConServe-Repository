@@ -57,13 +57,13 @@ const Register = () => {
       case 'firstName':
       case 'lastName':
         valid = value.trim().length >= 2;
-        error = valid ? '' : 'Must be at least 2 characters';
+        error = valid ? '' : 'Min 2 characters';
         break;
       
       case 'email':
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         valid = emailRegex.test(value);
-        error = valid ? '' : 'Please enter a valid email address';
+        error = valid ? '' : 'Invalid email format';
         break;
       
       case 'password':
@@ -74,16 +74,16 @@ const Register = () => {
         const hasSpecial = /[^a-zA-Z0-9]/.test(value);
         valid = hasLength && hasUpper && hasLower && hasNumber && hasSpecial;
         
-        if (!hasLength) error = 'Password must be at least 12 characters';
-        else if (!hasUpper) error = 'Must include uppercase letter';
-        else if (!hasLower) error = 'Must include lowercase letter';
-        else if (!hasNumber) error = 'Must include number';
-        else if (!hasSpecial) error = 'Must include special character (!@#$%^&*)';
+        if (!hasLength) error = 'Min 12 characters';
+        else if (!hasUpper) error = 'Need uppercase';
+        else if (!hasLower) error = 'Need lowercase';
+        else if (!hasNumber) error = 'Need number';
+        else if (!hasSpecial) error = 'Need special char';
         break;
       
       case 'confirmPassword':
         valid = value === formData.password && value.length > 0;
-        error = valid ? '' : 'Passwords do not match';
+        error = valid ? '' : 'Passwords must match';
         break;
     }
 
@@ -95,7 +95,6 @@ const Register = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Validate on change for better UX
     if (name !== 'studentId') {
       validateField(name, value);
     }
@@ -129,7 +128,7 @@ const Register = () => {
     } catch (err) {
       setStudentIdValid(false);
       setStudentInfo(null);
-      setFieldErrors(prev => ({ ...prev, studentId: 'Failed to verify ID' }));
+      setFieldErrors(prev => ({ ...prev, studentId: 'Failed to verify' }));
       setFieldValid(prev => ({ ...prev, studentId: false }));
     } finally {
       setCheckingId(false);
@@ -148,15 +147,14 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate all fields
     const errors = [];
     
     if (!agreedToTerms) {
-      errors.push('You must agree to the Terms & Conditions and Privacy Policy');
+      errors.push('Must agree to Terms & Privacy Policy');
     }
     
     if (studentIdValid !== true) {
-      errors.push(`Please enter a valid ${formData.role} ID number`);
+      errors.push(`Enter valid ${formData.role} ID`);
     }
     
     if (formData.password !== formData.confirmPassword) {
@@ -165,11 +163,11 @@ const Register = () => {
     
     const strength = getPasswordStrength(formData.password);
     if (strength < 4) {
-      errors.push('Password is too weak. Must include: 12+ characters, uppercase, lowercase, number, and special character');
+      errors.push('Password too weak - Need 12+ chars, uppercase, lowercase, number, special char');
     }
     
     if (!fieldValid.email) {
-      errors.push('Please enter a valid email address');
+      errors.push('Invalid email address');
     }
     
     if (errors.length > 0) {
@@ -184,17 +182,16 @@ const Register = () => {
     if (result.success) {
       setShowSuccessModal(true);
     } else {
-      // Parse backend error
       const backendErrors = [];
       
       if (result.error.includes('email')) {
-        backendErrors.push('Email is already registered');
+        backendErrors.push('Email already registered');
       } else if (result.error.includes('ID')) {
-        backendErrors.push('Student/Faculty ID is already in use');
+        backendErrors.push('Student/Faculty ID already used');
       } else if (result.error.includes('password')) {
-        backendErrors.push('Password does not meet security requirements');
+        backendErrors.push('Password does not meet requirements');
       } else {
-        backendErrors.push(result.error || 'Registration failed. Please try again.');
+        backendErrors.push(result.error || 'Registration failed');
       }
       
       setErrorMessages(backendErrors);
@@ -208,7 +205,7 @@ const Register = () => {
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
   const getFieldClassName = (fieldName) => {
-    const baseClass = "w-full px-4 py-2.5 rounded-xl focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition";
+    const baseClass = "w-full px-3 py-2.5 rounded-xl focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition text-sm";
     
     if (fieldValid[fieldName]) {
       return `${baseClass} border-2 border-green-500 bg-green-50 dark:bg-green-900/10`;
@@ -220,12 +217,12 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        title="Account Created Successfully!"
-        message="Your account is pending admin approval. You'll receive an email notification once your account is approved."
+        title="Account Created!"
+        message="Your account is pending admin approval. Check your email for updates."
         onAction={() => navigate('/login')}
       />
 
@@ -235,35 +232,41 @@ const Register = () => {
         errors={errorMessages}
       />
 
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl p-8 border border-gray-200 dark:border-gray-800 my-8 animate-scale-in relative">
-        <div className="absolute top-4 right-4 flex space-x-2">
-          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <Home size={20} className="text-gray-600 dark:text-gray-400" />
-          </Link>
-          <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <X size={20} className="text-gray-600 dark:text-gray-400" />
-          </Link>
-        </div>
-
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-navy rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
-            {logo ? <img src={logo} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-white font-bold text-2xl">C</span>}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 md:p-8 border border-gray-200 dark:border-gray-800 my-4 sm:my-8 animate-scale-in relative">
+        {/* Header with Close Buttons */}
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-navy rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+            {logo ? <img src={logo} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-white font-bold text-xl sm:text-2xl">C</span>}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Account</h1>
-          <p className="text-gray-600 dark:text-gray-400">Join ConServe Research Hub</p>
+          <div className="flex space-x-2">
+            <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <Home size={18} className="text-gray-600 dark:text-gray-400" />
+            </Link>
+            <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <X size={18} className="text-gray-600 dark:text-gray-400" />
+            </Link>
+          </div>
         </div>
 
+        {/* Title */}
+        <div className="text-center mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Create Account</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Join ConServe Research Hub</p>
+        </div>
+
+        {/* Info Banner */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-3 rounded-lg mb-4 flex items-start space-x-2">
-          <Info size={18} className="text-navy flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            <strong>Note:</strong> Your account will need admin approval before you can access the system.
+          <Info size={16} className="text-navy flex-shrink-0 mt-0.5" />
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+            <strong>Note:</strong> Account requires admin approval
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          {/* Name Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 First Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -277,13 +280,13 @@ const Register = () => {
                   className={getFieldClassName('firstName')}
                   placeholder="Juan"
                 />
-                {fieldValid.firstName && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500" size={20} />}
+                {fieldValid.firstName && <CheckCircle className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500" size={18} />}
               </div>
-              {fieldErrors.firstName && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{fieldErrors.firstName}</p>}
+              {fieldErrors.firstName && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.firstName}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 Last Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -297,14 +300,15 @@ const Register = () => {
                   className={getFieldClassName('lastName')}
                   placeholder="Dela Cruz"
                 />
-                {fieldValid.lastName && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500" size={20} />}
+                {fieldValid.lastName && <CheckCircle className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500" size={18} />}
               </div>
-              {fieldErrors.lastName && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{fieldErrors.lastName}</p>}
+              {fieldErrors.lastName && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.lastName}</p>}
             </div>
           </div>
 
+          {/* Email */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               Email <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -318,13 +322,14 @@ const Register = () => {
                 className={getFieldClassName('email')}
                 placeholder="your.email@example.com"
               />
-              {fieldValid.email && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500" size={20} />}
+              {fieldValid.email && <CheckCircle className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500" size={18} />}
             </div>
-            {fieldErrors.email && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{fieldErrors.email}</p>}
+            {fieldErrors.email && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.email}</p>}
           </div>
 
+          {/* Role */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               Role <span className="text-red-500">*</span>
             </label>
             <select
@@ -334,15 +339,16 @@ const Register = () => {
                 setStudentIdValid(null);
                 setStudentInfo(null);
               }}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
             >
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
             </select>
           </div>
 
+          {/* Student/Faculty ID */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {formData.role === 'faculty' ? 'Faculty ID' : 'Student ID'} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -352,22 +358,22 @@ const Register = () => {
                 required
                 value={formData.studentId}
                 onChange={(e) => setFormData({ ...formData, studentId: e.target.value.toUpperCase() })}
-                className={`w-full px-4 py-2.5 pr-12 rounded-xl focus:outline-none ${
+                className={`w-full px-3 py-2.5 pr-10 rounded-xl focus:outline-none text-sm ${
                   studentIdValid === true ? 'border-2 border-green-500 bg-green-50 dark:bg-green-900/10' :
                   studentIdValid === false ? 'border-2 border-red-500 bg-red-50 dark:bg-red-900/10' :
                   'border-2 border-gray-300 dark:border-gray-700 focus:border-navy'
                 } bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
                 placeholder={formData.role === 'faculty' ? 'FAC-12345' : '2021-12345'}
               />
-              {checkingId && <div className="absolute right-4 top-1/2 -translate-y-1/2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div></div>}
-              {!checkingId && studentIdValid === true && <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" size={20} />}
-              {!checkingId && studentIdValid === false && <X className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />}
+              {checkingId && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-navy"></div></div>}
+              {!checkingId && studentIdValid === true && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />}
+              {!checkingId && studentIdValid === false && <X className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500" size={18} />}
             </div>
-            {fieldErrors.studentId && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{fieldErrors.studentId}</p>}
+            {fieldErrors.studentId && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.studentId}</p>}
             {studentInfo && (
               <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <p className="text-xs text-green-700 dark:text-green-400">
-                  ✓ Valid ID: <strong>{studentInfo.fullName}</strong>
+                <p className="text-xs text-green-700 dark:text-green-400 break-words">
+                  ✓ <strong>{studentInfo.fullName}</strong>
                   {studentInfo.course && ` - ${studentInfo.course}`}
                   {studentInfo.department && ` - ${studentInfo.department}`}
                 </p>
@@ -375,8 +381,9 @@ const Register = () => {
             )}
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -387,18 +394,18 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 onBlur={(e) => validateField('password', e.target.value)}
-                className={getFieldClassName('password')}
+                className={`${getFieldClassName('password')} pr-10`}
                 placeholder="Min. 12 characters"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 p-1"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {fieldErrors.password && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{fieldErrors.password}</p>}
+            {fieldErrors.password && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.password}</p>}
             {formData.password && (
               <div className="mt-2">
                 <div className="flex gap-1">
@@ -411,8 +418,9 @@ const Register = () => {
             )}
           </div>
 
+          {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               Confirm Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -423,50 +431,53 @@ const Register = () => {
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
                 onBlur={(e) => validateField('confirmPassword', e.target.value)}
-                className={getFieldClassName('confirmPassword')}
-                placeholder="Re-enter your password"
+                className={`${getFieldClassName('confirmPassword')} pr-10`}
+                placeholder="Re-enter password"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 p-1"
               >
-                {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
-              {fieldValid.confirmPassword && <CheckCircle className="absolute right-12 top-1/2 -translate-y-1/2 text-green-500" size={20} />}
+              {fieldValid.confirmPassword && <CheckCircle className="absolute right-10 top-1/2 -translate-y-1/2 text-green-500" size={18} />}
             </div>
-            {fieldErrors.confirmPassword && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{fieldErrors.confirmPassword}</p>}
+            {fieldErrors.confirmPassword && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.confirmPassword}</p>}
           </div>
 
+          {/* Terms Checkbox */}
           <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700">
-            <label className="flex items-start space-x-3 cursor-pointer">
+            <label className="flex items-start space-x-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="w-5 h-5 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 cursor-pointer"
+                className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 cursor-pointer flex-shrink-0"
                 required
               />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                I agree to the <Link to="/terms" target="_blank" className="text-navy hover:underline font-semibold">Terms & Conditions</Link>
-                {' '}and <Link to="/privacy" target="_blank" className="text-navy hover:underline font-semibold">Privacy Policy</Link>
-                <span className="text-red-500 ml-1">*</span>
+              <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                I agree to the <Link to="/terms" target="_blank" className="text-navy hover:underline font-semibold">Terms</Link>
+                {' '}& <Link to="/privacy" target="_blank" className="text-navy hover:underline font-semibold">Privacy</Link>
+                <span className="text-red-500">*</span>
               </span>
             </label>
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading || !agreedToTerms || studentIdValid !== true}
-            className="w-full bg-navy hover:bg-navy-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full bg-navy hover:bg-navy-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm sm:text-base"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
-            <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
+            <span>{loading ? 'Creating...' : 'Create Account'}</span>
           </button>
         </form>
 
-        <p className="text-center text-gray-600 dark:text-gray-400 mt-4 text-sm">
-          Already have an account? <Link to="/login" className="text-navy hover:text-navy-700 font-semibold">Sign in</Link>
+        {/* Footer */}
+        <p className="text-center text-gray-600 dark:text-gray-400 mt-4 text-xs sm:text-sm">
+          Have an account? <Link to="/login" className="text-navy hover:text-navy-700 font-semibold">Sign in</Link>
         </p>
       </div>
     </div>
