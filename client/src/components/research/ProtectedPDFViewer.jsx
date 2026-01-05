@@ -40,6 +40,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const screenshotAttempts = useRef(0);
   const lastHideTime = useRef(0);
   const visibilityCount = useRef(0);
+  const recordingCheckInterval = useRef(null);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
@@ -55,13 +56,18 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast(`🚫 ${reason}`, 'error');
     screenshotAttempts.current++;
     
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      document.body.style.opacity = '0';
-      setTimeout(() => {
-        document.body.style.opacity = '1';
-        if (violations < MAX_VIOLATIONS) setIsBlocked(false);
-      }, 3000);
+    if (canvasRef.current) {
+      canvasRef.current.style.filter = 'blur(50px) brightness(0.3)';
+      canvasRef.current.style.opacity = '0';
     }
+    
+    setTimeout(() => {
+      if (canvasRef.current && violations < MAX_VIOLATIONS) {
+        canvasRef.current.style.filter = 'none';
+        canvasRef.current.style.opacity = '1';
+        setIsBlocked(false);
+      }
+    }, 3000);
     
     if (violations >= MAX_VIOLATIONS - 1 || screenshotAttempts.current >= 3) {
       setTimeout(() => {
@@ -71,135 +77,108 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // ============================================
-  // 🍎 MACOS SCREENSHOT PREVENTION - ENHANCED
-  // ============================================
+  // 🍎 MACOS SCREENSHOT DETECTION
   useEffect(() => {
-    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
     if (!isMac) return;
 
-    console.log('🍎 MacOS Security Layer Active');
+    console.log('🍎 macOS Screenshot Protection Active');
 
-    const hideContent = () => {
-      if (canvasRef.current) {
-        canvasRef.current.style.opacity = '0';
-        canvasRef.current.style.filter = 'blur(50px)';
-        setTimeout(() => {
-          if (canvasRef.current) {
-            canvasRef.current.style.opacity = '1';
-            canvasRef.current.style.filter = 'none';
-          }
-        }, 3000);
-      }
-    };
-
-    // Detect ALL Mac screenshot shortcuts
+    // 🔴 DETECT CMD+SHIFT+3/4/5 (macOS Screenshots)
     const detectMacScreenshot = (e) => {
-      const cmd = e.metaKey;
-      const ctrl = e.ctrlKey;
-      const shift = e.shiftKey;
-      const key = e.key;
-
-      // ⌘ + Shift + 3 (Full screen)
-      // ⌘ + Shift + 4 (Selection)
-      // ⌘ + Shift + 5 (Screenshot tool)
-      if (cmd && shift && ['3', '4', '5', '#', '$', '%'].includes(key)) {
+      const isCmdShift3 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '3';
+      const isCmdShift4 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '4';
+      const isCmdShift5 = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '5';
+      
+      if (isCmdShift3 || isCmdShift4 || isCmdShift5) {
         e.preventDefault();
         e.stopPropagation();
-        hideContent();
-        blockContent('🍎 Mac Screenshot BLOCKED');
+        blockContent('🍎 macOS Screenshot BLOCKED');
+        navigator.clipboard.writeText('');
         screenshotAttempts.current += 2;
-        document.body.style.opacity = '0';
-        setTimeout(() => { document.body.style.opacity = '1'; }, 3000);
-        return false;
-      }
-
-      // ⌘ + Control + Shift + 3/4 (Clipboard screenshot)
-      if (cmd && ctrl && shift && ['3', '4', '#', '$'].includes(key)) {
-        e.preventDefault();
-        e.stopPropagation();
-        hideContent();
-        blockContent('🍎 Clipboard Screenshot BLOCKED');
-        screenshotAttempts.current += 2;
-        return false;
-      }
-
-      // ⌘ + S (Prevent save)
-      if (cmd && key === 's') {
-        e.preventDefault();
-        blockContent('💾 Save Blocked');
-        return false;
-      }
-
-      // ⌘ + P (Prevent print)
-      if (cmd && key === 'p') {
-        e.preventDefault();
-        blockContent('🖨️ Print Blocked');
         return false;
       }
     };
 
-    // Detect Screenshot Utility opening
-    const detectScreenshotUtility = () => {
+    // 🔴 DETECT SCREEN RECORDING (QuickTime, etc)
+    const detectScreenRecording = async () => {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          if (stream) {
+            blockContent('🎥 Screen Recording BLOCKED');
+            stream.getTracks().forEach(track => track.stop());
+          }
+        }
+      } catch (err) {
+        // User cancelled - normal behavior
+      }
+    };
+
+    // 🔴 MONITOR FOR RECORDING INDICATORS
+    const monitorRecording = () => {
+      if (document.hidden || !document.hasFocus()) {
+        blockContent('🍎 macOS Activity Detected');
+      }
+    };
+
+    // 🔴 BLUR ON FOCUS LOSS (Screenshot.app switching)
+    const blurOnFocusLoss = () => {
+      if (!document.hasFocus()) {
+        if (canvasRef.current) {
+          canvasRef.current.style.filter = 'blur(50px)';
+          canvasRef.current.style.opacity = '0.3';
+        }
+        blockContent('🍎 Focus Lost - Screenshot Blocked');
+        
+        setTimeout(() => {
+          if (canvasRef.current && document.hasFocus()) {
+            canvasRef.current.style.filter = 'none';
+            canvasRef.current.style.opacity = '1';
+            if (violations < MAX_VIOLATIONS) setIsBlocked(false);
+          }
+        }, 2000);
+      }
+    };
+
+    // 🔴 DETECT VISIBILITY CHANGES (Screenshot triggers)
+    const detectVisibilityChange = () => {
       const now = Date.now();
       if (document.hidden) {
-        hideContent();
         if (now - lastHideTime.current < 1000) {
-          blockContent('🍎 Screenshot Tool Detected');
-          screenshotAttempts.current++;
+          blockContent('🍎 Rapid Hide/Show - Screenshot Blocked');
+          screenshotAttempts.current += 2;
         }
         lastHideTime.current = now;
+        blurOnFocusLoss();
       }
     };
 
-    // Monitor focus loss (screenshot review)
-    const handleBlur = () => {
-      const now = Date.now();
-      if (now - lastHideTime.current < 2000) {
-        hideContent();
-        blockContent('🍎 Screenshot Activity Detected');
-        screenshotAttempts.current++;
-      }
-      lastHideTime.current = now;
-    };
-
-    // Prevent clipboard access
-    const preventClipboard = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      navigator.clipboard.writeText('');
-      blockContent('📋 Clipboard Blocked');
-      return false;
-    };
-
-    // Detect Page Hide (Screenshot capture moment)
-    const detectPageHide = () => {
-      hideContent();
-      blockContent('🍎 Screenshot Capture Detected');
-    };
-
+    // 🔴 ATTACH LISTENERS
     document.addEventListener('keydown', detectMacScreenshot, { passive: false });
     document.addEventListener('keyup', detectMacScreenshot, { passive: false });
-    document.addEventListener('visibilitychange', detectScreenshotUtility);
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('pagehide', detectPageHide);
-    document.addEventListener('copy', preventClipboard, { passive: false });
-    document.addEventListener('cut', preventClipboard, { passive: false });
+    window.addEventListener('blur', blurOnFocusLoss);
+    window.addEventListener('focus', () => {
+      if (canvasRef.current && violations < MAX_VIOLATIONS) {
+        canvasRef.current.style.filter = 'none';
+        canvasRef.current.style.opacity = '1';
+      }
+    });
+    document.addEventListener('visibilitychange', detectVisibilityChange);
+
+    // Check for recording every 500ms
+    recordingCheckInterval.current = setInterval(monitorRecording, 500);
 
     return () => {
       document.removeEventListener('keydown', detectMacScreenshot);
       document.removeEventListener('keyup', detectMacScreenshot);
-      document.removeEventListener('visibilitychange', detectScreenshotUtility);
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('pagehide', detectPageHide);
-      document.removeEventListener('copy', preventClipboard);
-      document.removeEventListener('cut', preventClipboard);
+      window.removeEventListener('blur', blurOnFocusLoss);
+      document.removeEventListener('visibilitychange', detectVisibilityChange);
+      if (recordingCheckInterval.current) clearInterval(recordingCheckInterval.current);
     };
   }, [violations]);
 
-  // ============================================
-  // 📱 MOBILE SCREENSHOT PREVENTION (EXISTING)
-  // ============================================
+  // 🔴 MOBILE SCREENSHOT PROTECTION (EXISTING - KEEP AS IS)
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -413,6 +392,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     return () => clearTimeout(sessionTimerRef.current); 
   }, []);
 
+  // 🔴 WINDOWS/LINUX SCREENSHOT DETECTION (EXISTING)
   useEffect(() => {
     const detect = (e) => { 
       if (['PrintScreen', 44].includes(e.key || e.keyCode)) { 
@@ -617,7 +597,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.fillText(`Unauthorized copy prohibited`, vp.width - 10 * scale, vp.height - 15 * scale);
         ctx.restore();
         
-        // 🔥 CENTERED DIAGONAL WATERMARK
+        // Center Diagonal Watermark
         ctx.save();
         ctx.translate(vp.width / 2, vp.height / 2);
         ctx.rotate(-35 * Math.PI / 180);
@@ -656,19 +636,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.fillText(`Page ${currentPage} of ${totalPages}`, 0, 185 * scale);
         
         ctx.restore();
-
-        // 🍎 MAC-SPECIFIC WATERMARK
-        if (/Mac/.test(navigator.userAgent)) {
-          ctx.save();
-          ctx.globalAlpha = 0.18;
-          ctx.fillStyle = '#FF0000';
-          ctx.font = `bold ${Math.max(32, 48 * scale)}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.fillText('🍎 SCREENSHOT MONITORED', vp.width / 2, vp.height - 120 * scale);
-          ctx.font = `${Math.max(24, 36 * scale)}px monospace`;
-          ctx.fillText(`MacOS User: ${user?.email}`, vp.width / 2, vp.height - 80 * scale);
-          ctx.restore();
-        }
         
       } catch (err) { 
         setError(`Render failed: ${err.message}`); 
@@ -787,13 +754,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           </div>
         )}
 
-        {/* 🍎 MAC ALERT BANNER */}
-        {/Mac/.test(navigator.userAgent) && !isBlocked && (
-          <div className="absolute top-16 left-0 right-0 bg-red-600 text-white px-4 py-2 text-center text-xs font-bold animate-pulse z-50">
-            🍎 MacOS DETECTED - Screenshots & Screen Recording are MONITORED
-          </div>
-        )}
-
         <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-b border-blue-400/20">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Shield className="text-blue-300 flex-shrink-0" size={18}/>
@@ -804,84 +764,37 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           </div>
           <div className="flex items-center gap-1">
             <div className="flex md:hidden items-center gap-1">
-              <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} disabled={scale<=0.5} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-                <ZoomOut size={14}/>
-              </button>
-              <span className="text-white text-xs px-2 py-1 min-w-[50px] text-center font-mono bg-white/10 rounded font-bold">
-                {Math.round(scale*100)}%
-              </span>
-              <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-                <ZoomIn size={14}/>
-              </button>
+              <button onClick={()=>setScale(s=>Math.max(0.5,s-0.2))} disabled={scale<=0.5} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50"><ZoomOut size={14}/></button>
+              <span className="text-white text-xs px-2 py-1 min-w-[50px] text-center font-mono bg-white/10 rounded font-bold">{Math.round(scale*100)}%</span>
+              <button onClick={()=>setScale(s=>Math.min(3,s+0.2))} disabled={scale>=3} className="p-1.5 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50"><ZoomIn size={14}/></button>
             </div>
             <div className="hidden md:flex items-center gap-1">
               {ZOOM_PRESETS.map(z => (
-                <button 
-                  key={z}
-                  onClick={() => setScale(z)}
-                  className={`px-2 py-1 text-xs font-bold rounded transition ${
-                    Math.abs(scale - z) < 0.1 
-                      ? 'bg-white text-navy' 
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
+                <button key={z} onClick={() => setScale(z)} className={`px-2 py-1 text-xs font-bold rounded transition ${Math.abs(scale - z) < 0.1 ? 'bg-white text-navy' : 'bg-white/10 text-white hover:bg-white/20'}`}>
                   {Math.round(z*100)}%
                 </button>
               ))}
             </div>
-            
-            <button onClick={fitToWidth} className="p-1.5 md:p-2 bg-blue-500 hover:bg-blue-600 rounded text-white" title="Fit to Width">
-              <Maximize2 size={16}/>
-            </button>
+            <button onClick={fitToWidth} className="p-1.5 md:p-2 bg-blue-500 hover:bg-blue-600 rounded text-white" title="Fit to Width"><Maximize2 size={16}/></button>
             <div className="w-px h-4 md:h-6 bg-blue-400/30 mx-1"></div>
-            <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
-              <X size={16}/>
-            </button>
+            <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white"><X size={16}/></button>
           </div>
         </div>
         
         <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6" style={{display:'flex',alignItems:'flex-start',justifyContent:'center'}}>
-          <canvas 
-            ref={canvasRef} 
-            onTouchStart={handleCanvasTouch}
-            className="shadow-2xl border border-blue-500/30 rounded-lg" 
-            style={{
-              maxWidth:'100%',
-              height:'auto',
-              imageRendering:'crisp-edges',
-              filter:isBlocked?'blur(50px) brightness(0.3)':'none',
-              pointerEvents:isBlocked?'none':'auto',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              WebkitTouchCallout: 'none'
-            }}
-          />
+          <canvas ref={canvasRef} onTouchStart={handleCanvasTouch} className="shadow-2xl border border-blue-500/30 rounded-lg" style={{maxWidth:'100%',height:'auto',imageRendering:'crisp-edges',filter:isBlocked?'blur(50px) brightness(0.3)':'none',pointerEvents:isBlocked?'none':'auto',userSelect: 'none',WebkitUserSelect: 'none',WebkitTouchCallout: 'none'}}/>
         </div>
         
         <div className="bg-gradient-to-r from-navy to-accent px-3 py-2 flex items-center justify-between border-t border-blue-400/20">
           <div className="flex items-center gap-1 md:gap-2">
-            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronLeft size={16}/>
-            </button>
-            <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
-              Page {currentPage}/{totalPages}
-            </span>
-            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-              <ChevronRight size={16}/>
-            </button>
+            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50"><ChevronLeft size={16}/></button>
+            <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">Page {currentPage}/{totalPages}</span>
+            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50"><ChevronRight size={16}/></button>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-white text-xs font-bold bg-white/10 px-2 py-1 rounded border border-white/20">
-              ⏱️ {remaining}m
-            </div>
-            <div className="hidden md:block text-white text-xs font-bold bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
-              🔒 PROTECTED
-            </div>
-            {violations>0&&(
-              <div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">
-                ⚠️ {violations}/{MAX_VIOLATIONS}
-              </div>
-            )}
+            <div className="text-white text-xs font-bold bg-white/10 px-2 py-1 rounded border border-white/20">⏱️ {remaining}m</div>
+            <div className="hidden md:block text-white text-xs font-bold bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">🔒 PROTECTED</div>
+            {violations>0&&(<div className="text-white text-xs font-bold bg-orange-500/30 px-2 py-1 rounded border border-orange-400/50 animate-pulse">⚠️ {violations}/{MAX_VIOLATIONS}</div>)}
           </div>
         </div>
       </div>
