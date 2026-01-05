@@ -1,4 +1,4 @@
-// client/src/components/research/ProtectedPDFViewer.jsx - OPTIMIZED
+// client/src/components/research/ProtectedPDFViewer.jsx - FIXED AUTO-RECOVERY + COUNTDOWN
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -30,6 +30,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [violations, setViolations] = useState(0);
   const [userIP, setUserIP] = useState('Unknown');
   const [isBlocked, setIsBlocked] = useState(false);
+  const [blockCountdown, setBlockCountdown] = useState(3); // 🆕 NEW
   const [sessionExpired, setSessionExpired] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30 * 60);
   const [toast, setToast] = useState({ show: false, message: '', type: 'warning' });
@@ -67,25 +68,92 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
+  // 🆕 UPDATED - Auto-recovery logic
   const blockContent = (reason) => {
+    // Step 1: Instant blur
     instantBlur();
-    setIsBlocked(true);
+    
+    // Step 2: Log and notify
     logViolation(reason);
     showToast(`🚫 ${reason}`, 'error');
     screenshotAttempts.current++;
     
+    // Step 3: Update violations and handle recovery
     setViolations(prev => {
       const newCount = prev + 1;
+      
+      // Always block first
+      setIsBlocked(true);
+      
       if (newCount >= MAX_VIOLATIONS) {
+        // FINAL VIOLATION - Permanent block
         showToast('⚠️ Maximum violations - Closing viewer', 'error');
         setTimeout(onClose, 2000);
+      } else {
+        // TEMPORARY BLOCK - Auto-recovery with countdown
+        
+        // Start countdown from 3
+        setBlockCountdown(3);
+        
+        // Countdown interval: 3 -> 2 -> 1
+        const countdownInterval = setInterval(() => {
+          setBlockCountdown(c => {
+            if (c <= 1) {
+              clearInterval(countdownInterval);
+              return 0;
+            }
+            return c - 1;
+          });
+        }, 1000);
+        
+        // Auto-resume after 3 seconds
+        setTimeout(() => {
+          clearInterval(countdownInterval);
+          
+          // Restore canvas
+          if (canvasRef.current) {
+            canvasRef.current.style.transition = 'all 0.3s ease';
+            canvasRef.current.style.filter = 'none';
+            canvasRef.current.style.opacity = '1';
+          }
+          
+          // Restore wrapper
+          if (wrapperRef.current) {
+            wrapperRef.current.style.transition = 'all 0.3s ease';
+            wrapperRef.current.style.filter = 'none';
+            wrapperRef.current.style.opacity = '1';
+          }
+          
+          // Unblock
+          setIsBlocked(false);
+        }, 3000); // 3 second block
       }
+      
       return newCount;
     });
   };
 
+  const logViolation = async (type) => {
+    try {
+      const token = localStorage.getItem('token');
+      const researchId = pdfUrl?.split('/').pop();
+      if (researchId) {
+        await fetch(`${API_BASE}/research/log-violation`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ researchId, violationType: type })
+        });
+      }
+    } catch (err) {
+      console.error('Log error:', err);
+    }
+  };
+
   // ============================================
-  // ENHANCED MACOS PROTECTION - INSTANT BLOCKING
+  // ENHANCED MACOS PROTECTION
   // ============================================
   useEffect(() => {
     if (!isMac) return;
@@ -103,12 +171,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         e.stopImmediatePropagation();
         
         instantBlur();
-        
         navigator.clipboard.writeText(`🔒 PROTECTED - ${user?.email} - ${new Date().toLocaleString()}`).catch(() => {});
-        
-        blockContent('💻 MacOS Screenshot BLOCKED');
+        blockContent('💻 Screenshot Attempt Blocked'); // 🆕 UPDATED MESSAGE
         screenshotAttempts.current += 2;
-        
         return false;
       }
     };
@@ -116,7 +181,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     const detectShareDialog = () => {
       if (document.hidden) {
         instantBlur();
-        blockContent('📸 Screenshot Dialog Detected');
+        blockContent('🔒 Content Protection Activated'); // 🆕 GENERIC MESSAGE
         screenshotAttempts.current++;
       }
     };
@@ -133,7 +198,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   }, [violations, user, isMac]);
 
   // ============================================
-  // ENHANCED iOS PROTECTION - INSTANT BLOCKING
+  // ENHANCED iOS PROTECTION
   // ============================================
   useEffect(() => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -147,13 +212,10 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
 
       if (document.hidden && timeSinceLastVisibility > 100 && timeSinceLastVisibility < 500) {
         instantBlur();
-        
         const flash = document.createElement('div');
         flash.style.cssText = 'position:fixed;inset:0;background:black;z-index:9999;';
         document.body.appendChild(flash);
-        
-        blockContent('📱 iOS Screenshot Detected');
-        
+        blockContent('🔒 Content Protection Activated'); // 🆕 GENERIC MESSAGE
         setTimeout(() => flash.remove(), 500);
       }
 
@@ -163,7 +225,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     const detectPageHide = (e) => {
       if (e.persisted === false) {
         instantBlur();
-        blockContent('📱 Screenshot Detected');
+        blockContent('🔒 Content Protection Activated'); // 🆕 GENERIC MESSAGE
       }
     };
 
@@ -189,7 +251,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         e.preventDefault();
         e.stopPropagation();
         instantBlur();
-        blockContent('💻 PrintScreen Blocked');
+        blockContent('💻 PrintScreen Blocked'); // 🆕 ACCURATE MESSAGE
       }
     };
 
@@ -198,14 +260,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         e.preventDefault();
         navigator.clipboard.writeText('');
         instantBlur();
-        blockContent('💻 Blocked');
+        blockContent('💻 PrintScreen Blocked'); // 🆕 ACCURATE MESSAGE
       }
     };
 
     const detectDevTools = () => {
       if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
         instantBlur();
-        blockContent('🛠️ DevTools Detected');
+        blockContent('🛠️ DevTools Detected'); // 🆕 ACCURATE MESSAGE
         setTimeout(onClose, 2000);
       }
     };
@@ -304,25 +366,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }, 1000);
     return () => clearInterval(countdownRef.current);
   }, []);
-
-  const logViolation = async (type) => {
-    try {
-      const token = localStorage.getItem('token');
-      const researchId = pdfUrl?.split('/').pop();
-      if (researchId) {
-        await fetch(`${API_BASE}/research/log-violation`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ researchId, violationType: type })
-        });
-      }
-    } catch (err) {
-      console.error('Log error:', err);
-    }
-  };
 
   // Load PDF
   useEffect(() => {
@@ -634,123 +677,154 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={2000} />}
 
       <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg">
-        🔍 {Math.round(scale * 100)}%
+        🔍 {Math.roun 
+(scale * 100)}% </div>
+<div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
+    {/* 🆕 UPDATED BLOCK SCREEN WITH COUNTDOWN */}
+    {isBlocked && (
+      <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
+        <div className="text-center max-w-lg p-8">
+          {/* Animated Shield Icon */}
+          <div className="relative mb-6">
+            <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
+              <Shield size={64} className="text-white" />
+            </div>
+            <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
+          </div>
+          
+          {/* Title */}
+          <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
+          
+          {/* Violation Counter */}
+          <p className="text-red-400 text-xl font-semibold mb-3">
+            Violation #{violations} of {MAX_VIOLATIONS}
+          </p>
+          
+          {/* Countdown OR Closing Message */}
+          {violations < MAX_VIOLATIONS ? (
+            <>
+              {/* Countdown Timer */}
+              <div className="text-white text-6xl font-bold mt-8 mb-4 animate-pulse">
+                {blockCountdown}
+              </div>
+              <p className="text-gray-400 text-lg mb-6">
+                Resuming in {blockCountdown} second{blockCountdown !== 1 ? 's' : ''}...
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Final Violation Message */}
+              <div className="text-red-400 text-6xl font-bold mt-8 mb-4 animate-bounce">
+                ✕
+              </div>
+              <p className="text-red-400 text-lg mb-6 font-bold">
+                Closing viewer...
+              </p>
+            </>
+          )}
+          
+          {/* User Info */}
+          <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
+            <p className="font-mono">🚨 Action Logged</p>
+            <p className="font-mono mt-1">📍 {userIP}</p>
+            <p className="font-mono mt-1">👤 {user?.email}</p>
+          </div>
+        </div>
       </div>
+    )}
 
-      <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
-        {isBlocked && (
-          <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
-            <div className="text-center max-w-lg p-8">
-              <div className="relative mb-6">
-                <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
-                  <Shield size={64} className="text-white" />
-                </div>
-                <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
-              </div>
-              <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
-              <p className="text-red-400 text-xl font-semibold mb-3">Violation #{violations} of {MAX_VIOLATIONS}</p>
-              <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
-                <p className="font-mono">🚨 Action Logged</p>
-                <p className="font-mono mt-1">📍 {userIP}</p>
-                <p className="font-mono mt-1">👤 {user?.email}</p>
-              </div>
-            </div>
-          </div>
+    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Shield className="text-blue-200 flex-shrink-0" size={18} />
+        <div className="min-w-0 flex-1">
+          <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
+          <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {!isMobile && (
+          <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
+            <Maximize2 size={16} />
+          </button>
         )}
+        <div className="w-px h-6 bg-blue-400/30"></div>
+        <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
+          <X size={16} />
+        </button>
+      </div>
+    </div>
 
-        <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Shield className="text-blue-200 flex-shrink-0" size={18} />
-            <div className="min-w-0 flex-1">
-              <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
-              <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isMobile && (
-              <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
-                <Maximize2 size={16} />
-              </button>
-            )}
-            <div className="w-px h-6 bg-blue-400/30"></div>
-            <button onClick={onClose} className="p-1.5 md:p-2 bg-red-500 hover:bg-red-600 rounded text-white">
-              <X size={16} />
+    <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 flex items-start justify-center">
+      <div
+        ref={wrapperRef}
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+          transition: isBlocked ? 'none' : 'transform 0.2s ease-out',
+          filter: isBlocked ? 'blur(50px) brightness(0.3)' : 'none',
+          opacity: rendered && !isBlocked ? 1 : 0,
+          pointerEvents: isBlocked ? 'none' : 'auto'
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          className="shadow-2xl border-2 border-blue-700 rounded-lg"
+          style={{
+            display: 'block',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none'
+          }}
+        />
+      </div>
+    </div>
+
+    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 border-t-2 border-blue-700">
+      {isMobile && (
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1">
+            <button onClick={zoomOut} disabled={ZOOM_LEVELS.indexOf(scale) === 0} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
+              <ZoomOut size={18} />
+            </button>
+            <button onClick={resetZoom} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold active:scale-95 transition">
+              Reset
+            </button>
+            <button onClick={zoomIn} disabled={ZOOM_LEVELS.indexOf(scale) === ZOOM_LEVELS.length - 1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
+              <ZoomIn size={18} />
             </button>
           </div>
-        </div>
-
-        <div ref={containerRef} className="flex-1 overflow-auto bg-gray-900 p-4 md:p-6 flex items-start justify-center">
-          <div
-            ref={wrapperRef}
-            style={{
-              transform: `scale(${scale})`,
-              transformOrigin: 'top center',
-              transition: isBlocked ? 'none' : 'transform 0.2s ease-out',
-              filter: isBlocked ? 'blur(50px) brightness(0.3)' : 'none',
-              opacity: rendered && !isBlocked ? 1 : 0,
-              pointerEvents: isBlocked ? 'none' : 'auto'
-            }}
-          >
-            <canvas
-              ref={canvasRef}
-              className="shadow-2xl border-2 border-blue-700 rounded-lg"
-              style={{
-                display: 'block',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                WebkitTouchCallout: 'none'
-              }}
-            />
+          <div className="text-white text-xs bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
+            💡 Double-tap to zoom
           </div>
         </div>
+      )}
 
-        <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 border-t-2 border-blue-700">
-          {isMobile && (
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1">
-                <button onClick={zoomOut} disabled={ZOOM_LEVELS.indexOf(scale) === 0} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
-                  <ZoomOut size={18} />
-                </button>
-                <button onClick={resetZoom} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold active:scale-95 transition">
-                  Reset
-                </button>
-                <button onClick={zoomIn} disabled={ZOOM_LEVELS.indexOf(scale) === ZOOM_LEVELS.length - 1} className="p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-30 active:scale-95 transition">
-                  <ZoomIn size={18} />
-                </button>
-              </div>
-              <div className="text-white text-xs bg-blue-500/30 px-2 py-1 rounded border border-blue-400/50">
-                💡 Double-tap to zoom
-              </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 md:gap-2">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
+            Page {currentPage}/{totalPages}
+          </span>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()}`}>
+            ⏱️ {formatTime(timeRemaining)}
+          </div>
+          {violations > 0 && (
+            <div className="text-white text-xs font-bold bg-red-500/30 px-2 py-1 rounded border border-red-400/50 animate-pulse">
+              ⚠️ {violations}/{MAX_VIOLATIONS}
             </div>
           )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 md:gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-white text-xs md:text-sm px-2 md:px-4 py-1 min-w-[100px] md:min-w-[140px] text-center font-mono bg-white/10 rounded font-bold">
-                Page {currentPage}/{totalPages}
-              </span>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded text-white disabled:opacity-50">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()}`}>
-                ⏱️ {formatTime(timeRemaining)}
-              </div>
-              {violations > 0 && (
-                <div className="text-white text-xs font-bold bg-red-500/30 px-2 py-1 rounded border border-red-400/50 animate-pulse">
-                  ⚠️ {violations}/{MAX_VIOLATIONS}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
-    </>
-  );
+    </div>
+  </div>
+</>
+);
 };
-
 export default ProtectedPDFViewer;
