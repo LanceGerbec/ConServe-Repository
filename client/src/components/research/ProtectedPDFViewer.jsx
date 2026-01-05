@@ -483,7 +483,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
         ctx.font = `bold ${badgeFont2}px Inter, monospace`;
-        ctx.fillText(`ConServe Repository`, 8, displayHeight - 48);
+        ctx.fillText(`CONserve Repository`, 8, displayHeight - 48);
         ctx.font = `${badgeFont2 * 0.9}px Inter, monospace`;
         ctx.fillText(`NEUST College of Nursing`, 8, displayHeight - 32);
         ctx.fillText(`© ${now.getFullYear()} - All Rights`, 8, displayHeight - 16);

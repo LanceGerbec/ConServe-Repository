@@ -104,7 +104,7 @@ const Help = () => {
           <HelpCircle size={32} className="text-white" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Help Center</h1>
-        <p className="text-gray-600 dark:text-gray-400">Find answers and learn how to use ConServe</p>
+        <p className="text-gray-600 dark:text-gray-400">Find answers and learn how to use CONserve</p>
       </div>
 
       {/* Quick Links */}

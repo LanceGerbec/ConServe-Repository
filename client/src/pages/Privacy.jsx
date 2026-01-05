@@ -65,10 +65,10 @@ const Privacy = () => {
           Our Commitment
         </h2>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-          ConServe is committed to protecting your privacy and personal data. This Privacy Policy explains how we collect, use, store, and protect your information in compliance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>.
+          CONserve is committed to protecting your privacy and personal data. This Privacy Policy explains how we collect, use, store, and protect your information in compliance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>.
         </p>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          By using ConServe, you acknowledge that you have read and understood this Privacy Policy and consent to the collection and processing of your personal data as described herein.
+          By using CONserve, you acknowledge that you have read and understood this Privacy Policy and consent to the collection and processing of your personal data as described herein.
         </p>
       </div>
 
@@ -191,7 +191,7 @@ const Privacy = () => {
       {/* Cookies */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-5">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Cookies & Tracking</h2>
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">ConServe uses essential cookies to:</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">CONserve uses essential cookies to:</p>
         <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300 mb-3">
           <li className="flex items-start"><span className="mr-2">•</span>Maintain secure login sessions</li>
           <li className="flex items-start"><span className="mr-2">•</span>Remember theme preferences</li>

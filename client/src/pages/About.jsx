@@ -35,7 +35,7 @@ const About = () => {
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-          About <span className="text-navy">ConServe</span>
+          About <span className="text-navy">CONserve</span>
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400">Preserving excellence in nursing research</p>
       </div>
@@ -44,10 +44,10 @@ const About = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 mb-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
           <BookOpen className="text-navy" size={24} />
-          What is ConServe?
+          What is CONserve?
         </h2>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-          ConServe is the official research repository of Nueva Ecija University of Science and Technology (NEUST) College of Nursing. Our platform serves as a comprehensive digital archive for nursing research papers, theses, and academic publications.
+          CONserve is the official research repository of Nueva Ecija University of Science and Technology (NEUST) College of Nursing. Our platform serves as a comprehensive digital archive for nursing research papers, theses, and academic publications.
         </p>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
           We are committed to preserving, protecting, and promoting academic research excellence by providing a secure, accessible platform that connects researchers, students, and faculty members within the nursing community.

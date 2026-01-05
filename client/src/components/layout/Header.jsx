@@ -66,7 +66,7 @@ const Header = () => {
                   {logos.conserve?.url ? <img src={logos.conserve.url} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-white font-bold text-lg md:text-xl">C</span>}
                 </div>
                 <div className="hidden lg:block">
-                  <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">ConServe</span>
+                  <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">CONserve</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400 block">Repository</span>
                 </div>
               </Link>

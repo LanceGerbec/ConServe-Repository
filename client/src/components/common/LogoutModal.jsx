@@ -29,7 +29,7 @@ const LogoutModal = ({ isOpen, onConfirm, onCancel }) => {
         {/* Body */}
         <div className="p-6">
           <p className="text-gray-700 dark:text-gray-300 text-center mb-6">
-            Are you sure you want to logout from ConServe?
+            Are you sure you want to logout from CONserve?
           </p>
 
           {/* Action Buttons */}

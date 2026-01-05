@@ -6,7 +6,7 @@ const OnboardingModal = ({ onComplete, onSkip }) => {
 
   const steps = [
     {
-      title: "Welcome to ConServe! 👋",
+      title: "Welcome to CONserve! 👋",
       description: "Your research repository hub for NEUST College of Nursing",
       icon: BookOpen,
       features: [
@@ -41,7 +41,7 @@ const OnboardingModal = ({ onComplete, onSkip }) => {
     {
       title: "You're All Set! 🎉",
       icon: Check,
-      description: "Ready to explore ConServe",
+      description: "Ready to explore CONserve",
       features: [
         "Visit Dashboard to see your stats",
         "Browse Research to explore papers",

@@ -57,7 +57,7 @@ const Footer = () => {
               </Link>
             </div>
             
-            <h3 className="text-white font-bold text-lg mb-2">ConServe</h3>
+            <h3 className="text-white font-bold text-lg mb-2">CONserve</h3>
             <p className="text-sm text-gray-400">NEUST College of Nursing Research Repository - Preserving academic excellence.</p>
           </div>
 
@@ -99,7 +99,7 @@ const Footer = () => {
         {/* Bottom Section - Centered */}
         <div className="text-center space-y-3">
           <p className="text-sm text-gray-400">
-            © {new Date().getFullYear()} ConServe - NEUST College of Nursing. All rights reserved.
+            © {new Date().getFullYear()} CONserve - NEUST College of Nursing. All rights reserved.
           </p>
           
           <p className="text-xs text-gray-500">

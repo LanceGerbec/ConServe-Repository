@@ -41,7 +41,7 @@ const Home = () => {
           </div>
 
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-3 md:mb-6 animate-fade-in tracking-tight leading-tight">
-            <span className="text-navy-800 dark:text-white">Con</span><span className="text-navy-900 dark:text-white">Serve</span>
+            <span className="text-navy-800 dark:text-white">CON</span><span className="text-navy-900 dark:text-white">serve</span>
           </h1>
           
           <p className="text-base md:text-xl lg:text-3xl text-navy-700 dark:text-gray-300 mb-2 md:mb-4 font-bold tracking-wide">
@@ -89,7 +89,7 @@ const Home = () => {
       <section className="px-4 py-12 md:py-20 max-w-7xl mx-auto bg-gradient-to-b from-white via-blue-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <div className="text-center mb-8 md:mb-16">
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-navy-900 dark:text-white mb-3 md:mb-5 tracking-tight leading-tight">
-            Why Choose ConServe?
+            Why Choose CONserve?
           </h2>
           <p className="text-sm md:text-lg lg:text-xl text-navy-700 dark:text-navy-300 font-semibold">Professional Tools for Nursing Research Excellence</p>
         </div>
@@ -214,7 +214,7 @@ const Home = () => {
               <h2 className="text-2xl md:text-4xl lg:text-5xl font-black text-white mb-4 md:mb-8 tracking-tight">
                 Welcome Back, {user.firstName}!
               </h2>
-              <p className="text-sm md:text-lg text-blue-100 dark:text-blue-200 mb-8 md:mb-12 font-medium">Continue your research journey with ConServe</p>
+              <p className="text-sm md:text-lg text-blue-100 dark:text-blue-200 mb-8 md:mb-12 font-medium">Continue your research journey with CONserve</p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-5 justify-center">
                 {(user.role === 'student' || user.role === 'faculty') && (
                   <button 

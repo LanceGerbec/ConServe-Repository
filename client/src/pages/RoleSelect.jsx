@@ -70,7 +70,7 @@ const RoleSelect = () => {
               {logo ? <img src={logo} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-navy font-bold text-3xl sm:text-4xl">C</span>}
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-3 sm:mb-4 leading-tight">
-              Welcome to <span className="text-blue-400">ConServe</span>
+              Welcome to <span className="text-blue-400">CONserve</span>
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-gray-200 px-2">Select your role to access the research repository</p>
           </div>
