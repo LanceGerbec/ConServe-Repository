@@ -229,114 +229,210 @@ useEffect(() => {
   };
 }, [violations, user]);
 
-  // Mobile protection (keep existing)
-  useEffect(() => {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    if (!isMobile) return;
+ // ============================================
+// 🔒 ENHANCED iOS SCREENSHOT PROTECTION
+// ============================================
 
-    const hideContent = () => {
-      if (wrapperRef.current) {
-        wrapperRef.current.style.opacity = '0';
-        wrapperRef.current.style.filter = 'blur(50px)';
-        setTimeout(() => {
-          if (wrapperRef.current) {
-            wrapperRef.current.style.opacity = '1';
-            wrapperRef.current.style.filter = 'none';
-          }
-        }, 2000);
-      }
-    };
+useEffect(() => {
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isIOS) return;
 
-    if (isAndroid) {
-      const detectVisibility = () => {
-        const now = Date.now();
-        visibilityCount.current++;
-        if (document.hidden) {
-          hideContent();
-          blockContent('📱 Screenshot Blocked');
-          lastHideTime.current = now;
-          if (now - lastHideTime.current < 1000) screenshotAttempts.current += 2;
-        }
-      };
+  let lastInteractionTime = Date.now();
+  let suspiciousPatternCount = 0;
+  let blurTimeout = null;
+  let isBlurring = false;
 
-      const detectBlur = () => {
-        hideContent();
-        blockContent('📱 Screenshot Blocked');
-      };
+  // LAYER 1: Ultra-Fast Visibility Detection
+  const detectVisibilityChange = () => {
+    const now = Date.now();
+    const timeSinceLastInteraction = now - lastInteractionTime;
 
-      const detectTouch = (e) => {
-        if (e.touches?.length > 2) {
-          e.preventDefault();
-          e.stopPropagation();
-          hideContent();
-          blockContent('📱 3+ Fingers Blocked');
-          return false;
-        }
-      };
-
-      let powerPressed = false, volumePressed = false, volumeTime = 0;
-      const detectKeys = (e) => {
-        const key = e.keyCode || e.key;
-        const now = Date.now();
-        
-        if ([26, 'Power', 116, 223].includes(key)) powerPressed = true;
-        if ([25, 'VolumeDown', 114, 175, 'AudioVolumeDown'].includes(key)) {
-          volumePressed = true;
-          volumeTime = now;
-        }
-        
-        if (powerPressed && volumePressed && now - volumeTime < 500) {
-          e.preventDefault();
-          e.stopPropagation();
-          hideContent();
-          blockContent('📱 Hardware Screenshot BLOCKED');
-          screenshotAttempts.current += 2;
-          document.body.style.opacity = '0';
-          setTimeout(() => {
-            document.body.style.opacity = '1';
-            powerPressed = volumePressed = false;
-          }, 3000);
-          return false;
-        }
-        
-        setTimeout(() => { powerPressed = volumePressed = false; }, 600);
-      };
-
-      document.addEventListener('visibilitychange', detectVisibility);
-      window.addEventListener('blur', detectBlur);
-      window.addEventListener('pagehide', detectBlur);
-      document.addEventListener('keydown', detectKeys, { passive: false });
-      document.addEventListener('keyup', detectKeys, { passive: false });
-      document.addEventListener('touchstart', detectTouch, { passive: false });
-
-      return () => {
-        document.removeEventListener('visibilitychange', detectVisibility);
-        window.removeEventListener('blur', detectBlur);
-        window.removeEventListener('pagehide', detectBlur);
-        document.removeEventListener('keydown', detectKeys);
-        document.removeEventListener('keyup', detectKeys);
-        document.removeEventListener('touchstart', detectTouch);
-      };
+    // iOS screenshot causes 50-200ms visibility change
+    if (document.hidden && timeSinceLastInteraction > 100 && timeSinceLastInteraction < 1000) {
+      triggerScreenshotBlur('📱 iOS Screenshot Detected');
+      suspiciousPatternCount++;
     }
 
-    const preventAll = (e) => { 
-      e.preventDefault();
-      e.stopPropagation();
-      hideContent();
-      blockContent('📱 Action Blocked');
-      return false;
-    };
+    lastInteractionTime = now;
+  };
 
-    ['contextmenu', 'selectstart', 'select', 'dragstart', 'copy'].forEach(ev => 
-      document.addEventListener(ev, preventAll, { passive: false })
-    );
+  // LAYER 2: Blur Detection (iOS screenshot causes brief blur)
+  const detectBlur = () => {
+    const now = Date.now();
+    const timeSinceLastInteraction = now - lastInteractionTime;
 
-    return () => {
-      ['contextmenu', 'selectstart', 'select', 'dragstart', 'copy'].forEach(ev => 
-        document.removeEventListener(ev, preventAll)
-      );
-    };
-  }, [violations, isMobile]);
+    if (timeSinceLastInteraction < 500) {
+      triggerScreenshotBlur('📸 Screenshot Attempt');
+      suspiciousPatternCount++;
+    }
+  };
+
+  // LAYER 3: Page Hide Detection (iOS background transition)
+  const detectPageHide = (e) => {
+    // iOS screenshot triggers pagehide momentarily
+    if (e.persisted === false) {
+      triggerScreenshotBlur('📱 Hardware Screenshot');
+      suspiciousPatternCount += 2;
+    }
+  };
+
+  // LAYER 4: Focus Loss Pattern Analysis
+  const detectFocusLoss = () => {
+    const now = Date.now();
+    const timeSinceLastInteraction = now - lastInteractionTime;
+
+    // Rapid focus loss = screenshot attempt
+    if (timeSinceLastInteraction < 300) {
+      triggerScreenshotBlur('⚠️ Suspicious Activity');
+      suspiciousPatternCount++;
+    }
+  };
+
+  // LAYER 5: Screen Recording Detection
+  const detectScreenRecording = () => {
+    // iOS screen recording changes pixel ratio
+    const originalRatio = window.devicePixelRatio;
+    
+    setInterval(() => {
+      if (window.devicePixelRatio !== originalRatio) {
+        triggerScreenshotBlur('🎥 Screen Recording Detected');
+        screenshotAttempts.current += 3;
+      }
+    }, 1000);
+  };
+
+  // LAYER 6: AssistiveTouch Detection (rapid touch patterns)
+  const detectAssistiveTouch = (e) => {
+    const now = Date.now();
+    
+    // AssistiveTouch creates artificial touch events
+    if (e.touches?.length === 1 && e.timeStamp - lastInteractionTime < 50) {
+      triggerScreenshotBlur('🔘 AssistiveTouch Screenshot');
+      suspiciousPatternCount++;
+    }
+    
+    lastInteractionTime = now;
+  };
+
+  // CORE: Screenshot Blur Function
+  const triggerScreenshotBlur = (reason) => {
+    if (isBlurring) return;
+    isBlurring = true;
+
+    // Instant visual disruption
+    if (canvasRef.current) {
+      canvasRef.current.style.transition = 'none';
+      canvasRef.current.style.filter = 'blur(50px) brightness(0.1) contrast(0.3)';
+      canvasRef.current.style.opacity = '0';
+      canvasRef.current.style.transform = 'scale(0.8)';
+    }
+
+    // Flash black overlay
+    const blackOverlay = document.createElement('div');
+    blackOverlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: black;
+      z-index: 9999;
+      animation: fadeOut 2s forwards;
+    `;
+    document.body.appendChild(blackOverlay);
+
+    // Log violation
+    blockContent(reason);
+    screenshotAttempts.current++;
+
+    // Restore content after 2.5s
+    clearTimeout(blurTimeout);
+    blurTimeout = setTimeout(() => {
+      if (canvasRef.current && violations < MAX_VIOLATIONS) {
+        canvasRef.current.style.filter = 'none';
+        canvasRef.current.style.opacity = '1';
+        canvasRef.current.style.transform = 'scale(1)';
+        setIsBlocked(false);
+      }
+      
+      if (blackOverlay.parentNode) {
+        blackOverlay.remove();
+      }
+      
+      isBlurring = false;
+
+      // Check for repeated attempts
+      if (suspiciousPatternCount >= 3) {
+        showToast('🚨 Multiple screenshot attempts detected!', 'error');
+        screenshotAttempts.current += 2;
+        suspiciousPatternCount = 0;
+      }
+    }, 2500);
+
+    // Dynamic watermark refresh (make screenshot useless)
+    setTimeout(() => {
+      if (pdf && canvasRef.current) {
+        // Force re-render with new timestamp
+        setCurrentPage(p => p);
+      }
+    }, 100);
+  };
+
+  // LAYER 7: Clipboard Poisoning (for screenshot paste)
+  const poisonClipboard = () => {
+    const watermark = `🔒 CONFIDENTIAL - DO NOT DISTRIBUTE
+
+📱 Document: ${paperTitle}
+👤 Viewer: ${user?.firstName} ${user?.lastName}
+🆔 ID: ${user?.studentId || 'N/A'}
+📧 Email: ${user?.email || 'N/A'}
+📍 IP: ${userIP}
+📅 Timestamp: ${new Date().toLocaleString()}
+🚨 Session: ${Math.random().toString(36).substring(2, 10).toUpperCase()}
+
+⚠️ WARNING: This document is protected by intellectual property laws.
+Unauthorized copying, distribution, or sharing is strictly prohibited.
+This action has been logged and may result in disciplinary action.
+
+© ${new Date().getFullYear()} ConServe - NEUST College of Nursing
+All Rights Reserved`;
+
+    navigator.clipboard.writeText(watermark).catch(() => {});
+  };
+
+  // Add CSS for flash animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Attach all listeners
+  document.addEventListener('visibilitychange', detectVisibilityChange);
+  window.addEventListener('blur', detectBlur);
+  window.addEventListener('pagehide', detectPageHide);
+  window.addEventListener('focus', detectFocusLoss);
+  document.addEventListener('touchstart', detectAssistiveTouch, { passive: false });
+
+  // Poison clipboard every 2 seconds
+  const clipboardInterval = setInterval(poisonClipboard, 2000);
+
+  // Start screen recording detection
+  detectScreenRecording();
+
+  // Cleanup
+  return () => {
+    document.removeEventListener('visibilitychange', detectVisibilityChange);
+    window.removeEventListener('blur', detectBlur);
+    window.removeEventListener('pagehide', detectPageHide);
+    window.removeEventListener('focus', detectFocusLoss);
+    document.removeEventListener('touchstart', detectAssistiveTouch);
+    clearInterval(clipboardInterval);
+    clearTimeout(blurTimeout);
+    if (style.parentNode) style.remove();
+  };
+}, [pdf, violations, user, userIP, paperTitle]);
 
   // Double-tap zoom (mobile)
   useEffect(() => {
