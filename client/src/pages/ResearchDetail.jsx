@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
 import ReviewForm from '../components/review/ReviewForm';
-import ReviewHistory from '../components/review/ReviewHistory';
+import ReviewsModal from '../components/review/ReviewsModal';
 import SimilarPapers from '../components/research/SimilarPapers';
 import AwardsModal from '../components/admin/AwardsModal';
 
@@ -21,6 +21,7 @@ const ResearchDetail = () => {
   const [showCitation, setShowCitation] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
@@ -281,9 +282,30 @@ const ResearchDetail = () => {
             </p>
           </div>
 
+          {/* REVIEWS BUTTON - NEW */}
           {canSeeReviews && reviews.length > 0 && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <ReviewHistory reviews={reviews} onDelete={fetchReviews} />
+              <button
+                onClick={() => setShowReviewsModal(true)}
+                className="w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <MessageSquare size={20} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 dark:text-white text-sm">
+                      📋 Faculty Reviews ({reviews.length})
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Click to view all reviews
+                    </p>
+                  </div>
+                </div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold group-hover:translate-x-1 transition">
+                  →
+                </div>
+              </button>
             </div>
           )}
 
@@ -379,6 +401,19 @@ const ResearchDetail = () => {
           paper={paper} 
           onClose={() => setShowReviewModal(false)} 
           onSuccess={() => { setShowReviewModal(false); fetchPaper(); fetchReviews(); }} 
+        />
+      )}
+
+      {/* REVIEWS MODAL - NEW */}
+      {showReviewsModal && (
+        <ReviewsModal
+          isOpen={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          reviews={reviews}
+          onDelete={() => {
+            fetchReviews();
+            fetchPaper();
+          }}
         />
       )}
 
