@@ -6,11 +6,44 @@ import AuditLog from '../models/AuditLog.js';
 
 const router = express.Router();
 
-// ✅ NEW: Clean orphaned Faculty IDs
+// ✅ EDIT FACULTY ID
+router.patch('/:id', auth, authorize('admin'), async (req, res) => {
+  try {
+    const { facultyId, fullName } = req.body;
+    const record = await ValidFacultyId.findById(req.params.id);
+    
+    if (!record) return res.status(404).json({ error: 'Not found' });
+    if (record.isUsed) return res.status(400).json({ error: 'Cannot edit: Already used' });
+    
+    if (facultyId && facultyId !== record.facultyId) {
+      const exists = await ValidFacultyId.findOne({ facultyId: facultyId.toUpperCase() });
+      if (exists) return res.status(400).json({ error: 'ID already exists' });
+      record.facultyId = facultyId.toUpperCase();
+    }
+    
+    if (fullName) record.fullName = fullName.trim();
+    await record.save();
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'FACULTY_ID_UPDATED',
+      resource: 'ValidFacultyId',
+      resourceId: record._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { oldId: req.body.oldId, newId: facultyId, name: fullName }
+    });
+
+    res.json({ message: 'Updated successfully', record });
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+// Clean orphaned Faculty IDs
 router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
   try {
-    console.log('🧹 Cleaning orphaned Faculty IDs...');
-    
     const allUsedIds = await ValidFacultyId.find({ isUsed: true });
     let cleaned = 0;
 
@@ -22,7 +55,6 @@ router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
           validId.registeredUser = null;
           await validId.save();
           cleaned++;
-          console.log(`✅ Cleaned: ${validId.facultyId}`);
         }
       }
     }
@@ -38,16 +70,14 @@ router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
 
     res.json({ message: `Cleaned ${cleaned} orphaned Faculty IDs`, cleaned });
   } catch (error) {
-    console.error('❌ Clean error:', error);
     res.status(500).json({ error: 'Failed to clean IDs' });
   }
 });
 
-// Existing routes...
+// Check faculty ID
 router.get('/check/:facultyId', async (req, res) => {
   try {
-    const { facultyId } = req.params;
-    const validId = await ValidFacultyId.findOne({ facultyId: facultyId.toUpperCase(), status: 'active' });
+    const validId = await ValidFacultyId.findOne({ facultyId: req.params.facultyId.toUpperCase(), status: 'active' });
     if (!validId) return res.status(404).json({ valid: false, message: 'Invalid faculty ID' });
     if (validId.isUsed) return res.status(400).json({ valid: false, message: 'Already registered' });
     res.json({ valid: true, facultyInfo: { fullName: validId.fullName, department: validId.department, position: validId.position }});
@@ -56,6 +86,7 @@ router.get('/check/:facultyId', async (req, res) => {
   }
 });
 
+// Get all
 router.get('/', auth, authorize('admin'), async (req, res) => {
   try {
     const { status, search } = req.query;
@@ -69,6 +100,7 @@ router.get('/', auth, authorize('admin'), async (req, res) => {
   }
 });
 
+// Add new
 router.post('/', auth, authorize('admin'), async (req, res) => {
   try {
     const { facultyId, fullName, department, position, email } = req.body;
@@ -77,7 +109,7 @@ router.post('/', auth, authorize('admin'), async (req, res) => {
     if (existing) return res.status(400).json({ error: 'Already exists' });
 
     const validId = await ValidFacultyId.create({
-      facultyId: facultyId.toUpperCase(), fullName, department: department || '', position: position || '', email: email || '', addedBy: req.user._id
+      facultyId: facultyId.toUpperCase(), fullName: fullName.trim(), department: department || '', position: position || '', email: email || '', addedBy: req.user._id
     });
 
     await AuditLog.create({
@@ -91,6 +123,7 @@ router.post('/', auth, authorize('admin'), async (req, res) => {
   }
 });
 
+// Delete
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
     const validId = await ValidFacultyId.findById(req.params.id);

@@ -2,10 +2,15 @@ import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
 import AuditLog from '../models/AuditLog.js';
 
+// ✅ STRIP QUOTES HELPER
+const cleanString = (str) => {
+  if (!str) return '';
+  return str.toString().replace(/^["']|["']$/g, '').trim();
+};
+
 export const bulkUploadStudentIds = async (req, res) => {
   try {
     const { ids } = req.body;
-    
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Invalid data format' });
     }
@@ -14,27 +19,23 @@ export const bulkUploadStudentIds = async (req, res) => {
 
     for (const item of ids) {
       try {
-        if (!item.studentId || !item.fullName) {
+        const cleanId = cleanString(item.studentId);
+        const cleanName = cleanString(item.fullName);
+        
+        if (!cleanId || !cleanName) {
           results.errors.push({ studentId: item.studentId, error: 'Missing required fields' });
           continue;
         }
 
-        const existing = await ValidStudentId.findOne({ 
-          studentId: item.studentId.toUpperCase() 
-        });
-
-        if (existing) {
-          results.skipped++;
-          continue;
-        }
+        const existing = await ValidStudentId.findOne({ studentId: cleanId.toUpperCase() });
+        if (existing) { results.skipped++; continue; }
 
         await ValidStudentId.create({
-          studentId: item.studentId.toUpperCase(),
-          fullName: item.fullName,
+          studentId: cleanId.toUpperCase(),
+          fullName: cleanName,
           addedBy: req.user._id,
           status: 'active'
         });
-
         results.added++;
       } catch (err) {
         results.errors.push({ studentId: item.studentId, error: err.message });
@@ -60,7 +61,6 @@ export const bulkUploadStudentIds = async (req, res) => {
 export const bulkUploadFacultyIds = async (req, res) => {
   try {
     const { ids } = req.body;
-    
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Invalid data format' });
     }
@@ -69,27 +69,23 @@ export const bulkUploadFacultyIds = async (req, res) => {
 
     for (const item of ids) {
       try {
-        if (!item.facultyId || !item.fullName) {
+        const cleanId = cleanString(item.facultyId);
+        const cleanName = cleanString(item.fullName);
+        
+        if (!cleanId || !cleanName) {
           results.errors.push({ facultyId: item.facultyId, error: 'Missing required fields' });
           continue;
         }
 
-        const existing = await ValidFacultyId.findOne({ 
-          facultyId: item.facultyId.toUpperCase() 
-        });
-
-        if (existing) {
-          results.skipped++;
-          continue;
-        }
+        const existing = await ValidFacultyId.findOne({ facultyId: cleanId.toUpperCase() });
+        if (existing) { results.skipped++; continue; }
 
         await ValidFacultyId.create({
-          facultyId: item.facultyId.toUpperCase(),
-          fullName: item.fullName,
+          facultyId: cleanId.toUpperCase(),
+          fullName: cleanName,
           addedBy: req.user._id,
           status: 'active'
         });
-
         results.added++;
       } catch (err) {
         results.errors.push({ facultyId: item.facultyId, error: err.message });
