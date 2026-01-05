@@ -76,24 +76,15 @@ const ReviewHistory = ({ reviews, onDelete }) => {
                     <p className="text-sm text-gray-500">{review.reviewer.role}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    review.decision === 'approved' ? 'bg-green-100 text-green-700' :
-                    review.decision === 'rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {review.decision.toUpperCase()}
-                  </span>
-                  {canDelete(review) && (
-                    <button
-                      onClick={() => setConfirmModal({ isOpen: true, reviewId: review._id })}
-                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"
-                      title="Delete review"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
+                {canDelete(review) && (
+                  <button
+                    onClick={() => setConfirmModal({ isOpen: true, reviewId: review._id })}
+                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"
+                    title="Delete review"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
 
               <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{review.comments}</p>
