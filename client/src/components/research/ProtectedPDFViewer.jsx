@@ -1,4 +1,4 @@
-// client/src/components/research/ProtectedPDFViewer.jsx
+// client/src/components/research/ProtectedPDFViewer.jsx - ENHANCED MACBOOK PROTECTION
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -24,7 +24,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [scale, setScale] = useState(0.5); // 🔥 CHANGED: Start at 50% for mobile auto-fit
+  const [scale, setScale] = useState(0.5);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [violations, setViolations] = useState(0);
@@ -46,12 +46,15 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const visibilityCount = useRef(0);
   const lastTap = useRef(0);
   const renderLockRef = useRef(false);
+  const cmdPressed = useRef(false);
+  const shiftPressed = useRef(false);
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 5;
   const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
   const BASE_SCALE = isMobile ? 1.5 : 1.3;
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
@@ -63,13 +66,18 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     showToast(`🚫 ${reason}`, 'error');
     screenshotAttempts.current++;
     
-    if (isMobile) {
-      document.body.style.opacity = '0';
-      setTimeout(() => {
-        document.body.style.opacity = '1';
-        if (violations < MAX_VIOLATIONS) setIsBlocked(false);
-      }, 3000);
+    if (wrapperRef.current) {
+      wrapperRef.current.style.opacity = '0';
+      wrapperRef.current.style.filter = 'blur(50px)';
     }
+    
+    setTimeout(() => {
+      if (wrapperRef.current && violations < MAX_VIOLATIONS) {
+        wrapperRef.current.style.opacity = '1';
+        wrapperRef.current.style.filter = 'none';
+        setIsBlocked(false);
+      }
+    }, 3000);
     
     if (violations >= MAX_VIOLATIONS - 1 || screenshotAttempts.current >= 3) {
       setTimeout(() => {
@@ -79,65 +87,128 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
+  // 🔥 ENHANCED MACBOOK SCREENSHOT PROTECTION
   useEffect(() => {
-    if (!isMobile || !wrapperRef.current) return;
+    if (!isMac) return;
 
-    const handleDoubleTap = (e) => {
-      const now = Date.now();
-      if (now - lastTap.current < 300) {
-        e.preventDefault();
-        const currentIndex = ZOOM_LEVELS.indexOf(scale);
-        const targetScale = currentIndex <= 2 ? ZOOM_LEVELS[5] : ZOOM_LEVELS[2];
-        setScale(targetScale);
-        showToast(`🔍 ${Math.round(targetScale * 100)}%`, 'success');
-        if (navigator.vibrate) navigator.vibrate(30);
+    const hideContent = () => {
+      if (wrapperRef.current) {
+        wrapperRef.current.style.opacity = '0';
+        wrapperRef.current.style.filter = 'blur(50px)';
+        setTimeout(() => {
+          if (wrapperRef.current) {
+            wrapperRef.current.style.opacity = '1';
+            wrapperRef.current.style.filter = 'none';
+          }
+        }, 2000);
       }
-      lastTap.current = now;
     };
 
-    const wrapper = wrapperRef.current;
-    wrapper.addEventListener('touchend', handleDoubleTap);
-    return () => wrapper?.removeEventListener('touchend', handleDoubleTap);
-  }, [scale, isMobile]);
+    // 🔥 MAC KEYBOARD SCREENSHOT DETECTION
+    const detectMacScreenshot = (e) => {
+      const isCmdShift3 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '3';
+      const isCmdShift4 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '4';
+      const isCmdShift5 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '5';
+      const isCmdShift6 = (e.metaKey || e.key === 'Meta') && e.shiftKey && e.key === '6';
+      
+      // Track Cmd and Shift separately for more reliable detection
+      if (e.key === 'Meta' || e.metaKey) cmdPressed.current = true;
+      if (e.key === 'Shift' || e.shiftKey) shiftPressed.current = true;
+      
+      // Detect if both are pressed with number keys
+      const isScreenshotCombo = cmdPressed.current && shiftPressed.current && 
+        ['3', '4', '5', '6'].includes(e.key);
 
-  const zoomIn = () => {
-    const currentIndex = ZOOM_LEVELS.indexOf(scale);
-    if (currentIndex < ZOOM_LEVELS.length - 1) {
-      const newScale = ZOOM_LEVELS[currentIndex + 1];
-      setScale(newScale);
-      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
-      if (navigator.vibrate) navigator.vibrate(20);
-    } else {
-      showToast('🔍 Max zoom reached', 'warning');
-    }
-  };
+      if (isCmdShift3 || isCmdShift4 || isCmdShift5 || isCmdShift6 || isScreenshotCombo) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        hideContent();
+        blockContent('🖥️ MacBook Screenshot BLOCKED');
+        screenshotAttempts.current += 2;
+        
+        // Extra aggressive: blur the entire body
+        document.body.style.opacity = '0';
+        setTimeout(() => {
+          document.body.style.opacity = '1';
+        }, 2000);
+        
+        return false;
+      }
+    };
 
-  const zoomOut = () => {
-    const currentIndex = ZOOM_LEVELS.indexOf(scale);
-    if (currentIndex > 0) {
-      const newScale = ZOOM_LEVELS[currentIndex - 1];
-      setScale(newScale);
-      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
-      if (navigator.vibrate) navigator.vibrate(20);
-    } else {
-      showToast('🔍 Min zoom reached', 'warning');
-    }
-  };
+    const resetKeys = (e) => {
+      if (e.key === 'Meta' || !e.metaKey) cmdPressed.current = false;
+      if (e.key === 'Shift' || !e.shiftKey) shiftPressed.current = false;
+    };
 
-  const resetZoom = () => {
-    setScale(1);
-    showToast('🔄 Reset', 'success');
-  };
+    // 🔥 DETECT SCREENSHOT APP OPENING (blur event)
+    const detectAppSwitch = () => {
+      hideContent();
+      blockContent('🖥️ MacBook Screenshot App Blocked');
+      screenshotAttempts.current++;
+    };
 
-  const fitToWidth = () => {
-    if (!pdf || !containerRef.current || !canvasRef.current) return;
-    const containerWidth = containerRef.current.clientWidth - 48;
-    const canvasWidth = canvasRef.current.offsetWidth;
-    const newScale = containerWidth / canvasWidth;
-    setScale(Math.min(Math.max(newScale, ZOOM_LEVELS[0]), ZOOM_LEVELS[ZOOM_LEVELS.length - 1]));
-    showToast(`🔄 Fit to Width`, 'success');
-  };
+    // 🔥 VISIBILITY CHANGE (switching to Screenshot.app)
+    const detectVisibility = () => {
+      if (document.hidden) {
+        hideContent();
+        blockContent('🖥️ MacBook App Switch Blocked');
+        lastHideTime.current = Date.now();
+      }
+    };
 
+    // 🔥 PREVENT DRAG AND DROP
+    const preventDrag = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      blockContent('🖥️ Drag Blocked');
+      return false;
+    };
+
+    // 🔥 DETECT QUICKTIME / SCREEN RECORDING
+    const detectScreenRecording = () => {
+      // Check if window dimensions changed (recording toolbar)
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      
+      if (widthDiff > 200 || heightDiff > 200) {
+        hideContent();
+        blockContent('🖥️ Screen Recording Detected');
+      }
+    };
+
+    // Add all event listeners
+    document.addEventListener('keydown', detectMacScreenshot, { capture: true, passive: false });
+    document.addEventListener('keyup', resetKeys, { capture: true, passive: false });
+    window.addEventListener('blur', detectAppSwitch);
+    document.addEventListener('visibilitychange', detectVisibility);
+    document.addEventListener('dragstart', preventDrag, { passive: false });
+    document.addEventListener('drop', preventDrag, { passive: false });
+    
+    const recordingInterval = setInterval(detectScreenRecording, 3000);
+
+    // 🔥 MONITOR FOR SCREENSHOT.APP IN DOCK
+    const monitorFocus = setInterval(() => {
+      if (!document.hasFocus()) {
+        hideContent();
+        blockContent('🖥️ Focus Lost - Screenshot Blocked');
+      }
+    }, 500);
+
+    return () => {
+      document.removeEventListener('keydown', detectMacScreenshot);
+      document.removeEventListener('keyup', resetKeys);
+      window.removeEventListener('blur', detectAppSwitch);
+      document.removeEventListener('visibilitychange', detectVisibility);
+      document.removeEventListener('dragstart', preventDrag);
+      document.removeEventListener('drop', preventDrag);
+      clearInterval(recordingInterval);
+      clearInterval(monitorFocus);
+    };
+  }, [violations, isMac]);
+
+  // Mobile protection (keep existing)
   useEffect(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
     if (!isMobile) return;
@@ -246,6 +317,66 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
   }, [violations, isMobile]);
 
+  // Double-tap zoom (mobile)
+  useEffect(() => {
+    if (!isMobile || !wrapperRef.current) return;
+
+    const handleDoubleTap = (e) => {
+      const now = Date.now();
+      if (now - lastTap.current < 300) {
+        e.preventDefault();
+        const currentIndex = ZOOM_LEVELS.indexOf(scale);
+        const targetScale = currentIndex <= 2 ? ZOOM_LEVELS[5] : ZOOM_LEVELS[2];
+        setScale(targetScale);
+        showToast(`🔍 ${Math.round(targetScale * 100)}%`, 'success');
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+      lastTap.current = now;
+    };
+
+    const wrapper = wrapperRef.current;
+    wrapper.addEventListener('touchend', handleDoubleTap);
+    return () => wrapper?.removeEventListener('touchend', handleDoubleTap);
+  }, [scale, isMobile]);
+
+  const zoomIn = () => {
+    const currentIndex = ZOOM_LEVELS.indexOf(scale);
+    if (currentIndex < ZOOM_LEVELS.length - 1) {
+      const newScale = ZOOM_LEVELS[currentIndex + 1];
+      setScale(newScale);
+      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
+      if (navigator.vibrate) navigator.vibrate(20);
+    } else {
+      showToast('🔍 Max zoom reached', 'warning');
+    }
+  };
+
+  const zoomOut = () => {
+    const currentIndex = ZOOM_LEVELS.indexOf(scale);
+    if (currentIndex > 0) {
+      const newScale = ZOOM_LEVELS[currentIndex - 1];
+      setScale(newScale);
+      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
+      if (navigator.vibrate) navigator.vibrate(20);
+    } else {
+      showToast('🔍 Min zoom reached', 'warning');
+    }
+  };
+
+  const resetZoom = () => {
+    setScale(1);
+    showToast('🔄 Reset', 'success');
+  };
+
+  const fitToWidth = () => {
+    if (!pdf || !containerRef.current || !canvasRef.current) return;
+    const containerWidth = containerRef.current.clientWidth - 48;
+    const canvasWidth = canvasRef.current.offsetWidth;
+    const newScale = containerWidth / canvasWidth;
+    setScale(Math.min(Math.max(newScale, ZOOM_LEVELS[0]), ZOOM_LEVELS[ZOOM_LEVELS.length - 1]));
+    showToast(`🔄 Fit to Width`, 'success');
+  };
+
   useEffect(() => { 
     fetch('https://api.ipify.org?format=json')
       .then(r=>r.json())
@@ -349,7 +480,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // 🔥 UPDATED: Load PDF with auto-fit
   useEffect(() => {
     const loadPDF = async () => {
       try {
@@ -380,21 +510,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setTotalPages(doc.numPages);
         setLoading(false);
 
-        // 🔥 AUTO-FIT TO WIDTH ON MOBILE
         if (isMobile) {
           setTimeout(() => {
             if (containerRef.current && canvasRef.current) {
               const containerWidth = containerRef.current.clientWidth - 48;
               const canvasWidth = canvasRef.current.offsetWidth;
               const fitScale = containerWidth / canvasWidth;
-              
               const autoScale = Math.min(Math.max(fitScale, 0.5), 1.5);
               setScale(autoScale);
-              
-              console.log('📱 Auto-fit mobile:');
-              console.log('   Container width:', containerWidth);
-              console.log('   Canvas width:', canvasWidth);
-              console.log('   Calculated scale:', autoScale);
             }
           }, 200);
         }
@@ -406,7 +529,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE, isMobile]);
 
-  // 🔥 UPDATED: Render with auto-fit adjustment
   useEffect(() => {
     if (!pdf || !canvasRef.current || renderLockRef.current) return;
     
@@ -503,7 +625,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 8, displayHeight - 16);
         ctx.restore();
         
-        // 🔥 MUCH LARGER CENTER WATERMARK
+        // Center watermark
         const centerFont1 = Math.max(28, Math.min(displayWidth, displayHeight) * 0.08);
         const centerFont2 = Math.max(24, Math.min(displayWidth, displayHeight) * 0.07);
         const centerFont3 = Math.max(20, Math.min(displayWidth, displayHeight) * 0.06);
@@ -546,7 +668,6 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         setRendered(true);
         renderLockRef.current = false;
 
-
       } catch (err) {
         console.error('Render error:', err);
         setError(`Render failed: ${err.message}`);
@@ -576,100 +697,90 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       if (blocked.some(Boolean)) {
         e.preventDefault();
         blockContent('⌨️ Shortcut Blocked');
-        setTimeout(() => setIsBlocked(false), 1500);
-        return false;
-      }
-    };
-    ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
-      document.addEventListener(ev, ev==='keydown'?preventKeys:prevent, { passive: false })
-    );
-    return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
-      document.removeEventListener(ev, ev==='keydown'?preventKeys:prevent)
-    );
-  }, []);
+setTimeout(() => setIsBlocked(false), 1500);
+return false;
+}
+};
+['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
+document.addEventListener(ev, ev==='keydown'?preventKeys:prevent, { passive: false })
+);
+return () => ['contextmenu','keydown','copy','cut','paste','selectstart','dragstart'].forEach(ev =>
+document.removeEventListener(ev, ev==='keydown'?preventKeys:prevent)
+);
+}, []);
+useEffect(() => {
+if (isMobile) return;const handleKey = (e) => {
+  if (e.key === '[') zoomOut();
+  if (e.key === ']') zoomIn();
+  if (e.key === '0') resetZoom();
+  if (e.key === 'f' || e.key === 'F') fitToWidth();
+};
 
-  useEffect(() => {
-    if (isMobile) return;
+const handleWheel = (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    const currentIndex = ZOOM_LEVELS.findIndex(z => Math.abs(z - scale) < 0.01);
+    if (delta > 0 && currentIndex < ZOOM_LEVELS.length - 1) {
+      setScale(ZOOM_LEVELS[currentIndex + 1]);
+    } else if (delta < 0 && currentIndex > 0) {
+      setScale(ZOOM_LEVELS[currentIndex - 1]);
+    }
+  }
+};
 
-    const handleKey = (e) => {
-      if (e.key === '[') zoomOut();
-      if (e.key === ']') zoomIn();
-      if (e.key === '0') resetZoom();
-      if (e.key === 'f' || e.key === 'F') fitToWidth();
-    };
+window.addEventListener('keydown', handleKey);
+window.addEventListener('wheel', handleWheel, { passive: false });
 
-    const handleWheel = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const currentIndex = ZOOM_LEVELS.findIndex(z => Math.abs(z - scale) < 0.01);
-        if (delta > 0 && currentIndex < ZOOM_LEVELS.length - 1) {
-          setScale(ZOOM_LEVELS[currentIndex + 1]);
-        } else if (delta < 0 && currentIndex > 0) {
-          setScale(ZOOM_LEVELS[currentIndex - 1]);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKey);
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-      window.removeEventListener('wheel', handleWheel);
-    };
-  }, [isMobile, scale]);
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getTimerColor = () => {
-    if (timeRemaining > 600) return 'bg-green-500/30 border-green-400/50';
-    if (timeRemaining > 300) return 'bg-yellow-500/30 border-yellow-400/50';
-    return 'bg-red-500/30 border-red-400/50 animate-pulse';
-  };
-
-  if (loading) return (
-    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
-          <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32}/>
-        </div>
-        <p className="text-white text-xl font-bold">Loading Protected Document</p>
-        <p className="text-blue-400 text-sm mt-2">🔒 Initializing Security...</p>
-      </div>
-    </div>
-  );
-
-  if (error || sessionExpired) return (
-    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
-      <div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
-        <AlertCircle className="mx-auto text-red-500 mb-4 animate-pulse" size={64}/>
-        <h3 className="text-white text-2xl font-bold mb-3">
-          {sessionExpired?'Session Expired':'Failed to Load'}
-        </h3>
-        <p className="text-gray-300 mb-6 text-sm">
-          {sessionExpired?'Sessions expire after 30min':error}
-        </p>
-        <button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
-          ✕ Close
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      {toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}
-      
-      <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py -1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
-🔍 {Math.round(scale * 100)}%
+return () => {
+  window.removeEventListener('keydown', handleKey);
+  window.removeEventListener('wheel', handleWheel);
+};}, [isMobile, scale]);
+const formatTime = (seconds) => {
+const mins = Math.floor(seconds / 60);
+const secs = seconds % 60;
+return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+const getTimerColor = () => {
+if (timeRemaining > 600) return 'bg-green-500/30 border-green-400/50';
+if (timeRemaining > 300) return 'bg-yellow-500/30 border-yellow-400/50';
+return 'bg-red-500/30 border-red-400/50 animate-pulse';
+};
+if (loading) return (
+<div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+<div className="text-center">
+<div className="relative">
+<div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
+<Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32}/>
 </div>
-<div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
+<p className="text-white text-xl font-bold">Loading Protected Document</p>
+<p className="text-blue-400 text-sm mt-2">🔒 Initializing Security...</p>
+</div>
+</div>
+);
+if (error || sessionExpired) return (
+<div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
+<div className="text-center max-w-md bg-gray-900 rounded-2xl p-8 border-2 border-red-500">
+<AlertCircle className="mx-auto text-red-500 mb-4 animate-pulse" size={64}/>
+<h3 className="text-white text-2xl font-bold mb-3">
+{sessionExpired?'Session Expired':'Failed to Load'}
+</h3>
+<p className="text-gray-300 mb-6 text-sm">
+{sessionExpired?'Sessions expire after 30min':error}
+</p>
+<button onClick={onClose} className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
+✕ Close
+</button>
+</div>
+</div>
+);
+return (
+<>
+{toast.show && <Toast message={toast.message} type={toast.type} onClose={()=>setToast({...toast,show:false})} duration={2000}/>}<div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg animate-fade-in">
+    🔍 {Math.round(scale * 100)}%
+  </div>
+
+  <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
     {isBlocked && (
       <div className="absolute inset-0 bg-black flex items-center justify-center z-[60]">
         <div className="text-center max-w-lg p-8">

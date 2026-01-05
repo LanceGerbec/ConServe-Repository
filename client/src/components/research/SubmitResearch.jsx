@@ -306,7 +306,7 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                           <span className="font-bold text-gray-900 dark:text-white">Upload on behalf of someone else</span>
                         </div>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          Check this if you're uploading historical research where the original authors don't have accounts (e.g., papers from 2018).
+                          Check this box if you are uploading completed research on behalf of the original authors who do not have accounts.
                         </p>
                       </div>
                     </label>
