@@ -4,7 +4,6 @@ import AuditLog from '../models/AuditLog.js';
 import Notification from '../models/Notification.js';
 import { sendEmail } from '../utils/emailService.js';
 
-// Faculty submits review (SUGGESTIONS ONLY)
 export const submitReview = async (req, res) => {
   try {
     const { researchId, comments, ratings } = req.body;
@@ -32,7 +31,6 @@ export const submitReview = async (req, res) => {
       userAgent: req.get('user-agent')
     });
 
-    // 🔔 NOTIFY AUTHOR OF FACULTY REVIEW
     await Notification.create({
       recipient: research.submittedBy._id,
       type: 'REVIEW_RECEIVED',
@@ -44,7 +42,6 @@ export const submitReview = async (req, res) => {
       priority: 'high'
     });
 
-    // Email notification to author
     try {
       await sendEmail({
         to: research.submittedBy.email,
@@ -146,5 +143,43 @@ export const getReviewStats = async (req, res) => {
     res.json({ totalReviews, approved, rejected, revisions });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch review stats' });
+  }
+};
+
+export const deleteReview = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const review = await Review.findById(reviewId).populate('research', 'title');
+
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    const isReviewer = review.reviewer.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isReviewer) {
+      return res.status(403).json({ error: 'Not authorized to delete this review' });
+    }
+
+    await review.deleteOne();
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'REVIEW_DELETED',
+      resource: 'Review',
+      resourceId: reviewId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: {
+        researchTitle: review.research.title,
+        deletedBy: isAdmin ? 'admin' : 'reviewer'
+      }
+    });
+
+    res.json({ message: 'Review deleted successfully' });
+  } catch (error) {
+    console.error('Delete review error:', error);
+    res.status(500).json({ error: 'Failed to delete review' });
   }
 };

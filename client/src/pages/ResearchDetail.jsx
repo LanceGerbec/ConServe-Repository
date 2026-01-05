@@ -1,4 +1,3 @@
-// client/src/pages/ResearchDetail.jsx - MOBILE OPTIMIZED
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare, Award } from 'lucide-react';
@@ -6,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
 import ReviewForm from '../components/review/ReviewForm';
+import ReviewHistory from '../components/review/ReviewHistory';
 import SimilarPapers from '../components/research/SimilarPapers';
 import AwardsModal from '../components/admin/AwardsModal';
 
@@ -14,6 +14,7 @@ const ResearchDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [paper, setPaper] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookmarked, setBookmarked] = useState(false);
@@ -23,7 +24,7 @@ const ResearchDetail = () => {
   const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  useEffect(() => { fetchPaper(); }, [id]);
+  useEffect(() => { fetchPaper(); fetchReviews(); }, [id]);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -58,6 +59,21 @@ const ResearchDetail = () => {
       setError('Connection error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/reviews/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.reviews || []);
+      }
+    } catch (error) {
+      console.error('Fetch reviews error:', error);
     }
   };
 
@@ -133,6 +149,7 @@ const ResearchDetail = () => {
   const isAdmin = user?.role === 'admin';
   const isFaculty = user?.role === 'faculty';
   const canAccess = paper?.status === 'approved' || isAuthor || isAdmin;
+  const canSeeReviews = isAuthor || isAdmin || isFaculty;
 
   if (error || !canAccess) {
     const statusInfo = {
@@ -264,6 +281,12 @@ const ResearchDetail = () => {
             </p>
           </div>
 
+          {canSeeReviews && reviews.length > 0 && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <ReviewHistory reviews={reviews} onDelete={fetchReviews} />
+            </div>
+          )}
+
           {paper.awards?.length > 0 && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
@@ -355,7 +378,7 @@ const ResearchDetail = () => {
         <ReviewForm 
           paper={paper} 
           onClose={() => setShowReviewModal(false)} 
-          onSuccess={() => { setShowReviewModal(false); fetchPaper(); }} 
+          onSuccess={() => { setShowReviewModal(false); fetchPaper(); fetchReviews(); }} 
         />
       )}
 
