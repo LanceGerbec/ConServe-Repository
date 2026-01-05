@@ -677,7 +677,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={2000} />}
 
       <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg">
-        🔍 {Math.roun 
+        🔍 {Math.round 
 (scale * 100)}% </div>
 <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
     {/* 🆕 UPDATED BLOCK SCREEN WITH COUNTDOWN */}
