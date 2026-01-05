@@ -284,7 +284,7 @@ export const sendPasswordResetEmail = async (user, token) => {
             </div>
 
             <p style="font-size:14px;color:#6b7280;margin-top:30px">
-              Questions? Contact us at <a href="mailto:${ADMIN_EMAIL}" style="color:#2563eb;text-decoration:none">${ADMIN_EMAIL}</a>
+              Questions? Contact us at <a href="mailto:conserve2025@gmail.com" style="color:#2563eb;text-decoration:none">conserve2025@gmail.com</a>
             </p>
           </div>
           <div style="background:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb">
@@ -297,7 +297,6 @@ export const sendPasswordResetEmail = async (user, token) => {
     `
   });
 };
-
 // ============================================
 // 🆕 PASSWORD RESET CONFIRMATION EMAIL
 // ============================================
