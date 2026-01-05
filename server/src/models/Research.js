@@ -8,20 +8,25 @@ const researchSchema = new mongoose.Schema({
   keywords: [String],
   category: { type: String, enum: ['Completed', 'Published'], required: true },
   subjectArea: String,
-  yearCompleted: { type: Number, min: 1900, max: 2100 }, // NEW FIELD
+  yearCompleted: { type: Number, min: 1900, max: 2100 },
   fileUrl: { type: String, required: true },
   fileSize: Number,
   fileName: String,
   gridfsId: mongoose.Schema.Types.ObjectId,
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'revision'], default: 'pending' },
-  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  
+  // 🆕 NEW FIELDS FOR "UPLOAD ON BEHALF"
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Account that uploaded
+  uploadedOnBehalf: { type: Boolean, default: false }, // True if uploaded for someone else
+  actualAuthors: [String], // Names of real authors (if they don't have accounts)
+  
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   revisionNotes: String,
-awards: [{
-  name: { type: String, required: true },
-  color: { type: String, default: 'gold' },
-  addedAt: { type: Date, default: Date.now }
-}],
+  awards: [{
+    name: { type: String, required: true },
+    color: { type: String, default: 'gold' },
+    addedAt: { type: Date, default: Date.now }
+  }],
   publishedDate: Date,
   approvedDate: Date,
   views: { type: Number, default: 0 },
@@ -57,10 +62,10 @@ awards: [{
 
 researchSchema.index({ title: 'text', abstract: 'text', keywords: 'text' });
 researchSchema.index({ status: 1, submittedBy: 1 });
-researchSchema.index({ yearCompleted: 1 }); // NEW INDEX
-researchSchema.index({ subjectArea: 1 }); // NEW INDEX
-researchSchema.index({ createdAt: -1 }); // ADD THIS LINE
-researchSchema.index({ views: -1 }); // ADD THIS LINE
-researchSchema.index({ authors: 1 }); // ADD THIS LINE
+researchSchema.index({ yearCompleted: 1 });
+researchSchema.index({ subjectArea: 1 });
+researchSchema.index({ createdAt: -1 });
+researchSchema.index({ views: -1 });
+researchSchema.index({ authors: 1 });
 
 export default mongoose.model('Research', researchSchema);

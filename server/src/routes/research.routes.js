@@ -218,11 +218,35 @@ router.get('/', auth, async (req, res) => {
 });
 
 // SUBMIT RESEARCH
+// REPLACE the POST '/' route (around line 95) with this:
+
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF required' });
     
-    const { title, authors, abstract, keywords, category, subjectArea, yearCompleted } = req.body;
+    const { 
+      title, 
+      authors, 
+      abstract, 
+      keywords, 
+      category, 
+      subjectArea, 
+      yearCompleted,
+      uploadOnBehalf, // 🆕 NEW
+      actualAuthors   // 🆕 NEW
+    } = req.body;
+    
+    // 🆕 CHECK PERMISSION FOR "UPLOAD ON BEHALF"
+    const canUploadOnBehalf = 
+      req.user.role === 'admin' || 
+      req.user.role === 'faculty' || 
+      req.user.canUploadOnBehalf;
+    
+    if (uploadOnBehalf === 'true' && !canUploadOnBehalf) {
+      return res.status(403).json({ 
+        error: 'You do not have permission to upload on behalf of others' 
+      });
+    }
     
     const bucket = getGridFSBucket();
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
@@ -239,9 +263,24 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
 
     uploadStream.on('finish', async () => {
       try {
+        // 🆕 HANDLE AUTHOR NAMES
+        let authorNames = [];
+        let isUploadedOnBehalf = false;
+        let realAuthors = [];
+        
+        if (uploadOnBehalf === 'true' && actualAuthors) {
+          // Uploading on behalf - use provided author names
+          isUploadedOnBehalf = true;
+          realAuthors = JSON.parse(actualAuthors);
+          authorNames = realAuthors;
+        } else {
+          // Normal upload - use parsed authors
+          authorNames = JSON.parse(authors);
+        }
+        
         const research = await Research.create({
           title,
-          authors: JSON.parse(authors),
+          authors: authorNames,
           abstract,
           keywords: JSON.parse(keywords),
           category,
@@ -252,16 +291,22 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           fileSize: req.file.size,
           fileUrl: `/research/${uploadStream.id}/pdf`,
           submittedBy: req.user._id,
+          uploadedOnBehalf: isUploadedOnBehalf, // 🆕
+          actualAuthors: isUploadedOnBehalf ? realAuthors : [], // 🆕
           status: 'pending'
         });
         
         await AuditLog.create({
           user: req.user._id,
-          action: 'RESEARCH_SUBMITTED',
+          action: isUploadedOnBehalf ? 'RESEARCH_SUBMITTED_ON_BEHALF' : 'RESEARCH_SUBMITTED',
           resource: 'Research',
           resourceId: research._id,
           ipAddress: req.ip,
-          userAgent: req.get('user-agent')
+          userAgent: req.get('user-agent'),
+          details: {
+            uploadedOnBehalf: isUploadedOnBehalf,
+            actualAuthors: isUploadedOnBehalf ? realAuthors : null
+          }
         });
         
         await notifyNewResearchSubmitted(research);
