@@ -11,6 +11,8 @@ const StudentLogin = lazy(() => import('./components/auth/StudentLogin'));
 const FacultyLogin = lazy(() => import('./components/auth/FacultyLogin'));
 const AdminLogin = lazy(() => import('./components/auth/AdminLogin'));
 const Register = lazy(() => import('./components/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
 const Help = lazy(() => import('./pages/Help'));
@@ -46,8 +48,8 @@ function App() {
               <Route path="/login/faculty" element={<FacultyLogin />} />
               <Route path="/login/admin" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={lazy(() => import('./pages/ForgotPassword'))()} />
-              <Route path="/reset-password" element={lazy(() => import('./pages/ResetPassword'))()} />  
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
               <Route path="/explore" element={<ProtectedRoute><Layout><Explore /></Layout></ProtectedRoute>} />
