@@ -22,6 +22,7 @@ import searchRoutes from './src/routes/search.routes.js';
 import awardsRoutes from './src/routes/awards.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
+import reportRoutes from './src/routes/report.routes.js';
 
 dotenv.config();
 
@@ -194,6 +195,9 @@ app.use('/api/search', searchRoutes);
 console.log('✅ Search routes registered');
 
 app.use('/api/research', awardsRoutes);
+
+app.use('/api/reports', reportRoutes);
+console.log('✅ Report routes registered');
 
 // Rate limiting for all API routes
 app.use('/api', apiLimiter);
