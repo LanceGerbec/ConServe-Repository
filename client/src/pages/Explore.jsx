@@ -1,6 +1,6 @@
-// client/src/pages/Explore.jsx - WITH AWARDS & VIEW TOGGLE
+// client/src/pages/Explore.jsx - ENHANCED WITH SORTING
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award } from 'lucide-react';
+import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award, ArrowUpDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const useDebounce = (value, delay) => {
@@ -163,6 +163,16 @@ const TipsModal = memo(({ onClose }) => (
             <li>• Recognized research highlighted</li>
           </ul>
         </div>
+
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <h4 className="font-semibold text-sm text-green-900 dark:text-green-300 mb-2">📊 Sorting</h4>
+          <ul className="text-xs text-green-800 dark:text-green-200 space-y-1">
+            <li>• Most Viewed - Popular papers first</li>
+            <li>• Alphabetical - A-Z sorting</li>
+            <li>• By Date - Newest or oldest</li>
+            <li>• Most Awards - Award-winning first</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -177,6 +187,7 @@ const Explore = () => {
   const [initialLoad, setInitialLoad] = useState(true);
   const [searchMode, setSearchMode] = useState('simple');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('exploreViewMode') || 'grid');
+  const [sortBy, setSortBy] = useState(() => localStorage.getItem('exploreSortBy') || 'relevance');
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
   const [filters, setFilters] = useState({ category: '', yearCompleted: '', subjectArea: '', author: '' });
@@ -199,6 +210,10 @@ const Explore = () => {
   useEffect(() => {
     localStorage.setItem('exploreViewMode', viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('exploreSortBy', sortBy);
+  }, [sortBy]);
 
   useEffect(() => {
     if (debouncedQuery && debouncedQuery.length >= 2 && searchMode === 'simple') {
@@ -248,6 +263,33 @@ const Explore = () => {
     setShowSuggestions(combined.length > 0);
   }, [allPapers]);
 
+  const sortedPapers = useMemo(() => {
+    if (!papers.length) return [];
+    const sorted = [...papers];
+    
+    switch (sortBy) {
+      case 'views-desc':
+        return sorted.sort((a, b) => (b.views || 0) - (a.views || 0));
+      case 'alpha-asc':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case 'alpha-desc':
+        return sorted.sort((a, b) => b.title.localeCompare(a.title));
+      case 'date-desc':
+        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      case 'date-asc':
+        return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      case 'awards-desc':
+        return sorted.sort((a, b) => (b.awards?.length || 0) - (a.awards?.length || 0));
+      case 'year-desc':
+        return sorted.sort((a, b) => (b.yearCompleted || 0) - (a.yearCompleted || 0));
+      case 'year-asc':
+        return sorted.sort((a, b) => (a.yearCompleted || 0) - (b.yearCompleted || 0));
+      case 'relevance':
+      default:
+        return sorted;
+    }
+  }, [papers, sortBy]);
+
   const performSearch = async () => {
     setLoading(true);
     setActiveQuery(query);
@@ -293,6 +335,7 @@ const Explore = () => {
     setSemantic(false);
     setSuggestions([]);
     setShowSuggestions(false);
+    setSortBy('relevance');
     setPapers(allPapers);
   }, [allPapers]);
 
@@ -300,6 +343,18 @@ const Explore = () => {
     Object.values(activeFilters).filter(Boolean).length + (activeQuery ? 1 : 0) + (semantic ? 1 : 0), 
     [activeFilters, activeQuery, semantic]
   );
+
+  const sortOptions = [
+    { value: 'relevance', label: '✨ Relevance', show: activeQuery },
+    { value: 'views-desc', label: '👁️ Most Viewed', show: true },
+    { value: 'date-desc', label: '🆕 Newest First', show: true },
+    { value: 'date-asc', label: '📅 Oldest First', show: true },
+    { value: 'alpha-asc', label: '🔤 A → Z', show: true },
+    { value: 'alpha-desc', label: '🔤 Z → A', show: true },
+    { value: 'awards-desc', label: '🏆 Most Awards', show: true },
+    { value: 'year-desc', label: '📆 Year (New)', show: true },
+    { value: 'year-asc', label: '📆 Year (Old)', show: true }
+  ].filter(opt => opt.show);
 
   if (initialLoad) {
     return (
@@ -417,11 +472,23 @@ const Explore = () => {
         )}
       </div>
 
-      <div className="flex items-center justify-between px-4 mb-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400"><strong className="text-navy dark:text-accent text-base">{papers.length}</strong> papers</p>
+      <div className="flex items-center justify-between px-4 mb-3 gap-2">
+        <p className="text-sm text-gray-600 dark:text-gray-400 flex-shrink-0"><strong className="text-navy dark:text-accent text-base">{sortedPapers.length}</strong> papers</p>
+        
         <div className="flex items-center gap-2">
-          {activeCount > 0 && <button onClick={clearAll} className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1"><X size={12} />Clear</button>}
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+          {activeCount > 0 && <button onClick={clearAll} className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 flex-shrink-0"><X size={12} />Clear</button>}
+          
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            className="text-xs border-2 border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 focus:border-navy focus:outline-none bg-white dark:bg-gray-700 font-semibold min-w-0"
+          >
+            {sortOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg flex-shrink-0">
             <button onClick={() => setViewMode('grid')} className={`p-2 rounded transition ${viewMode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`} title="Grid View">
               <Grid size={16} className={viewMode === 'grid' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
             </button>
@@ -432,7 +499,7 @@ const Explore = () => {
         </div>
       </div>
 
-{!activeQuery && recommendations.length > 0 && (
+      {!activeQuery && recommendations.length > 0 && (
         <div className="mx-4 mb-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
             <TrendingUp size={16} className="text-purple-600" />Recommended
@@ -459,26 +526,27 @@ const Explore = () => {
         </div>
       )}
       
-{loading ? (
-    <div className="flex items-center justify-center py-16">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy mx-auto mb-2"></div>
-        <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Searching...</p>
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy mx-auto mb-2"></div>
+            <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Searching...</p>
+          </div>
+        </div>
+      ) : sortedPapers.length === 0 ? (
+        <div className="text-center py-12 mx-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          <BookOpen size={40} className="mx-auto text-gray-400 mb-2 opacity-30" />
+          <p className="text-base font-bold text-gray-900 dark:text-white mb-1">No papers found</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Try different keywords</p>
+          {activeCount > 0 && <button onClick={clearAll} className="px-5 py-2 bg-navy text-white rounded-lg hover:bg-navy-800 transition font-semibold text-sm">Show all</button>}
+        </div>
+      ) : (
+        <div className={`px-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}`}>
+          {sortedPapers.map((paper) => <PaperCard key={paper._id} paper={paper} onClick={(id) => navigate(`/research/${id}`)} highlight={activeQuery} viewMode={viewMode} />)}
+        </div>
+      )}
     </div>
-  ) : papers.length === 0 ? (
-    <div className="text-center py-12 mx-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <BookOpen size={40} className="mx-auto text-gray-400 mb-2 opacity-30" />
-      <p className="text-base font-bold text-gray-900 dark:text-white mb-1">No papers found</p>
-      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Try different keywords</p>
-      {activeCount > 0 && <button onClick={clearAll} className="px-5 py-2 bg-navy text-white rounded-lg hover:bg-navy-800 transition font-semibold text-sm">Show all</button>}
-    </div>
-  ) : (
-    <div className={`px-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}`}>
-      {papers.map((paper) => <PaperCard key={paper._id} paper={paper} onClick={(id) => navigate(`/research/${id}`)} highlight={activeQuery} viewMode={viewMode} />)}
-    </div>
-  )}
-</div>
-);
+  );
 };
+
 export default Explore;
