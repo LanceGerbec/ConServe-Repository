@@ -139,7 +139,7 @@ export const approvalEmailTemplate = (user) => `
   </html>
 `;
 
-// Password Reset Email Template - FIXED LAYOUT
+// Password Reset Email Template
 export const passwordResetEmailTemplate = (user, token) => {
   const resetUrl = `${CLIENT_URL}/reset-password?token=${token}`;
   return `
@@ -150,19 +150,13 @@ export const passwordResetEmailTemplate = (user, token) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Password Reset - ConServe</title>
-  <!--[if mso]>
-  <style type="text/css">
-    body, table, td {font-family: Arial, sans-serif !important;}
-  </style>
-  <![endif]-->
 </head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,sans-serif;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f3f4f6;">
     <tr>
       <td style="padding:20px 0;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
           
-          <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg, #dc2626 0%, #ef4444 100%);padding:40px 30px;text-align:center;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
@@ -183,26 +177,22 @@ export const passwordResetEmailTemplate = (user, token) => {
             </td>
           </tr>
 
-          <!-- Body -->
           <tr>
             <td style="padding:40px 30px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 
-                <!-- Greeting -->
                 <tr>
                   <td style="padding-bottom:20px;">
                     <p style="margin:0;font-size:18px;color:#111827;line-height:1.5;">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
                   </td>
                 </tr>
 
-                <!-- Message -->
                 <tr>
                   <td style="padding-bottom:30px;">
                     <p style="margin:0;font-size:16px;color:#374151;line-height:1.6;">We received a request to reset your password for your ConServe account.</p>
                   </td>
                 </tr>
 
-                <!-- Warning Box -->
                 <tr>
                   <td style="padding-bottom:30px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;">
@@ -220,7 +210,6 @@ export const passwordResetEmailTemplate = (user, token) => {
                   </td>
                 </tr>
 
-                <!-- Button -->
                 <tr>
                   <td style="text-align:center;padding-bottom:30px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
@@ -233,7 +222,6 @@ export const passwordResetEmailTemplate = (user, token) => {
                   </td>
                 </tr>
 
-                <!-- Link Box -->
                 <tr>
                   <td style="padding-bottom:30px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f9fafb;border-radius:8px;">
@@ -249,7 +237,6 @@ export const passwordResetEmailTemplate = (user, token) => {
                   </td>
                 </tr>
 
-                <!-- Contact -->
                 <tr>
                   <td style="padding-top:30px;border-top:1px solid #e5e7eb;">
                     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.5;">
@@ -262,7 +249,6 @@ export const passwordResetEmailTemplate = (user, token) => {
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="background-color:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb;">
               <p style="margin:5px 0;font-size:13px;color:#9ca3af;">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
@@ -279,7 +265,7 @@ export const passwordResetEmailTemplate = (user, token) => {
 `;
 };
 
-// Password Reset Confirmation Template - FIXED LAYOUT
+// Password Reset Confirmation Template
 export const passwordResetConfirmationTemplate = (user) => `
 <!DOCTYPE html>
 <html>
@@ -295,7 +281,6 @@ export const passwordResetConfirmationTemplate = (user) => `
       <td style="padding:20px 0;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
           
-          <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg, #10b981 0%, #34d399 100%);padding:40px 30px;text-align:center;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
@@ -316,7 +301,6 @@ export const passwordResetConfirmationTemplate = (user) => `
             </td>
           </tr>
 
-          <!-- Body -->
           <tr>
             <td style="padding:40px 30px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
@@ -333,7 +317,6 @@ export const passwordResetConfirmationTemplate = (user) => `
                   </td>
                 </tr>
 
-                <!-- Success Box -->
                 <tr>
                   <td style="padding-bottom:30px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#d1fae5;border-left:4px solid #10b981;border-radius:8px;">
@@ -351,7 +334,6 @@ export const passwordResetConfirmationTemplate = (user) => `
                   </td>
                 </tr>
 
-                <!-- Button -->
                 <tr>
                   <td style="text-align:center;padding-bottom:30px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
@@ -364,7 +346,6 @@ export const passwordResetConfirmationTemplate = (user) => `
                   </td>
                 </tr>
 
-                <!-- Warning Box -->
                 <tr>
                   <td style="padding-bottom:30px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;">
@@ -382,7 +363,6 @@ export const passwordResetConfirmationTemplate = (user) => `
                   </td>
                 </tr>
 
-                <!-- Security Info -->
                 <tr>
                   <td style="padding-top:30px;border-top:1px solid #e5e7eb;">
                     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
@@ -396,7 +376,6 @@ export const passwordResetConfirmationTemplate = (user) => `
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="background-color:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb;">
               <p style="margin:5px 0;font-size:13px;color:#9ca3af;">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
@@ -410,6 +389,38 @@ export const passwordResetConfirmationTemplate = (user) => `
   </table>
 </body>
 </html>
+`;
+
+// Admin New User Notification Template
+export const adminNewUserNotificationTemplate = (user) => `
+  <!DOCTYPE html>
+  <html>
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+  <body style="margin:0;padding:20px;background:#f3f4f6">
+    <div style="${styles.container}">
+      ${emailHeader('New User Registration', 'Action Required')}
+      <div style="${styles.body}">
+        <p style="font-size:18px;color:#111827;margin-bottom:20px">A new user has registered and is awaiting approval:</p>
+        
+        <div style="background:#eff6ff;padding:25px;margin:25px 0;border-radius:10px;border:1px solid #bfdbfe">
+          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.user} Name:</strong> ${user.firstName} ${user.lastName}</p>
+          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.envelope} Email:</strong> ${user.email}</p>
+          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.document} ID:</strong> ${user.studentId}</p>
+          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.user} Role:</strong> ${user.role}</p>
+          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.clock} Date:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        ${infoBox(`
+          <p style="margin:0;color:#92400e;font-size:15px;font-weight:bold">${icons.warning} Action Required</p>
+          <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">Please review and approve this user to grant system access.</p>
+        `, 'warning')}
+
+        ${emailButton(CLIENT_URL + '/dashboard', 'Review & Approve User')}
+      </div>
+      ${emailFooter()}
+    </div>
+  </body>
+  </html>
 `;
 
 // Faculty Review Notification Template
@@ -445,12 +456,3 @@ export const facultyReviewNotificationTemplate = (research, reviewer, comments) 
   </body>
   </html>
 `;
-
-export {
-  welcomeEmailTemplate,
-  approvalEmailTemplate,
-  passwordResetEmailTemplate,
-  passwordResetConfirmationTemplate,
-  adminNewUserNotificationTemplate,
-  facultyReviewNotificationTemplate
-};
