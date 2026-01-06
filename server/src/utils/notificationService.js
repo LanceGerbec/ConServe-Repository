@@ -62,38 +62,36 @@ export const notifyFacultyOfApprovedPaper = async (research) => {
 export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
   try {
     const statusConfig = {
-      approved: {
-        emoji: '✅',
-        title: 'Research Approved!',
-        message: `Great news! Your research "${research.title}" has been approved and is now published.`,
-        priority: 'high'
-      },
-      rejected: {
-        emoji: '❌',
-        title: 'Research Needs Revision',
-        message: `Your research "${research.title}" was not approved. Reason: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
-        priority: 'high'
-      },
-      revision: {
-        emoji: '📝',
-        title: 'Revisions Requested',
-        message: `Please revise your research "${research.title}". Feedback: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
-        priority: 'high'
-      }
-    };
+  approved: {
+    title: 'Research Approved',
+    message: `Your research "${research.title}" has been approved and is now published.`,
+    priority: 'high'
+  },
+  rejected: {
+    title: 'Research Needs Revision',
+    message: `Your research "${research.title}" requires revision. Reason: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
+    priority: 'high'
+  },
+  revision: {
+    title: 'Revisions Requested',
+    message: `Please revise your research "${research.title}". Feedback: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
+    priority: 'high'
+  }
+};
+
 
     const config = statusConfig[newStatus];
     if (!config) return;
 
     await Notification.create({
-      recipient: research.submittedBy._id || research.submittedBy,
-      type: `RESEARCH_${newStatus.toUpperCase()}`,
-      title: `${config.emoji} ${config.title}`,
-      message: config.message,
-      link: `/research/${research._id}`,
-      relatedResearch: research._id,
-      priority: config.priority
-    });
+  recipient: research.submittedBy._id || research.submittedBy,
+  type: `RESEARCH_${newStatus.toUpperCase()}`,
+  title: config.title,
+  message: config.message,
+  link: `/research/${research._id}`,
+  relatedResearch: research._id,
+  priority: config.priority
+});
 
     console.log(`✅ ${newStatus.toUpperCase()} notification sent to author`);
   } catch (error) {
@@ -109,7 +107,7 @@ export const notifyViewMilestone = async (research, views) => {
     await Notification.create({
       recipient: research.submittedBy,
       type: 'RESEARCH_VIEWED',
-      title: `🎉 ${views} Views Milestone!`,
+      title: `${views} Views Milestone`,
       message: `Your research "${research.title}" has reached ${views} views!`,
       link: `/research/${research._id}`,
       relatedResearch: research._id,
@@ -131,7 +129,7 @@ export const notifyNewUserRegistered = async (user) => {
     const notifications = admins.map(admin => ({
       recipient: admin._id,
       type: 'NEW_USER_REGISTERED',
-      title: '👤 New User Registration',
+     title: 'New User Registration',
       message: `${user.firstName} ${user.lastName} (${user.role}) - ${user.email}`,
       link: '/dashboard',
       relatedUser: user._id,
@@ -150,7 +148,7 @@ export const notifyAccountApproved = async (userId) => {
     await Notification.create({
       recipient: userId,
       type: 'ACCOUNT_APPROVED',
-      title: '✅ Account Approved!',
+      title: 'Account Approved',
       message: 'Your ConServe account has been approved. You can now login and access the system.',
       link: '/dashboard',
       priority: 'high'
