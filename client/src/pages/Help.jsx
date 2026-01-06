@@ -7,7 +7,7 @@ const Help = () => {
 
   const quickLinks = [
     { icon: Upload, title: 'Submit Research', desc: 'Upload your paper', link: '/dashboard' },
-    { icon: Search, title: 'Search Papers', desc: 'Find research quickly', link: '/browse' },
+    { icon: Search, title: 'Search Papers', desc: 'Find research quickly', link: '/explore' },
     { icon: Shield, title: 'Security', desc: 'Account protection', link: '#security' },
     { icon: FileText, title: 'Guidelines', desc: 'Submission rules', link: '#guidelines' }
   ];
@@ -17,31 +17,33 @@ const Help = () => {
       title: 'Getting Started',
       icon: BookOpen,
       steps: [
-        'Register with valid email',
-        'Wait for admin approval',
-        'Login with credentials',
-        'Explore repository'
+        'Register with valid Student/Faculty ID',
+        'Wait 24-48 hours for approval',
+        'Check email for approval notification',
+        'Login and explore repository'
       ]
     },
     {
       title: 'Submit Research',
       icon: Upload,
       steps: [
-        'Prepare IMRaD format PDF',
-        'Go to dashboard',
-        'Click "Submit Research"',
-        'Fill metadata accurately',
-        'Review and submit'
+        'Prepare PDF in IMRaD format',
+        'Login to your dashboard',
+        'Click "Submit Research" button',
+        'Fill all required metadata',
+        'Upload PDF (max 10MB)',
+        'Review and submit for approval'
       ]
     },
     {
       title: 'Search Papers',
       icon: Search,
       steps: [
-        'Use search bar',
-        'Apply filters',
-        'Use advanced search',
-        'Save to favorites'
+        'Use main search bar',
+        'Apply category filters',
+        'Try advanced search options',
+        'Bookmark favorite papers',
+        'Generate citations easily'
       ]
     }
   ];
@@ -49,43 +51,83 @@ const Help = () => {
   const faqs = [
     {
       q: 'How do I submit research?',
-      a: 'Login → Dashboard → Submit Research → Upload IMRaD PDF → Fill metadata → Review → Submit. Admin approval takes 3-5 days.',
-      tags: ['submit', 'upload', 'research']
+      a: 'Login → Dashboard → Submit Research → Upload IMRaD-format PDF (max 10MB) → Fill metadata (title, authors, keywords, etc.) → Review → Submit. Admin reviews in 24-48 hours.',
+      tags: ['submit', 'upload', 'research', 'pdf']
     },
     {
-      q: 'How long is approval?',
-      a: 'Typically 3-5 business days. You\'ll get email notification once reviewed.',
-      tags: ['approval', 'time', 'review']
+      q: 'How long does approval take?',
+      a: 'Account approval: 24-48 hours. Research paper approval: 24-48 hours after submission. You\'ll receive email notifications for both.',
+      tags: ['approval', 'time', 'review', 'wait']
     },
     {
-      q: 'Can I edit after upload?',
-      a: 'Yes, before admin approval. After approval, email conserve@neust.edu.ph to request changes.',
-      tags: ['edit', 'modify', 'change']
+      q: 'What is IMRaD format?',
+      a: 'IMRaD stands for Introduction, Methods, Results, and Discussion. Your PDF must follow this academic structure for nursing research papers.',
+      tags: ['imrad', 'format', 'structure', 'pdf']
     },
     {
-      q: 'What file format?',
-      a: 'PDF in IMRaD format. Max 10MB. No password protection.',
-      tags: ['format', 'pdf', 'file']
+      q: 'Can I edit after submission?',
+      a: 'Yes, before admin approval via your dashboard. After approval, email conserve2025@gmail.com to request changes with justification.',
+      tags: ['edit', 'modify', 'change', 'update']
+    },
+    {
+      q: 'What file format is required?',
+      a: 'PDF only, max 10MB, in IMRaD format. No password protection. Must include title, abstract, authors, and keywords.',
+      tags: ['format', 'pdf', 'file', 'size']
     },
     {
       q: 'Who can access papers?',
-      a: 'All logged-in users can view abstracts. Full papers require approved account.',
-      tags: ['access', 'view', 'permission']
+      a: 'All approved users can view abstracts and metadata. Full PDFs are viewable online with watermark protection (no downloads).',
+      tags: ['access', 'view', 'permission', 'watermark']
     },
     {
-      q: 'How to reset password?',
-      a: 'Click "Forgot Password" on login → Enter email → Follow link (expires in 1 hour).',
-      tags: ['password', 'reset', 'login']
+      q: 'How do I reset my password?',
+      a: 'Click "Forgot Password" on login page → Enter your email → Check inbox for reset link (expires in 1 hour) → Create new password.',
+      tags: ['password', 'reset', 'login', 'forgot']
     },
     {
       q: 'Can I download papers?',
-      a: 'No direct downloads. View online with watermark protection.',
-      tags: ['download', 'save', 'watermark']
+      a: 'No direct downloads. Papers are viewable online only with watermark protection to preserve intellectual property.',
+      tags: ['download', 'save', 'watermark', 'pdf']
     },
     {
-      q: 'How to cite?',
-      a: 'Click "Cite" button on any paper → Choose style (APA, MLA, Chicago, Harvard) → Copy.',
-      tags: ['cite', 'citation', 'reference']
+      q: 'How do I cite a paper?',
+      a: 'View any paper → Click "Generate Citation" → Choose style (APA, MLA, Chicago, Harvard) → Copy to clipboard. Auto-formatted.',
+      tags: ['cite', 'citation', 'reference', 'apa', 'mla']
+    },
+    {
+      q: 'What is "Upload on Behalf"?',
+      a: 'Faculty and authorized users can submit papers on behalf of authors who don\'t have accounts. The uploader is recorded separately from actual authors.',
+      tags: ['upload', 'behalf', 'faculty', 'author']
+    },
+    {
+      q: 'How do faculty reviews work?',
+      a: 'After admin approval, faculty can provide feedback/suggestions. Final decisions rest with admin. Authors get notified of all reviews.',
+      tags: ['faculty', 'review', 'feedback', 'approval']
+    },
+    {
+      q: 'What happens after approval?',
+      a: 'Your paper is published in the repository, searchable by all users, and you receive email notification. Faculty can then provide reviews.',
+      tags: ['approved', 'published', 'notification']
+    },
+    {
+      q: 'Can I see my submission history?',
+      a: 'Yes. Dashboard → "My Submissions" shows all your papers with status (pending/approved/rejected) and view counts.',
+      tags: ['history', 'submissions', 'dashboard', 'status']
+    },
+    {
+      q: 'How do notifications work?',
+      a: 'Bell icon (top right) shows real-time alerts for: account approval, paper status, faculty reviews, and system updates. Email notifications sent too.',
+      tags: ['notifications', 'alerts', 'bell', 'email']
+    },
+    {
+      q: 'What are valid Student/Faculty IDs?',
+      a: 'Only pre-registered IDs work. If yours doesn\'t work, contact conserve2025@gmail.com with proof of enrollment/employment.',
+      tags: ['id', 'student', 'faculty', 'registration']
+    },
+    {
+      q: 'How secure is my research?',
+      a: 'Papers have digital watermarks, no-download protection, print-blocking, and all access is logged. Your IP rights are protected.',
+      tags: ['security', 'protection', 'watermark', 'ip']
     }
   ];
 
@@ -98,7 +140,6 @@ const Help = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
-      {/* Header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-navy rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
           <HelpCircle size={32} className="text-white" />
@@ -107,12 +148,9 @@ const Help = () => {
         <p className="text-gray-600 dark:text-gray-400">Find answers and learn how to use CONserve</p>
       </div>
 
-      {/* Quick Links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {quickLinks.map((link, i) => (
-          
-          <a  key={i}
-          href={link.link}
+          <a key={i} href={link.link}
             className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition group text-center"
           >
             <div className="w-10 h-10 bg-navy/10 rounded-lg flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
@@ -124,7 +162,6 @@ const Help = () => {
         ))}
       </div>
 
-      {/* Step-by-Step Guides */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Guides</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -151,7 +188,6 @@ const Help = () => {
         </div>
       </div>
 
-      {/* FAQs with Search */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">FAQs</h2>
@@ -160,7 +196,6 @@ const Help = () => {
           </span>
         </div>
 
-        {/* Search */}
         <div className="relative mb-4">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
@@ -175,12 +210,11 @@ const Help = () => {
               onClick={() => setSearchTerm('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <ChevronDown size={18} className="rotate-45" />
+              ×
             </button>
           )}
         </div>
 
-        {/* FAQ List */}
         {filteredFaqs.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
             <MessageSquare size={48} className="mx-auto text-gray-400 mb-3 opacity-50" />
@@ -189,8 +223,7 @@ const Help = () => {
         ) : (
           <div className="space-y-2">
             {filteredFaqs.map((faq, i) => (
-              <div 
-                key={i}
+              <div key={i}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
               >
                 <button
@@ -214,20 +247,19 @@ const Help = () => {
         )}
       </div>
 
-      {/* Contact Support */}
       <div className="bg-gradient-to-r from-navy to-accent text-white rounded-xl p-6 text-center shadow-lg">
         <Mail size={40} className="mx-auto mb-3" />
         <h2 className="text-xl font-bold mb-2">Still Need Help?</h2>
         <p className="mb-5 text-blue-100">Our support team is ready to assist</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a 
-            href="mailto:conserve@neust.edu.ph"
+            href="mailto:conserve2025@gmail.com"
             className="inline-block bg-white text-navy px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition"
           >
             Email Support
           </a>
           <a 
-            href="tel:+631234567890"
+            href="tel:+639123456789"
             className="inline-block bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-lg font-bold hover:bg-white/30 transition"
           >
             Call Us
