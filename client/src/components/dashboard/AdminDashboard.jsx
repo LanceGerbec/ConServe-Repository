@@ -1,10 +1,9 @@
-// client/src/components/dashboard/AdminDashboard.jsx - FIXED STICKY HEADER
+// client/src/components/dashboard/AdminDashboard.jsx - FIXED VERSION
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import AnalyticsDashboard from '../analytics/AnalyticsDashboard';
-import ActivityLogs from '../analytics/ActivityLogs';
+import AnalyticsHub from '../analytics/AnalyticsHub';
 import SettingsManagement from '../admin/SettingsManagement';
 import ValidIdsManagement from '../admin/ValidIdsManagement';
 import AdminReviewModal from '../admin/AdminReviewModal';
@@ -12,7 +11,6 @@ import AwardsModal from '../admin/AwardsModal';
 import TeamManagement from '../admin/TeamManagement';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
-import ReportsDashboard from '../reports/ReportsDashboard';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -40,13 +38,6 @@ const ViewToggle = memo(({ mode, onChange }) => (
       <List size={18} className={mode === 'list' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
     </button>
   </div>
-));
-
-const SortButton = memo(({ label, active, direction, onClick }) => (
-  <button onClick={onClick} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${active ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
-    {label}
-    {active ? (direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
-  </button>
 ));
 
 const SortableHeader = memo(({ label, sortKey, currentSort, onSort }) => {
@@ -163,7 +154,7 @@ const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview, onMa
 ));
 
 const PendingUserCard = memo(({ user, onApprove, onReject }) => (
-  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 active:scale-98 transition-all">
+  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{user.firstName} {user.lastName}</h3>
     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{user.email}</p>
     <p className="text-xs text-gray-500 mb-3">ID: {user.studentId} • {user.role}</p>
@@ -179,7 +170,7 @@ const PendingUserCard = memo(({ user, onApprove, onReject }) => (
 ));
 
 const PendingResearchCard = memo(({ paper, onReview }) => (
-  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 active:scale-98 transition-all">
+  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
     <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 text-sm">{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
     <p className="text-xs text-gray-500 mb-3 line-clamp-2">{paper.abstract}</p>
@@ -217,17 +208,11 @@ const AdminDashboard = () => {
   const showToast = useCallback((msg, type = 'success') => setToast({ show: true, message: msg, type }), []);
 
   const handleUserSort = useCallback((key) => {
-    setUserSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
+    setUserSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
   }, []);
 
   const handlePaperSort = useCallback((key) => {
-    setPaperSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
+    setPaperSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
   }, []);
 
   const getSortedUsers = useCallback((users) => {
@@ -252,9 +237,8 @@ const AdminDashboard = () => {
           bVal = new Date(b.createdAt);
           break;
         case 'status':
-          const statusOrder = { pending: 0, approved: 1 };
-          aVal = statusOrder[a.isApproved ? 'approved' : 'pending'];
-          bVal = statusOrder[b.isApproved ? 'approved' : 'pending'];
+          aVal = a.isApproved ? 1 : 0;
+          bVal = b.isApproved ? 1 : 0;
           break;
         default:
           return 0;
@@ -481,28 +465,34 @@ const AdminDashboard = () => {
   }
 
   const adminStats = [
-    { icon: Users, label: 'Total Users', value: stats.users.totalUsers,color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-{ icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-gradient-to-br from-green-500 to-green-600' },
-{ icon: Shield, label: 'Pending', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-gradient-to-br from-yellow-500 to-yellow-600' },
-{ icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
-];
-const tabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'users', label: 'Users' },
-  { id: 'research', label: 'Papers' },
-  { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
-  { id: 'reports', label: 'Reports' }, // 🆕 ADD THIS
-  { id: 'valid-ids', label: 'Valid IDs' },
-  { id: 'team', label: 'Team' },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'logs', label: 'Logs' },
-  { id: 'settings', label: 'Settings' }
+    { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
+    { icon: FileText, label: 'Total Papers', value: stats.research.total, color: 'bg-gradient-to-br from-green-500 to-green-600' },
+    { icon: Shield, label: 'Pending', value: stats.users.pendingApproval + stats.research.pending, color: 'bg-gradient-to-br from-yellow-500 to-yellow-600' },
+    { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
+  ];
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'users', label: 'Users' },
+    { id: 'research', label: 'Papers' },
+    { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'valid-ids', label: 'Valid IDs ' },
+{ id: 'team', label: 'Team' },
+{ id: 'settings', label: 'Settings' }
 ];
 return (
 <>
-{toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />}
-<ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })} onConfirm={confirmDelete} title={`Delete ${confirmModal.ids.length} ${confirmModal.type}(s)?`}
-message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal.type}(s). This cannot be undone.`} confirmText="Delete" type="danger" />
+{toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} duration={3000} />}
+<ConfirmModal
+  isOpen={confirmModal.isOpen}
+  onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
+  onConfirm={confirmDelete}
+  title={`Delete ${confirmModal.ids.length} ${confirmModal.type}(s)?`}
+  message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal.type}(s). This cannot be undone.`}
+  confirmText="Delete"
+  type="danger"
+/>
 {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
 {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
 <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
@@ -520,7 +510,15 @@ message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal
 <div className="px-4 mb-6">
 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
 {tabs.map(tab => (
-<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
+<button
+  key={tab.id}
+  onClick={() => setActiveTab(tab.id)}
+  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
+    activeTab === tab.id
+      ? 'bg-navy text-white shadow-lg scale-105'
+      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
+  }`}
+>
 {tab.label}
 {tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">{tab.badge}</span>}
 </button>
@@ -609,9 +607,7 @@ message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal
 </thead>
 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 {sortedUsers.length === 0 ? (
-<tr>
-<td colSpan="6" className="text-center py-12 text-gray-500">No users found</td>
-</tr>
+<tr><td colSpan="6" className="text-center py-12 text-gray-500">No users found</td></tr>
 ) : (
 sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)
 )}
@@ -669,9 +665,7 @@ sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.i
 </thead>
 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 {sortedPapers.length === 0 ? (
-<tr>
-<td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td>
-</tr>
+<tr><td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td></tr>
 ) : (
 sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
 )}
@@ -710,12 +704,10 @@ sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPape
 </div>
 </div>
 )}
+{activeTab === 'analytics' && <AnalyticsHub />}
 {activeTab === 'valid-ids' && <ValidIdsManagement />}
 {activeTab === 'team' && <TeamManagement />}
-{activeTab === 'analytics' && <AnalyticsDashboard />}
-{activeTab === 'logs' && <ActivityLogs />}
 {activeTab === 'settings' && <SettingsManagement />}
-{activeTab === 'reports' && <ReportsDashboard />}
 </div>
 </div>
 {showReviewModal && selectedPaper && (
@@ -727,10 +719,8 @@ sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPape
 </>
 );
 };
-AdminDashboard.displayName = 'AdminDashboard';
 StatCard.displayName = 'StatCard';
 ViewToggle.displayName = 'ViewToggle';
-SortButton.displayName = 'SortButton';
 SortableHeader.displayName = 'SortableHeader';
 BulkActionsBar.displayName = 'BulkActionsBar';
 UserGridCard.displayName = 'UserGridCard';
