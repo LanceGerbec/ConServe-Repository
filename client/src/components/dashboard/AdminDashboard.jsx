@@ -564,10 +564,11 @@ return (
 </div>
 <div className="px-4 space-y-6">
 {activeTab === 'overview' && (
-<>
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-{adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
-</div>
+  <>
+    {/* ✅ KEEP: Admin stats are useful for quick navigation */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
+    </div>
 <div className="space-y-6">
 <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
