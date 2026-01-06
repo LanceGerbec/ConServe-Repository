@@ -1,6 +1,6 @@
 // client/src/components/research/ProtectedPDFViewer.jsx - FIXED AUTO-RECOVERY + COUNTDOWN
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle, Clock, MapPin, User, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
 
@@ -686,19 +686,17 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         <div className="text-center max-w-lg p-8">
           {/* Animated Shield Icon */}
           <div className="relative mb-6">
-            <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
-              <Shield size={64} className="text-white" />
-            </div>
-            <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
-          </div>
-          
-          {/* Title */}
-          <h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
-          
-          {/* Violation Counter */}
-          <p className="text-red-400 text-xl font-semibold mb-3">
-            Violation #{violations} of {MAX_VIOLATIONS}
-          </p>
+  <div className="w-32 h-32 mx-auto bg-red-600 rounded-full flex items-center justify-center animate-pulse">
+    <Shield size={64} className="text-white" />
+  </div>
+  <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-red-500 rounded-full animate-ping"></div>
+</div>
+
+<h2 className="text-white text-3xl font-bold mb-4">CONTENT BLOCKED</h2>
+
+<p className="text-red-400 text-xl font-semibold mb-3">
+  Violation #{violations} of {MAX_VIOLATIONS}
+</p>
           
           {/* Countdown OR Closing Message */}
           {violations < MAX_VIOLATIONS ? (
@@ -714,21 +712,30 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           ) : (
             <>
               {/* Final Violation Message */}
-              <div className="text-red-400 text-6xl font-bold mt-8 mb-4 animate-bounce">
-                ✕
-              </div>
-              <p className="text-red-400 text-lg mb-6 font-bold">
-                Closing viewer...
-              </p>
+              <div className="text-red-400 text-6xl font-bold mt-8 mb-4 animate-bounce flex items-center justify-center">
+  <XCircle size={64} />
+</div>
+<p className="text-red-400 text-lg mb-6 font-bold">
+  Closing viewer...
+</p>
             </>
           )}
           
           {/* User Info */}
-          <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
-            <p className="font-mono">🚨 Action Logged</p>
-            <p className="font-mono mt-1">📍 {userIP}</p>
-            <p className="font-mono mt-1">👤 {user?.email}</p>
-          </div>
+     <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 text-sm text-gray-300">
+  <p className="font-mono flex items-center gap-2">
+    <AlertCircle size={14} />
+    Action Logged
+  </p>
+  <p className="font-mono mt-1 flex items-center gap-2">
+    <MapPin size={14} />
+    {userIP}
+  </p>
+  <p className="font-mono mt-1 flex items-center gap-2">
+    <User size={14} />
+    {user?.email}
+  </p>
+</div>
         </div>
       </div>
     )}
@@ -811,16 +818,18 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
             <ChevronRight size={16} />
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()}`}>
-            ⏱️ {formatTime(timeRemaining)}
-          </div>
-          {violations > 0 && (
-            <div className="text-white text-xs font-bold bg-red-500/30 px-2 py-1 rounded border border-red-400/50 animate-pulse">
-              ⚠️ {violations}/{MAX_VIOLATIONS}
-            </div>
-          )}
-        </div>
+  <div className="flex items-center gap-2">
+  <div className={`text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded border-2 ${getTimerColor()} flex items-center gap-1`}>
+    <Clock size={14} />
+    {formatTime(timeRemaining)}
+  </div>
+  {violations > 0 && (
+    <div className="text-white text-xs font-bold bg-red-500/30 px-2 py-1 rounded border border-red-400/50 animate-pulse flex items-center gap-1">
+      <AlertCircle size={14} />
+      {violations}/{MAX_VIOLATIONS}
+    </div>
+  )}
+</div>
       </div>
     </div>
   </div>
