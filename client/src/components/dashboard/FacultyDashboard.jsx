@@ -244,7 +244,11 @@ const FacultyDashboard = () => {
               }} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
                 <tab.icon size={18} />
                 <span className="text-sm">{tab.label}</span>
-                {tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">{tab.badge}</span>}
+                {tab.badge > 0 && (
+  <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
+    {tab.badge}
+  </span>
+)}
               </button>
             ))}
           </div>

@@ -503,8 +503,9 @@ return (
   </div>
 
   <div className="relative flex items-center gap-6">
+    {/* ✅ APRICOT SHIELD */}
     <div className="flex-shrink-0">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center shadow-2xl ring-4 ring-white/20 transform transition-transform hover:scale-105">
+      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-4 ring-white/20 transform transition-transform hover:scale-105">
         <Shield size={32} className="text-white" />
       </div>
     </div>
@@ -538,8 +539,9 @@ return (
       </div>
     </div>
 
-    <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-purple-500/20 backdrop-blur-sm rounded-xl border border-purple-400/30">
-      <Shield size={18} className="text-purple-300" />
+    {/* ✅ APRICOT ADMINISTRATOR BADGE */}
+    <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
+      <Shield size={18} className="text-orange-300" />
       <span className="text-sm font-semibold text-white">Administrator</span>
     </div>
   </div>
@@ -557,7 +559,11 @@ return (
   }`}
 >
 {tab.label}
-{tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">{tab.badge}</span>}
+{tab.badge > 0 && (
+  <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
+    {tab.badge}
+  </span>
+)}
 </button>
 ))}
 </div>
