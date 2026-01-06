@@ -715,7 +715,7 @@ sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPape
 {activeTab === 'analytics' && <AnalyticsDashboard />}
 {activeTab === 'logs' && <ActivityLogs />}
 {activeTab === 'settings' && <SettingsManagement />}
-{activeReport === 'reports' && <ReportsDashboard />}
+{activeTab === 'reports' && <ReportsDashboard />}
 </div>
 </div>
 {showReviewModal && selectedPaper && (
