@@ -139,108 +139,277 @@ export const approvalEmailTemplate = (user) => `
   </html>
 `;
 
-// Password Reset Email Template
+// Password Reset Email Template - FIXED LAYOUT
 export const passwordResetEmailTemplate = (user, token) => {
   const resetUrl = `${CLIENT_URL}/reset-password?token=${token}`;
   return `
-  <!DOCTYPE html>
-  <html>
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-  <body style="margin:0;padding:20px;background:#f3f4f6">
-    <div style="${styles.container}">
-      ${emailHeader('Password Reset Request', 'ConServe Account Security')}
-      <div style="${styles.body}">
-        <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
-        <p style="font-size:16px;color:#374151;line-height:1.8">We received a request to reset your password for your ConServe account.</p>
-        
-        ${infoBox(`
-          <p style="margin:0;color:#92400e;font-size:14px;font-weight:bold">${icons.clock} This link expires in 1 hour</p>
-          <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">If you didn't request this, please ignore this email.</p>
-        `, 'warning')}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Password Reset - ConServe</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td {font-family: Arial, sans-serif !important;}
+  </style>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f3f4f6;">
+    <tr>
+      <td style="padding:20px 0;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg, #dc2626 0%, #ef4444 100%);padding:40px 30px;text-align:center;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align:center;">
+                    <div style="display:inline-block;width:60px;height:60px;background-color:rgba(255,255,255,0.2);border-radius:50%;text-align:center;line-height:60px;margin-bottom:15px;">
+                      <span style="font-size:32px;color:#ffffff;">&#128274;</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align:center;">
+                    <h1 style="margin:0;font-size:32px;font-weight:bold;color:#ffffff;line-height:1.2;">Password Reset Request</h1>
+                    <p style="margin:10px 0 0 0;font-size:14px;color:rgba(255,255,255,0.9);">ConServe Account Security</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-        ${emailButton(resetUrl, 'Reset Password')}
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 30px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                
+                <!-- Greeting -->
+                <tr>
+                  <td style="padding-bottom:20px;">
+                    <p style="margin:0;font-size:18px;color:#111827;line-height:1.5;">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
+                  </td>
+                </tr>
 
-        <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:25px 0">
-          <p style="margin:0 0 10px 0;color:#374151;font-size:14px;font-weight:bold">Or copy this link:</p>
-          <p style="margin:0;color:#6b7280;font-size:12px;word-break:break-all">${resetUrl}</p>
-        </div>
+                <!-- Message -->
+                <tr>
+                  <td style="padding-bottom:30px;">
+                    <p style="margin:0;font-size:16px;color:#374151;line-height:1.6;">We received a request to reset your password for your ConServe account.</p>
+                  </td>
+                </tr>
 
-        <p style="font-size:14px;color:#6b7280;margin-top:30px">
-          Questions? Contact us at <a href="mailto:conserve2025@gmail.com" style="color:#2563eb;text-decoration:none">conserve2025@gmail.com</a>
-        </p>
-      </div>
-      ${emailFooter()}
-    </div>
-  </body>
-  </html>
+                <!-- Warning Box -->
+                <tr>
+                  <td style="padding-bottom:30px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;">
+                      <tr>
+                        <td style="padding:20px;">
+                          <p style="margin:0 0 10px 0;font-size:14px;color:#92400e;font-weight:bold;">
+                            <span style="font-size:16px;">&#9200;</span> This link expires in 1 hour
+                          </p>
+                          <p style="margin:0;font-size:14px;color:#92400e;line-height:1.5;">
+                            If you didn't request this, please ignore this email.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Button -->
+                <tr>
+                  <td style="text-align:center;padding-bottom:30px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td style="background-color:#dc2626;border-radius:10px;text-align:center;">
+                          <a href="${resetUrl}" target="_blank" style="display:inline-block;padding:16px 48px;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px;">Reset Password</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Link Box -->
+                <tr>
+                  <td style="padding-bottom:30px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f9fafb;border-radius:8px;">
+                      <tr>
+                        <td style="padding:20px;">
+                          <p style="margin:0 0 10px 0;font-size:14px;color:#374151;font-weight:bold;">Or copy this link:</p>
+                          <p style="margin:0;font-size:12px;color:#6b7280;word-break:break-all;line-height:1.5;">
+                            ${resetUrl}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Contact -->
+                <tr>
+                  <td style="padding-top:30px;border-top:1px solid #e5e7eb;">
+                    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.5;">
+                      Questions? Contact us at <a href="mailto:conserve2025@gmail.com" style="color:#2563eb;text-decoration:none;">conserve2025@gmail.com</a>
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb;">
+              <p style="margin:5px 0;font-size:13px;color:#9ca3af;">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
+              <p style="margin:5px 0;font-size:13px;color:#9ca3af;">Research Repository System</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 `;
 };
 
-// Password Reset Confirmation Template
+// Password Reset Confirmation Template - FIXED LAYOUT
 export const passwordResetConfirmationTemplate = (user) => `
-  <!DOCTYPE html>
-  <html>
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-  <body style="margin:0;padding:20px;background:#f3f4f6">
-    <div style="${styles.container}">
-      ${emailHeader('Password Reset Complete', 'Your account is secure')}
-      <div style="${styles.body}">
-        <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
-        <p style="font-size:16px;color:#374151;line-height:1.8">Your ConServe password has been successfully reset.</p>
-        
-        ${infoBox(`
-          <p style="margin:0;color:#065f46;font-size:14px;font-weight:bold">${icons.check} Your account is secure</p>
-          <p style="margin:10px 0 0 0;color:#065f46;font-size:14px">You can now log in with your new password.</p>
-        `, 'success')}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Password Reset Complete - ConServe</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f3f4f6;">
+    <tr>
+      <td style="padding:20px 0;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg, #10b981 0%, #34d399 100%);padding:40px 30px;text-align:center;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align:center;">
+                    <div style="display:inline-block;width:60px;height:60px;background-color:rgba(255,255,255,0.2);border-radius:50%;text-align:center;line-height:60px;margin-bottom:15px;">
+                      <span style="font-size:32px;color:#ffffff;">&#10003;</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align:center;">
+                    <h1 style="margin:0;font-size:32px;font-weight:bold;color:#ffffff;line-height:1.2;">Password Reset Complete</h1>
+                    <p style="margin:10px 0 0 0;font-size:14px;color:rgba(255,255,255,0.9);">Your account is secure</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-        ${emailButton(CLIENT_URL + '/login', 'Login to ConServe')}
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 30px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                
+                <tr>
+                  <td style="padding-bottom:20px;">
+                    <p style="margin:0;font-size:18px;color:#111827;line-height:1.5;">Hello <strong>${user.firstName} ${user.lastName}</strong>,</p>
+                  </td>
+                </tr>
 
-        ${infoBox(`
-          <p style="margin:0;color:#92400e;font-size:14px;font-weight:bold">${icons.warning} Didn't reset your password?</p>
-          <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">Contact support immediately at conserve2025@gmail.com</p>
-        `, 'warning')}
+                <tr>
+                  <td style="padding-bottom:30px;">
+                    <p style="margin:0;font-size:16px;color:#374151;line-height:1.6;">Your ConServe password has been successfully reset.</p>
+                  </td>
+                </tr>
 
-        <p style="font-size:14px;color:#6b7280;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
-          <strong>Time:</strong> ${new Date().toLocaleString()}<br>
-          <strong>Security:</strong> Action logged for your protection
-        </p>
-      </div>
-      ${emailFooter()}
-    </div>
-  </body>
-  </html>
-`;
+                <!-- Success Box -->
+                <tr>
+                  <td style="padding-bottom:30px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#d1fae5;border-left:4px solid #10b981;border-radius:8px;">
+                      <tr>
+                        <td style="padding:20px;">
+                          <p style="margin:0 0 10px 0;font-size:14px;color:#065f46;font-weight:bold;">
+                            <span style="font-size:16px;">&#10003;</span> Your account is secure
+                          </p>
+                          <p style="margin:0;font-size:14px;color:#065f46;line-height:1.5;">
+                            You can now log in with your new password.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-// Admin New User Notification Template
-export const adminNewUserNotificationTemplate = (user) => `
-  <!DOCTYPE html>
-  <html>
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-  <body style="margin:0;padding:20px;background:#f3f4f6">
-    <div style="${styles.container}">
-      ${emailHeader('New User Registration', 'Action Required')}
-      <div style="${styles.body}">
-        <p style="font-size:18px;color:#111827;margin-bottom:20px">A new user has registered and is awaiting approval:</p>
-        
-        <div style="background:#eff6ff;padding:25px;margin:25px 0;border-radius:10px;border:1px solid #bfdbfe">
-          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.user} Name:</strong> ${user.firstName} ${user.lastName}</p>
-          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.envelope} Email:</strong> ${user.email}</p>
-          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.document} ID:</strong> ${user.studentId}</p>
-          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.user} Role:</strong> ${user.role}</p>
-          <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.clock} Date:</strong> ${new Date().toLocaleString()}</p>
-        </div>
+                <!-- Button -->
+                <tr>
+                  <td style="text-align:center;padding-bottom:30px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td style="background-color:#10b981;border-radius:10px;text-align:center;">
+                          <a href="${CLIENT_URL}/login" target="_blank" style="display:inline-block;padding:16px 48px;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px;">Login to ConServe</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-        ${infoBox(`
-          <p style="margin:0;color:#92400e;font-size:15px;font-weight:bold">${icons.warning} Action Required</p>
-          <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">Please review and approve this user to grant system access.</p>
-        `, 'warning')}
+                <!-- Warning Box -->
+                <tr>
+                  <td style="padding-bottom:30px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;">
+                      <tr>
+                        <td style="padding:20px;">
+                          <p style="margin:0 0 10px 0;font-size:14px;color:#92400e;font-weight:bold;">
+                            <span style="font-size:16px;">&#9888;</span> Didn't reset your password?
+                          </p>
+                          <p style="margin:0;font-size:14px;color:#92400e;line-height:1.5;">
+                            Contact support immediately at conserve2025@gmail.com
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-        ${emailButton(CLIENT_URL + '/dashboard', 'Review & Approve User')}
-      </div>
-      ${emailFooter()}
-    </div>
-  </body>
-  </html>
+                <!-- Security Info -->
+                <tr>
+                  <td style="padding-top:30px;border-top:1px solid #e5e7eb;">
+                    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
+                      <strong>Time:</strong> ${new Date().toLocaleString()}<br>
+                      <strong>Security:</strong> Action logged for your protection
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f9fafb;padding:25px;text-align:center;border-top:1px solid #e5e7eb;">
+              <p style="margin:5px 0;font-size:13px;color:#9ca3af;">© ${new Date().getFullYear()} ConServe - NEUST College of Nursing</p>
+              <p style="margin:5px 0;font-size:13px;color:#9ca3af;">Research Repository System</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 `;
 
 // Faculty Review Notification Template
