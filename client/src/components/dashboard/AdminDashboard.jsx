@@ -12,6 +12,7 @@ import AwardsModal from '../admin/AwardsModal';
 import TeamManagement from '../admin/TeamManagement';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
+import ReportsDashboard from '../reports/ReportsDashboard';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -486,15 +487,16 @@ const AdminDashboard = () => {
 { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
 ];
 const tabs = [
-{ id: 'overview', label: 'Overview' },
-{ id: 'users', label: 'Users' },
-{ id: 'research', label: 'Papers' },
-{ id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
-{ id: 'valid-ids', label: 'Valid IDs' },
-{ id: 'team', label: 'Team' },
-{ id: 'analytics', label: 'Analytics' },
-{ id: 'logs', label: 'Logs' },
-{ id: 'settings', label: 'Settings' }
+  { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'Users' },
+  { id: 'research', label: 'Papers' },
+  { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
+  { id: 'reports', label: 'Reports' }, // 🆕 ADD THIS
+  { id: 'valid-ids', label: 'Valid IDs' },
+  { id: 'team', label: 'Team' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'logs', label: 'Logs' },
+  { id: 'settings', label: 'Settings' }
 ];
 return (
 <>
@@ -713,6 +715,7 @@ sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPape
 {activeTab === 'analytics' && <AnalyticsDashboard />}
 {activeTab === 'logs' && <ActivityLogs />}
 {activeTab === 'settings' && <SettingsManagement />}
+{activeReport === 'reports' && <ReportsDashboard />}
 </div>
 </div>
 {showReviewModal && selectedPaper && (
