@@ -496,16 +496,53 @@ return (
 {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
 {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
 <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-<div className="bg-gradient-to-br from-navy via-blue-700 to-accent text-white p-6 mb-6 shadow-xl">
-<div className="flex items-center gap-3 mb-2">
-<div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-<Shield size={24} />
-</div>
-<div>
-<h1 className="text-xl font-bold">Admin Dashboard</h1>
-<p className="text-sm text-blue-100 opacity-90">Welcome, {user?.firstName}</p>
-</div>
-</div>
+<div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-6 mb-6 shadow-xl relative overflow-hidden">
+  <div className="absolute inset-0 opacity-10">
+    <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+  </div>
+
+  <div className="relative flex items-center gap-6">
+    <div className="flex-shrink-0">
+      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center shadow-2xl ring-4 ring-white/20 transform transition-transform hover:scale-105">
+        <Shield size={32} className="text-white" />
+      </div>
+    </div>
+
+    <div className="flex-1 min-w-0">
+      <div className="mb-2">
+        <h1 className="text-2xl font-bold text-white mb-1">Admin Dashboard</h1>
+        <p className="text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
+      </div>
+
+      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-3"></div>
+
+      <div className="flex items-center gap-4 text-sm flex-wrap">
+        <div className="flex items-center gap-2 text-blue-100">
+          <FileText size={16} className="text-blue-300" />
+          <span className="font-semibold text-white">{stats?.research?.total || 0}</span>
+          <span className="text-blue-200">Papers</span>
+        </div>
+        <div className="w-px h-4 bg-blue-400/30"></div>
+        <div className="flex items-center gap-2 text-blue-100">
+          <Activity size={16} className="text-green-300" />
+          <span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span>
+          <span className="text-blue-200">Active</span>
+        </div>
+        <div className="w-px h-4 bg-blue-400/30"></div>
+        <div className="flex items-center gap-2 text-blue-100">
+          <Clock size={16} className="text-yellow-300" />
+          <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
+          <span className="text-blue-200">Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-purple-500/20 backdrop-blur-sm rounded-xl border border-purple-400/30">
+      <Shield size={18} className="text-purple-300" />
+      <span className="text-sm font-semibold text-white">Administrator</span>
+    </div>
+  </div>
 </div>
 <div className="px-4 mb-6">
 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
