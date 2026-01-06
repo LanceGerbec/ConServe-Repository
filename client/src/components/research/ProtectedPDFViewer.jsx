@@ -75,7 +75,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     
     // Step 2: Log and notify
     logViolation(reason);
-    showToast(`🚫 ${reason}`, 'error');
+    showToast(`Screenshot Attempt Blocked`, 'error');
     screenshotAttempts.current++;
     
     // Step 3: Update violations and handle recovery
@@ -172,7 +172,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         
         instantBlur();
         navigator.clipboard.writeText(`🔒 PROTECTED - ${user?.email} - ${new Date().toLocaleString()}`).catch(() => {});
-        blockContent('💻 Screenshot Attempt Blocked'); // 🆕 UPDATED MESSAGE
+        blockContent('Screenshot Attempt Blocked');
         screenshotAttempts.current += 2;
         return false;
       }
@@ -181,7 +181,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     const detectShareDialog = () => {
       if (document.hidden) {
         instantBlur();
-        blockContent('🔒 Content Protection Activated'); // 🆕 GENERIC MESSAGE
+        blockContent('Content Protection Activated');
         screenshotAttempts.current++;
       }
     };
@@ -215,7 +215,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const flash = document.createElement('div');
         flash.style.cssText = 'position:fixed;inset:0;background:black;z-index:9999;';
         document.body.appendChild(flash);
-        blockContent('🔒 Content Protection Activated'); // 🆕 GENERIC MESSAGE
+        blockContent('Content Protection Activated');
         setTimeout(() => flash.remove(), 500);
       }
 
@@ -225,7 +225,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     const detectPageHide = (e) => {
       if (e.persisted === false) {
         instantBlur();
-        blockContent('🔒 Content Protection Activated'); // 🆕 GENERIC MESSAGE
+        blockContent('Content Protection Activated');
       }
     };
 
@@ -251,7 +251,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         e.preventDefault();
         e.stopPropagation();
         instantBlur();
-        blockContent('💻 PrintScreen Blocked'); // 🆕 ACCURATE MESSAGE
+        blockContent('Screenshot Attempt Blocked');
       }
     };
 
@@ -260,14 +260,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         e.preventDefault();
         navigator.clipboard.writeText('');
         instantBlur();
-        blockContent('💻 PrintScreen Blocked'); // 🆕 ACCURATE MESSAGE
+        blockContent('PrintScreen Blocked');
       }
     };
 
     const detectDevTools = () => {
       if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
         instantBlur();
-        blockContent('🛠️ DevTools Detected'); // 🆕 ACCURATE MESSAGE
+        blockContent('DevTools Detected');
         setTimeout(onClose, 2000);
       }
     };
@@ -294,7 +294,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const currentIndex = ZOOM_LEVELS.indexOf(scale);
         const targetScale = currentIndex <= 2 ? ZOOM_LEVELS[5] : ZOOM_LEVELS[2];
         setScale(targetScale);
-        showToast(`🔍 ${Math.round(targetScale * 100)}%`, 'success');
+        showToast(`${Math.round(newScale * 100)}%`, 'success');
         if (navigator.vibrate) navigator.vibrate(30);
       }
       lastTap.current = now;
@@ -310,9 +310,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (currentIndex < ZOOM_LEVELS.length - 1) {
       const newScale = ZOOM_LEVELS[currentIndex + 1];
       setScale(newScale);
-      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
+      showToast(`${Math.round(newScale * 100)}%`, 'success');
       if (navigator.vibrate) navigator.vibrate(20);
-    } else showToast('🔍 Max zoom', 'warning');
+    } else showToast(`Max zoom`, 'warning');
   };
 
   const zoomOut = () => {
@@ -320,14 +320,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (currentIndex > 0) {
       const newScale = ZOOM_LEVELS[currentIndex - 1];
       setScale(newScale);
-      showToast(`🔍 ${Math.round(newScale * 100)}%`, 'success');
+      showToast(`${Math.round(newScale * 100)}%`, 'success');
       if (navigator.vibrate) navigator.vibrate(20);
-    } else showToast('🔍 Min zoom', 'warning');
+    } else showToast(`Min zoom`, 'warning');
   };
 
   const resetZoom = () => {
     setScale(1);
-    showToast('🔄 Reset', 'success');
+    showToast(`Reset`, 'success');
   };
 
   const fitToWidth = () => {
@@ -336,7 +336,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     const canvasWidth = canvasRef.current.offsetWidth;
     const newScale = containerWidth / canvasWidth;
     setScale(Math.min(Math.max(newScale, ZOOM_LEVELS[0]), ZOOM_LEVELS[ZOOM_LEVELS.length - 1]));
-    showToast('🔄 Fit to Width', 'success');
+    showToast(`Fit to Width`, 'success');
   };
 
   useEffect(() => {
@@ -358,9 +358,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     countdownRef.current = setInterval(() => {
       setTimeRemaining(prev => {
         const newTime = Math.max(0, prev - 1);
-        if (newTime === 300) showToast('⏰ 5 minutes remaining', 'warning');
-        if (newTime === 120) showToast('⏰ 2 minutes remaining', 'warning');
-        if (newTime === 60) showToast('⏰ 1 minute remaining', 'error');
+        if (newTime === 300) showToast(`5 minutes remaining`, 'warning');
+        if (newTime === 120) showToast(`2 minutes remaining`, 'warning');
+        if (newTime === 60) showToast(`1 minute remaining`, 'error');
         return newTime;
       });
     }, 1000);
@@ -417,155 +417,155 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE, isMobile]);
 
-  // Render page with watermarks
-  useEffect(() => {
-    if (!pdf || !canvasRef.current || renderLockRef.current) return;
+ // Render page with watermarks
+useEffect(() => {
+  if (!pdf || !canvasRef.current || renderLockRef.current) return;
 
-    setRendered(false);
-    renderLockRef.current = true;
+  setRendered(false);
+  renderLockRef.current = true;
 
-    const renderPage = async () => {
-      try {
-        const page = await pdf.getPage(currentPage);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', { alpha: false });
+  const renderPage = async () => {
+    try {
+      const page = await pdf.getPage(currentPage);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d', { alpha: false });
 
-        const dpr = window.devicePixelRatio || 1;
-        const vp = page.getViewport({ scale: BASE_SCALE });
+      const dpr = window.devicePixelRatio || 1;
+      const vp = page.getViewport({ scale: BASE_SCALE });
 
-        canvas.width = vp.width * dpr;
-        canvas.height = vp.height * dpr;
-        canvas.style.width = vp.width + 'px';
-        canvas.style.height = vp.height + 'px';
+      canvas.width = vp.width * dpr;
+      canvas.height = vp.height * dpr;
+      canvas.style.width = vp.width + 'px';
+      canvas.style.height = vp.height + 'px';
 
-        ctx.scale(dpr, dpr);
+      ctx.scale(dpr, dpr);
 
-        await page.render({
-          canvasContext: ctx,
-          viewport: vp,
-          intent: 'display'
-        }).promise;
+      await page.render({
+        canvasContext: ctx,
+        viewport: vp,
+        intent: 'display'
+      }).promise;
 
-        const now = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-        const displayWidth = vp.width;
-        const displayHeight = vp.height;
+      const displayWidth = vp.width;
+      const displayHeight = vp.height;
 
-        const badgeW = isMobile ? 180 : 280;
-        const badgeH = isMobile ? 65 : 100;
-        const badgeFont1 = isMobile ? 10 : 14;
-        const badgeFont2 = isMobile ? 8 : 12;
+      const badgeW = isMobile ? 180 : 280;
+      const badgeH = isMobile ? 65 : 100;
+      const badgeFont1 = isMobile ? 10 : 14;
+      const badgeFont2 = isMobile ? 8 : 12;
 
-        // Top-left badge
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, 0, badgeW, badgeH);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${badgeFont1}px Inter`;
-        ctx.fillText(`🔒 PROTECTED`, 8, 22);
-        ctx.font = `${badgeFont2}px Inter`;
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 8, 40);
-        ctx.fillText(`${time}`, 8, 55);
-        ctx.restore();
+      // Top-left badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, 0, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${badgeFont1}px Inter`;
+      ctx.fillText(`PROTECTED`, 8, 22);
+      ctx.font = `${badgeFont2}px Inter`;
+      ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 8, 40);
+      ctx.fillText(`${time}`, 8, 55);
+      ctx.restore();
 
-        // Top-right badge
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(displayWidth - badgeW, 0, badgeW, badgeH);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'right';
-        ctx.font = `bold ${badgeFont1}px Inter`;
-        ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 8, 22);
-        ctx.font = `${badgeFont2}px Inter`;
-        ctx.fillText(`IP: ${userIP}`, displayWidth - 8, 40);
-        ctx.fillText(`${date}`, displayWidth - 8, 55);
-        ctx.restore();
+      // Top-right badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(displayWidth - badgeW, 0, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.font = `bold ${badgeFont1}px Inter`;
+      ctx.fillText(`Page ${currentPage}/${totalPages}`, displayWidth - 8, 22);
+      ctx.font = `${badgeFont2}px Inter`;
+      ctx.fillText(`IP: ${userIP}`, displayWidth - 8, 40);
+      ctx.fillText(`${date}`, displayWidth - 8, 55);
+      ctx.restore();
 
-        // Bottom-left badge
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(0, displayHeight - badgeH, badgeW, badgeH);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'left';
-        ctx.font = `bold ${badgeFont2}px Inter`;
-        ctx.fillText(`CONserve Repository`, 8, displayHeight - 48);
-        ctx.font = `${badgeFont2 * 0.9}px Inter`;
-        ctx.fillText(`NEUST College of Nursing`, 8, displayHeight - 32);
-        ctx.fillText(`© ${now.getFullYear()}`, 8, displayHeight - 16);
-        ctx.restore();
+      // Bottom-left badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, displayHeight - badgeH, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${badgeFont2}px Inter`;
+      ctx.fillText(`CONserve Repository`, 8, displayHeight - 48);
+      ctx.font = `${badgeFont2 * 0.9}px Inter`;
+      ctx.fillText(`NEUST College of Nursing`, 8, displayHeight - 32);
+      ctx.fillText(`© ${now.getFullYear()}`, 8, displayHeight - 16);
+      ctx.restore();
 
-        // Bottom-right badge
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(displayWidth - badgeW, displayHeight - badgeH, badgeW, badgeH);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'right';
-        ctx.font = `bold ${badgeFont2}px Inter`;
-        ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 8, displayHeight - 48);
-        ctx.font = `${badgeFont2 * 0.9}px Inter`;
-        ctx.fillText(`${user?.email || ''}`, displayWidth - 8, displayHeight - 32);
-        ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 8, displayHeight - 16);
-        ctx.restore();
+      // Bottom-right badge
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(displayWidth - badgeW, displayHeight - badgeH, badgeW, badgeH);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.font = `bold ${badgeFont2}px Inter`;
+      ctx.fillText(`${user?.firstName || ''} ${user?.lastName || ''}`, displayWidth - 8, displayHeight - 48);
+      ctx.font = `${badgeFont2 * 0.9}px Inter`;
+      ctx.fillText(`${user?.email || ''}`, displayWidth - 8, displayHeight - 32);
+      ctx.fillText(`Unauthorized copy prohibited`, displayWidth - 8, displayHeight - 16);
+      ctx.restore();
 
-        // Center watermark
-        const centerFont1 = Math.max(28, Math.min(displayWidth, displayHeight) * 0.08);
-        const centerFont2 = Math.max(24, Math.min(displayWidth, displayHeight) * 0.07);
-        const centerFont3 = Math.max(20, Math.min(displayWidth, displayHeight) * 0.06);
-        const centerFont4 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.05);
-        const centerFont5 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.045);
-        const centerFont6 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.04);
+      // Center watermark
+      const centerFont1 = Math.max(28, Math.min(displayWidth, displayHeight) * 0.08);
+      const centerFont2 = Math.max(24, Math.min(displayWidth, displayHeight) * 0.07);
+      const centerFont3 = Math.max(20, Math.min(displayWidth, displayHeight) * 0.06);
+      const centerFont4 = Math.max(18, Math.min(displayWidth, displayHeight) * 0.05);
+      const centerFont5 = Math.max(16, Math.min(displayWidth, displayHeight) * 0.045);
+      const centerFont6 = Math.max(14, Math.min(displayWidth, displayHeight) * 0.04);
 
-        ctx.save();
-        ctx.translate(displayWidth / 2, displayHeight / 2);
-        ctx.rotate(-35 * Math.PI / 180);
+      ctx.save();
+      ctx.translate(displayWidth / 2, displayHeight / 2);
+      ctx.rotate(-35 * Math.PI / 180);
 
-        ctx.globalAlpha = 0.28;
-        ctx.font = `bold ${centerFont1}px Inter`;
-        ctx.fillStyle = '#1e3a8a';
-        ctx.textAlign = 'center';
-        ctx.fillText(`🔒 ${user?.firstName || 'PROTECTED'}`, 0, -120);
+      ctx.globalAlpha = 0.28;
+      ctx.font = `bold ${centerFont1}px Inter`;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${user?.firstName || 'PROTECTED'}`, 0, -120);
 
-        ctx.font = `bold ${centerFont2}px Inter`;
-        ctx.globalAlpha = 0.26;
-        ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -40);
+      ctx.font = `bold ${centerFont2}px Inter`;
+      ctx.globalAlpha = 0.26;
+      ctx.fillText(`ID: ${user?.studentId || 'N/A'}`, 0, -40);
 
-        ctx.font = `bold ${centerFont3}px Inter`;
-        ctx.globalAlpha = 0.24;
-        ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 50);
+      ctx.font = `bold ${centerFont3}px Inter`;
+      ctx.globalAlpha = 0.24;
+      ctx.fillText(`${user?.email || 'CONFIDENTIAL'}`, 0, 50);
 
-        ctx.font = `${centerFont4}px Inter`;
-        ctx.globalAlpha = 0.22;
-        ctx.fillText(`${date} • ${time}`, 0, 120);
+      ctx.font = `${centerFont4}px Inter`;
+      ctx.globalAlpha = 0.22;
+      ctx.fillText(`${date} • ${time}`, 0, 120);
 
-        ctx.font = `bold ${centerFont5}px Inter`;
-        ctx.globalAlpha = 0.20;
-        ctx.fillText(`Session: ${sid}`, 0, 180);
+      ctx.font = `bold ${centerFont5}px Inter`;
+      ctx.globalAlpha = 0.20;
+      ctx.fillText(`Session: ${sid}`, 0, 180);
 
-        ctx.font = `${centerFont6}px Inter`;
-        ctx.globalAlpha = 0.18;
-        ctx.fillText(`Page ${currentPage}/${totalPages}`, 0, 230);
+      ctx.font = `${centerFont6}px Inter`;
+      ctx.globalAlpha = 0.18;
+      ctx.fillText(`Page ${currentPage}/${totalPages}`, 0, 230);
 
-        ctx.restore();
+      ctx.restore();
 
-        setRendered(true);
-        renderLockRef.current = false;
+      setRendered(true);
+      renderLockRef.current = false;
 
-      } catch (err) {
-        console.error('Render error:', err);
-        setError(`Render failed: ${err.message}`);
-        renderLockRef.current = false;
-      }
-    };
+    } catch (err) {
+      console.error('Render error:', err);
+      setError(`Render failed: ${err.message}`);
+      renderLockRef.current = false;
+    }
+  };
 
-    renderPage();
-  }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
+  renderPage();
+}, [pdf, currentPage, user, userIP, totalPages, isMobile]);
 
   // Prevent context menu, copy, etc
   useEffect(() => {
@@ -650,7 +650,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
           <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" size={32} />
         </div>
         <p className="text-white text-xl font-bold">Loading Protected Document</p>
-        <p className="text-blue-400 text-sm mt-2">🔒 Initializing Security...</p>
+<p className="text-blue-400 text-sm mt-2">Initializing Security...</p>
       </div>
     </div>
   );
@@ -676,9 +676,10 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={2000} />}
 
-      <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg">
-        🔍 {Math.round 
-(scale * 100)}% </div>
+      <div className="fixed top-20 right-4 z-[60] bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold border-2 border-blue-400 shadow-lg flex items-center gap-1">
+  <ZoomIn size={12} />
+  {Math.round(scale * 100)}%
+</div>
 <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
     {/* 🆕 UPDATED BLOCK SCREEN WITH COUNTDOWN */}
     {isBlocked && (
@@ -740,14 +741,14 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       </div>
     )}
 
-    <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <Shield className="text-blue-200 flex-shrink-0" size={18} />
-        <div className="min-w-0 flex-1">
-          <h3 className="text-white font-bold text-xs md:text-sm truncate">🔒 {paperTitle}</h3>
-          <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
-        </div>
-      </div>
+ <div className="bg-gradient-to-r from-blue-900 to-blue-700 px-3 py-2 flex items-center justify-between border-b-2 border-blue-700">
+  <div className="flex items-center gap-2 flex-1 min-w-0">
+    <Shield className="text-blue-200 flex-shrink-0" size={18} />
+    <div className="min-w-0 flex-1">
+      <h3 className="text-white font-bold text-xs md:text-sm truncate">PROTECTED: {paperTitle}</h3>
+      <p className="text-blue-200 text-xs truncate hidden md:block">{user?.email} | {userIP}</p>
+    </div>
+  </div>
       <div className="flex items-center gap-2">
         {!isMobile && (
           <button onClick={fitToWidth} className="hidden md:flex p-2 bg-blue-500 hover:bg-blue-600 rounded text-white items-center gap-1" title="Fit (F)">
