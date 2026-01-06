@@ -445,3 +445,12 @@ export const facultyReviewNotificationTemplate = (research, reviewer, comments) 
   </body>
   </html>
 `;
+
+export {
+  welcomeEmailTemplate,
+  approvalEmailTemplate,
+  passwordResetEmailTemplate,
+  passwordResetConfirmationTemplate,
+  adminNewUserNotificationTemplate,
+  facultyReviewNotificationTemplate
+};
