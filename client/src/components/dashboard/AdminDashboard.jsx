@@ -496,53 +496,52 @@ return (
 {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
 {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
 <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-<div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-6 mb-6 shadow-xl relative overflow-hidden">
+<div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
   <div className="absolute inset-0 opacity-10">
-    <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-    <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+    <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
   </div>
 
-  <div className="relative flex items-center gap-6">
-    {/* ✅ APRICOT SHIELD */}
-    <div className="flex-shrink-0">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-4 ring-white/20 transform transition-transform hover:scale-105">
-        <Shield size={32} className="text-white" />
+  <div className="relative flex items-center gap-3 sm:gap-6">
+    <div className="hidden xs:block flex-shrink-0">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+        <Shield size={24} className="sm:w-8 sm:h-8 text-white" />
       </div>
     </div>
 
     <div className="flex-1 min-w-0">
-      <div className="mb-2">
-        <h1 className="text-2xl font-bold text-white mb-1">Admin Dashboard</h1>
-        <p className="text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
+      <div className="mb-1 sm:mb-2">
+        <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">Admin Dashboard</h1>
+        <p className="text-xs sm:text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
       </div>
 
-      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-3"></div>
+      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3"></div>
 
-      <div className="flex items-center gap-4 text-sm flex-wrap">
-        <div className="flex items-center gap-2 text-blue-100">
-          <FileText size={16} className="text-blue-300" />
+      <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+          <FileText size={14} className="text-blue-300 flex-shrink-0" />
           <span className="font-semibold text-white">{stats?.research?.total || 0}</span>
           <span className="text-blue-200">Papers</span>
         </div>
-        <div className="w-px h-4 bg-blue-400/30"></div>
-        <div className="flex items-center gap-2 text-blue-100">
-          <Activity size={16} className="text-green-300" />
+        <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+          <Activity size={14} className="text-green-300 flex-shrink-0" />
           <span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span>
           <span className="text-blue-200">Active</span>
         </div>
-        <div className="w-px h-4 bg-blue-400/30"></div>
-        <div className="flex items-center gap-2 text-blue-100">
-          <Clock size={16} className="text-yellow-300" />
+        <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+          <Clock size={14} className="text-yellow-300 flex-shrink-0" />
           <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
-          <span className="text-blue-200">Pending</span>
+          <span className="text-blue-200 hidden sm:inline">Pending</span>
+          <span className="text-blue-200 sm:hidden">Pend</span>
         </div>
       </div>
     </div>
 
-    {/* ✅ APRICOT ADMINISTRATOR BADGE */}
-    <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
-      <Shield size={18} className="text-orange-300" />
-      <span className="text-sm font-semibold text-white">Administrator</span>
+    <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
+      <Shield size={16} className="text-orange-300" />
+      <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
     </div>
   </div>
 </div>

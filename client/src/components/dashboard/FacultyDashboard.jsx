@@ -175,54 +175,56 @@ const FacultyDashboard = () => {
     <>
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
-      <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-6 mb-6 shadow-xl relative overflow-hidden">
+    <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
   <div className="absolute inset-0 opacity-10">
-    <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-    <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+    <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
   </div>
 
-  <div className="relative flex items-center gap-6">
-    <div className="flex-shrink-0">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-2xl ring-4 ring-white/20 transform transition-transform hover:scale-105">
-        <span className="text-2xl font-bold text-white tracking-tight">
+  <div className="relative flex items-center gap-3 sm:gap-6">
+    <div className="hidden xs:block flex-shrink-0">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+        <span className="text-lg sm:text-2xl font-bold text-white tracking-tight">
           {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
         </span>
       </div>
     </div>
 
     <div className="flex-1 min-w-0">
-      <div className="mb-2">
-        <p className="text-sm font-medium text-blue-100 mb-1">Welcome,</p>
-        <h1 className="text-2xl font-bold text-white mb-1">{user?.firstName} {user?.lastName}</h1>
-        <p className="text-sm text-blue-200 font-medium">Faculty Dashboard</p>
+      <div className="mb-1 sm:mb-2">
+        <p className="text-xs sm:text-sm font-medium text-blue-100 mb-0.5 sm:mb-1">Welcome,</p>
+        <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">{user?.firstName} {user?.lastName}</h1>
+        <p className="text-xs sm:text-sm text-blue-200 font-medium">Faculty Dashboard</p>
       </div>
 
-      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-3"></div>
+      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3"></div>
 
-      <div className="flex items-center gap-6 text-sm">
-        <div className="flex items-center gap-2 text-blue-100">
-          <FileText size={16} className="text-blue-300" />
+      <div className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+          <FileText size={14} className="text-blue-300 flex-shrink-0" />
           <span className="font-semibold text-white">{stats.reviews}</span>
-          <span className="text-blue-200">Review{stats.reviews !== 1 ? 's' : ''}</span>
+          <span className="text-blue-200 hidden sm:inline">Review{stats.reviews !== 1 ? 's' : ''}</span>
+          <span className="text-blue-200 sm:hidden">Rev</span>
         </div>
-        <div className="w-px h-4 bg-blue-400/30"></div>
-        <div className="flex items-center gap-2 text-blue-100">
-          <Clock size={16} className="text-yellow-300" />
+        <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+          <Clock size={14} className="text-yellow-300 flex-shrink-0" />
           <span className="font-semibold text-white">{stats.pending}</span>
           <span className="text-blue-200">Pending</span>
         </div>
-        <div className="w-px h-4 bg-blue-400/30"></div>
-        <div className="flex items-center gap-2 text-blue-100">
-          <Upload size={16} className="text-green-300" />
+        <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+          <Upload size={14} className="text-green-300 flex-shrink-0" />
           <span className="font-semibold text-white">{stats.submissions}</span>
-          <span className="text-blue-200">Paper{stats.submissions !== 1 ? 's' : ''}</span>
+          <span className="text-blue-200 hidden sm:inline">Paper{stats.submissions !== 1 ? 's' : ''}</span>
+          <span className="text-blue-200 sm:hidden">Paper</span>
         </div>
       </div>
     </div>
 
-    <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-      <Activity size={18} className="text-green-300" />
-      <span className="text-sm font-semibold text-white">Active</span>
+    <div className="hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+      <Activity size={16} className="text-green-300" />
+      <span className="text-xs sm:text-sm font-semibold text-white">Active</span>
     </div>
   </div>
 </div>
