@@ -1,3 +1,4 @@
+// client/src/components/common/Toast.jsx
 import { CheckCircle, X, AlertTriangle, Info, XCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
