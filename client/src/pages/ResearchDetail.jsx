@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare, Award } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Share2, Quote, Check, AlertTriangle, XCircle, Lock, MessageSquare, Award, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
 import ProtectedPDFViewer from '../components/research/ProtectedPDFViewer';
@@ -105,7 +105,7 @@ const ResearchDetail = () => {
       });
       const data = await res.json();
       setBookmarked(data.bookmarked);
-      showToast(data.bookmarked ? '✓ Bookmarked!' : '✓ Removed!');
+      showToast(data.bookmarked ? 'Bookmarked!' : 'Removed!');
     } catch (error) {
       showToast('Failed to update', 'error');
     }
@@ -120,10 +120,10 @@ const ResearchDetail = () => {
     try {
       if (navigator.share) {
         await navigator.share({ title: paper.title, url: window.location.href });
-        showToast('✓ Shared!');
+        showToast('Shared!');
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        showToast('✓ Link copied!');
+        showToast('Link copied!');
       }
     } catch (error) {
       if (error.name !== 'AbortError') showToast('Failed to share', 'error');
@@ -155,7 +155,7 @@ const ResearchDetail = () => {
   if (error || !canAccess) {
     const statusInfo = {
       rejected: { icon: XCircle, color: 'red', title: 'Research Not Available', message: 'This research paper has been rejected.', bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-500' },
-      pending: { icon: AlertTriangle, color: 'yellow', title: 'Research Under Review', message: 'This research paper is under review.', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' },
+      pending: { icon: Clock, color: 'yellow', title: 'Research Under Review', message: 'This research paper is under review.', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' },
       default: { icon: Lock, color: 'gray', title: 'Access Denied', message: error || 'Only approved research can be viewed.', bgClass: 'bg-gray-50 dark:bg-gray-900/20 border-gray-500' }
     };
 
@@ -184,6 +184,10 @@ const ResearchDetail = () => {
     );
   }
 
+  // Safe display of author names
+  const authorNames = paper?.authors?.join(', ') || 'Unknown';
+  const submitterName = paper?.submittedBy ? `${paper.submittedBy.firstName || ''} ${paper.submittedBy.lastName || ''}`.trim() || 'Unknown' : 'Unknown';
+
   return (
     <div className="min-h-screen pb-6">
       {toast.show && (
@@ -200,8 +204,9 @@ const ResearchDetail = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
         <div className="p-4 space-y-4">
           {paper.status !== 'approved' && (
-            <div className={`p-3 rounded-lg border-l-4 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
-              <p className="font-bold text-xs text-gray-900 dark:text-white">⚠️ {paper.status.toUpperCase()} PAPER</p>
+            <div className={`p-3 rounded-lg border-l-4 flex items-center gap-2 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
+              <AlertTriangle size={16} className={paper.status === 'pending' ? 'text-yellow-600' : 'text-red-600'} />
+              <p className="font-bold text-xs text-gray-900 dark:text-white">{paper.status.toUpperCase()} PAPER</p>
             </div>
           )}
 
@@ -212,7 +217,7 @@ const ResearchDetail = () => {
           <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <User size={14} className="flex-shrink-0" />
-              <span className="break-words">{paper.authors.join(', ')}</span>
+              <span className="break-words">{authorNames}</span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar size={14} className="flex-shrink-0" />
@@ -282,7 +287,6 @@ const ResearchDetail = () => {
             </p>
           </div>
 
-          {/* REVIEWS BUTTON - NEW */}
           {canSeeReviews && reviews.length > 0 && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
@@ -294,8 +298,9 @@ const ResearchDetail = () => {
                     <MessageSquare size={20} className="text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-gray-900 dark:text-white text-sm">
-                      📋 Faculty Reviews ({reviews.length})
+                    <p className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                      <CheckCircle size={16} className="text-blue-600" />
+                      Faculty Reviews ({reviews.length})
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
                       Click to view all reviews
@@ -363,9 +368,12 @@ const ResearchDetail = () => {
           <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Full Document</h2>
           <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-6 text-center border-2 border-dashed border-red-300 dark:border-red-700">
             <FileText className="mx-auto text-red-600 mb-3" size={48} />
-            <p className="text-gray-900 dark:text-white mb-1 font-bold text-sm">🔒 View-Only Protected Document</p>
+            <p className="text-gray-900 dark:text-white mb-1 font-bold text-sm flex items-center justify-center gap-2">
+              <Lock size={16} />
+              View-Only Protected Document
+            </p>
             <p className="text-gray-700 dark:text-gray-300 mb-4 text-xs">
-              {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : '⚠️ Preview Mode'}
+              {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : 'Preview Mode'}
             </p>
             <button 
               onClick={handleViewPDF} 
@@ -404,7 +412,6 @@ const ResearchDetail = () => {
         />
       )}
 
-      {/* REVIEWS MODAL - NEW */}
       {showReviewsModal && (
         <ReviewsModal
           isOpen={showReviewsModal}
