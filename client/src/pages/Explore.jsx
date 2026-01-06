@@ -1,6 +1,6 @@
-// client/src/pages/Explore.jsx - ENHANCED WITH SORTING
+// client/src/pages/Explore.jsx - PROFESSIONAL ICONS VERSION
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const useDebounce = (value, delay) => {
@@ -138,7 +138,9 @@ const TipsModal = memo(({ onClose }) => (
       
       <div className="space-y-3 max-h-96 overflow-y-auto">
         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-300 mb-2">🔍 Simple Search</h4>
+          <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+            <Search size={14} />Simple Search
+          </h4>
           <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
             <li>• Type any keyword (diabetes, nursing, etc.)</li>
             <li>• Auto-suggestions appear as you type</li>
@@ -147,7 +149,9 @@ const TipsModal = memo(({ onClose }) => (
         </div>
 
         <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-          <h4 className="font-semibold text-sm text-purple-900 dark:text-purple-300 mb-2">✨ Advanced Search</h4>
+          <h4 className="font-semibold text-sm text-purple-900 dark:text-purple-300 mb-2 flex items-center gap-2">
+            <Sparkles size={14} />Advanced Search
+          </h4>
           <ul className="text-xs text-purple-800 dark:text-purple-200 space-y-1">
             <li>• <code className="px-1 bg-white/50 rounded">AND</code> - diabetes AND management</li>
             <li>• <code className="px-1 bg-white/50 rounded">OR</code> - pediatric OR children</li>
@@ -156,7 +160,9 @@ const TipsModal = memo(({ onClose }) => (
         </div>
 
         <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-          <h4 className="font-semibold text-sm text-yellow-900 dark:text-yellow-300 mb-2">🏆 Awards</h4>
+          <h4 className="font-semibold text-sm text-yellow-900 dark:text-yellow-300 mb-2 flex items-center gap-2">
+            <Award size={14} />Awards
+          </h4>
           <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1">
             <li>• Hover/tap badges to see award names</li>
             <li>• Color-coded by award type</li>
@@ -165,7 +171,9 @@ const TipsModal = memo(({ onClose }) => (
         </div>
 
         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <h4 className="font-semibold text-sm text-green-900 dark:text-green-300 mb-2">📊 Sorting</h4>
+          <h4 className="font-semibold text-sm text-green-900 dark:text-green-300 mb-2 flex items-center gap-2">
+            <ArrowUpDown size={14} />Sorting
+          </h4>
           <ul className="text-xs text-green-800 dark:text-green-200 space-y-1">
             <li>• Most Viewed - Popular papers first</li>
             <li>• Alphabetical - A-Z sorting</li>
@@ -345,15 +353,15 @@ const Explore = () => {
   );
 
   const sortOptions = [
-    { value: 'relevance', label: '✨ Relevance', show: activeQuery },
-    { value: 'views-desc', label: '👁️ Most Viewed', show: true },
-    { value: 'date-desc', label: '🆕 Newest First', show: true },
-    { value: 'date-asc', label: '📅 Oldest First', show: true },
-    { value: 'alpha-asc', label: '🔤 A → Z', show: true },
-    { value: 'alpha-desc', label: '🔤 Z → A', show: true },
-    { value: 'awards-desc', label: '🏆 Most Awards', show: true },
-    { value: 'year-desc', label: '📆 Year (New)', show: true },
-    { value: 'year-asc', label: '📆 Year (Old)', show: true }
+    { value: 'relevance', label: 'Relevance', icon: Sparkles, show: activeQuery },
+    { value: 'views-desc', label: 'Most Viewed', icon: Eye, show: true },
+    { value: 'date-desc', label: 'Newest First', icon: Calendar, show: true },
+    { value: 'date-asc', label: 'Oldest First', icon: Calendar, show: true },
+    { value: 'alpha-asc', label: 'A to Z', icon: ArrowUpDown, show: true },
+    { value: 'alpha-desc', label: 'Z to A', icon: ArrowUpDown, show: true },
+    { value: 'awards-desc', label: 'Most Awards', icon: Award, show: true },
+    { value: 'year-desc', label: 'Year (New)', icon: Calendar, show: true },
+    { value: 'year-asc', label: 'Year (Old)', icon: Calendar, show: true }
   ].filter(opt => opt.show);
 
   if (initialLoad) {
@@ -372,7 +380,9 @@ const Explore = () => {
       {showTips && <TipsModal onClose={() => setShowTips(false)} />}
 
       <div className="bg-gradient-to-r from-navy to-accent text-white p-4 mb-4 rounded-b-xl shadow-lg">
-        <h1 className="text-2xl font-bold mb-1">🔍 Explore Research</h1>
+        <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
+          <Search size={24} />Explore Research
+        </h1>
         <p className="text-sm text-blue-100">Discover nursing papers</p>
       </div>
 

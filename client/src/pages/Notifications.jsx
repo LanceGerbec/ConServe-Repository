@@ -1,6 +1,6 @@
-// client/src/pages/Notifications.jsx - MOBILE OPTIMIZED
+// client/src/pages/Notifications.jsx - MOBILE OPTIMIZED WITH PROFESSIONAL ICONS
 import { useState, useEffect } from 'react';
-import { Bell, Check, Trash2, CheckCheck, X, Filter } from 'lucide-react';
+import { Bell, Check, Trash2, CheckCheck, X, Filter, CheckCircle, XCircle, FileEdit, BookOpen, ClipboardList, UserPlus, Eye, Star, AlertCircle } from 'lucide-react';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -109,13 +109,35 @@ const Notifications = () => {
   };
 
   const getTypeIcon = (type) => {
-    const icons = {
-      RESEARCH_APPROVED: '✅', RESEARCH_REJECTED: '❌', RESEARCH_REVISION: '📝',
-      NEW_RESEARCH_SUBMITTED: '📚', REVIEW_RECEIVED: '📋', ACCOUNT_APPROVED: '🎉',
-      SYSTEM_UPDATE: '🔔', NEW_USER_REGISTERED: '👤', RESEARCH_VIEWED: '👁️',
-      BOOKMARK_MILESTONE: '⭐'
+    const iconMap = {
+      RESEARCH_APPROVED: CheckCircle,
+      RESEARCH_REJECTED: XCircle,
+      RESEARCH_REVISION: FileEdit,
+      NEW_RESEARCH_SUBMITTED: BookOpen,
+      REVIEW_RECEIVED: ClipboardList,
+      ACCOUNT_APPROVED: CheckCircle,
+      SYSTEM_UPDATE: Bell,
+      NEW_USER_REGISTERED: UserPlus,
+      RESEARCH_VIEWED: Eye,
+      BOOKMARK_MILESTONE: Star
     };
-    return icons[type] || '🔔';
+    
+    const IconComponent = iconMap[type] || AlertCircle;
+    
+    const colorMap = {
+      RESEARCH_APPROVED: 'text-green-600',
+      RESEARCH_REJECTED: 'text-red-600',
+      RESEARCH_REVISION: 'text-yellow-600',
+      NEW_RESEARCH_SUBMITTED: 'text-blue-600',
+      REVIEW_RECEIVED: 'text-purple-600',
+      ACCOUNT_APPROVED: 'text-green-600',
+      SYSTEM_UPDATE: 'text-blue-600',
+      NEW_USER_REGISTERED: 'text-indigo-600',
+      RESEARCH_VIEWED: 'text-gray-600',
+      BOOKMARK_MILESTONE: 'text-yellow-600'
+    };
+    
+    return <IconComponent size={20} className={colorMap[type] || 'text-gray-600'} />;
   };
 
   const filteredNotifications = notifications.filter(n =>
@@ -229,7 +251,7 @@ const Notifications = () => {
                     onChange={() => toggleSelect(notif._id)}
                     className="w-5 h-5 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 flex-shrink-0 cursor-pointer"
                   />
-                  <span className="text-xl flex-shrink-0">{getTypeIcon(notif.type)}</span>
+                  <div className="flex-shrink-0 mt-0.5">{getTypeIcon(notif.type)}</div>
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-sm text-gray-900 dark:text-white break-words leading-tight">
@@ -247,14 +269,14 @@ const Notifications = () => {
                       {!notif.isRead && (
                         <button
                           onClick={() => markAsRead(notif._id)}
-                          className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                          className="text-xs text-blue-600 hover:underline whitespace-nowrap flex items-center gap-1"
                         >
-                          ✓ Mark read
+                          <Check size={12} />Mark read
                         </button>
                       )}
                       {notif.link && (
                         <a href={notif.link} className="text-xs text-navy dark:text-accent hover:underline whitespace-nowrap">
-                          View →
+                          View
                         </a>
                       )}
                       <button

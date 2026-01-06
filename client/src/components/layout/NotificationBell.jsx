@@ -1,6 +1,6 @@
-// client/src/components/layout/NotificationBell.jsx
+// client/src/components/layout/NotificationBell.jsx - PROFESSIONAL ICONS VERSION
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Trash2, CheckCheck, X } from 'lucide-react';
+import { Bell, Check, Trash2, CheckCheck, X, CheckCircle, XCircle, FileEdit, BookOpen, ClipboardList, UserPlus, Eye, Star, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const NotificationBell = () => {
@@ -13,7 +13,6 @@ const NotificationBell = () => {
   const dropdownRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -36,7 +35,7 @@ const NotificationBell = () => {
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);
     } catch (error) {
-      console.error('❌ Fetch notifications error:', error);
+      console.error('Fetch notifications error:', error);
     }
   };
 
@@ -59,7 +58,7 @@ const NotificationBell = () => {
       });
       fetchNotifications();
     } catch (error) {
-      console.error('❌ Mark read error:', error);
+      console.error('Mark read error:', error);
     }
   };
 
@@ -74,7 +73,7 @@ const NotificationBell = () => {
       });
       fetchNotifications();
     } catch (error) {
-      console.error('❌ Mark all read error:', error);
+      console.error('Mark all read error:', error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +89,7 @@ const NotificationBell = () => {
       });
       fetchNotifications();
     } catch (error) {
-      console.error('❌ Delete notification error:', error);
+      console.error('Delete notification error:', error);
     }
   };
 
@@ -103,13 +102,23 @@ const NotificationBell = () => {
   };
 
   const getTypeIcon = (type) => {
-    const icons = {
-      RESEARCH_APPROVED: '✅', RESEARCH_REJECTED: '❌', RESEARCH_REVISION: '📝',
-      NEW_RESEARCH_SUBMITTED: '📚', REVIEW_RECEIVED: '📋', ACCOUNT_APPROVED: '🎉',
-      SYSTEM_UPDATE: '🔔', NEW_USER_REGISTERED: '👤', RESEARCH_VIEWED: '👁️',
-      BOOKMARK_MILESTONE: '⭐'
+    const iconMap = {
+      RESEARCH_APPROVED: { Icon: CheckCircle, color: 'text-green-600' },
+      RESEARCH_REJECTED: { Icon: XCircle, color: 'text-red-600' },
+      RESEARCH_REVISION: { Icon: FileEdit, color: 'text-yellow-600' },
+      NEW_RESEARCH_SUBMITTED: { Icon: BookOpen, color: 'text-blue-600' },
+      REVIEW_RECEIVED: { Icon: ClipboardList, color: 'text-purple-600' },
+      ACCOUNT_APPROVED: { Icon: CheckCircle, color: 'text-green-600' },
+      SYSTEM_UPDATE: { Icon: Bell, color: 'text-blue-600' },
+      NEW_USER_REGISTERED: { Icon: UserPlus, color: 'text-indigo-600' },
+      RESEARCH_VIEWED: { Icon: Eye, color: 'text-gray-600' },
+      BOOKMARK_MILESTONE: { Icon: Star, color: 'text-yellow-600' }
     };
-    return icons[type] || '🔔';
+    
+    const config = iconMap[type] || { Icon: AlertCircle, color: 'text-gray-600' };
+    const { Icon, color } = config;
+    
+    return <Icon size={18} className={color} />;
   };
 
   const getTimeAgo = (date) => {
@@ -138,7 +147,6 @@ const NotificationBell = () => {
 
       {showDropdown && (
         <>
-          {/* 🚀 MOBILE FIX: Full screen overlay on mobile, dropdown on desktop */}
           <div className="fixed md:absolute inset-0 md:inset-auto md:right-0 md:mt-2 md:w-96 bg-white dark:bg-gray-800 md:rounded-xl md:shadow-2xl border-0 md:border border-gray-200 dark:border-gray-700 z-[100] flex flex-col max-h-screen md:max-h-[80vh]">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 flex-shrink-0">
@@ -191,7 +199,7 @@ const NotificationBell = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-lg">{getTypeIcon(notif.type)}</span>
+                          {getTypeIcon(notif.type)}
                           <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
                             {notif.title}
                           </p>
@@ -235,7 +243,6 @@ const NotificationBell = () => {
             </div>
           </div>
 
-          {/* 🚀 MOBILE ONLY: Backdrop to close dropdown */}
           <div 
             className="fixed inset-0 bg-black/20 z-[99] md:hidden"
             onClick={() => setShowDropdown(false)}
