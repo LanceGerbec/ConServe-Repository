@@ -1,4 +1,4 @@
-// client/src/components/layout/NotificationBell.jsx - PROFESSIONAL ICONS VERSION
+// client/src/components/layout/NotificationBell.jsx - CLEAN TITLES
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Trash2, CheckCheck, X, CheckCircle, XCircle, FileEdit, BookOpen, ClipboardList, UserPlus, Eye, Star, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -22,6 +22,10 @@ const NotificationBell = () => {
     if (showDropdown) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
+
+  const removeEmojis = (text) => {
+    return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+  };
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -148,7 +152,6 @@ const NotificationBell = () => {
       {showDropdown && (
         <>
           <div className="fixed md:absolute inset-0 md:inset-auto md:right-0 md:mt-2 md:w-96 bg-white dark:bg-gray-800 md:rounded-xl md:shadow-2xl border-0 md:border border-gray-200 dark:border-gray-700 z-[100] flex flex-col max-h-screen md:max-h-[80vh]">
-            {/* Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 flex-shrink-0">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Bell size={18} />
@@ -180,7 +183,6 @@ const NotificationBell = () => {
               </div>
             </div>
 
-            {/* Notifications List */}
             <div className="overflow-y-auto flex-1">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center">
@@ -201,7 +203,7 @@ const NotificationBell = () => {
                         <div className="flex items-center gap-2 mb-1">
                           {getTypeIcon(notif.type)}
                           <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
-                            {notif.title}
+                            {removeEmojis(notif.title)}
                           </p>
                         </div>
                         <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
@@ -229,7 +231,6 @@ const NotificationBell = () => {
               )}
             </div>
 
-            {/* Footer */}
             <div className="p-3 text-center border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
               <button
                 onClick={() => {

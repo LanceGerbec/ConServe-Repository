@@ -1,4 +1,4 @@
-// client/src/pages/Notifications.jsx - MOBILE OPTIMIZED WITH PROFESSIONAL ICONS
+// client/src/pages/Notifications.jsx - CLEAN TITLES
 import { useState, useEffect } from 'react';
 import { Bell, Check, Trash2, CheckCheck, X, Filter, CheckCircle, XCircle, FileEdit, BookOpen, ClipboardList, UserPlus, Eye, Star, AlertCircle } from 'lucide-react';
 
@@ -11,6 +11,10 @@ const Notifications = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => { fetchNotifications(); }, []);
+
+  const removeEmojis = (text) => {
+    return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -110,34 +114,22 @@ const Notifications = () => {
 
   const getTypeIcon = (type) => {
     const iconMap = {
-      RESEARCH_APPROVED: CheckCircle,
-      RESEARCH_REJECTED: XCircle,
-      RESEARCH_REVISION: FileEdit,
-      NEW_RESEARCH_SUBMITTED: BookOpen,
-      REVIEW_RECEIVED: ClipboardList,
-      ACCOUNT_APPROVED: CheckCircle,
-      SYSTEM_UPDATE: Bell,
-      NEW_USER_REGISTERED: UserPlus,
-      RESEARCH_VIEWED: Eye,
-      BOOKMARK_MILESTONE: Star
+      RESEARCH_APPROVED: { Icon: CheckCircle, color: 'text-green-600' },
+      RESEARCH_REJECTED: { Icon: XCircle, color: 'text-red-600' },
+      RESEARCH_REVISION: { Icon: FileEdit, color: 'text-yellow-600' },
+      NEW_RESEARCH_SUBMITTED: { Icon: BookOpen, color: 'text-blue-600' },
+      REVIEW_RECEIVED: { Icon: ClipboardList, color: 'text-purple-600' },
+      ACCOUNT_APPROVED: { Icon: CheckCircle, color: 'text-green-600' },
+      SYSTEM_UPDATE: { Icon: Bell, color: 'text-blue-600' },
+      NEW_USER_REGISTERED: { Icon: UserPlus, color: 'text-indigo-600' },
+      RESEARCH_VIEWED: { Icon: Eye, color: 'text-gray-600' },
+      BOOKMARK_MILESTONE: { Icon: Star, color: 'text-yellow-600' }
     };
     
-    const IconComponent = iconMap[type] || AlertCircle;
+    const config = iconMap[type] || { Icon: AlertCircle, color: 'text-gray-600' };
+    const { Icon, color } = config;
     
-    const colorMap = {
-      RESEARCH_APPROVED: 'text-green-600',
-      RESEARCH_REJECTED: 'text-red-600',
-      RESEARCH_REVISION: 'text-yellow-600',
-      NEW_RESEARCH_SUBMITTED: 'text-blue-600',
-      REVIEW_RECEIVED: 'text-purple-600',
-      ACCOUNT_APPROVED: 'text-green-600',
-      SYSTEM_UPDATE: 'text-blue-600',
-      NEW_USER_REGISTERED: 'text-indigo-600',
-      RESEARCH_VIEWED: 'text-gray-600',
-      BOOKMARK_MILESTONE: 'text-yellow-600'
-    };
-    
-    return <IconComponent size={20} className={colorMap[type] || 'text-gray-600'} />;
+    return <Icon size={20} className={color} />;
   };
 
   const filteredNotifications = notifications.filter(n =>
@@ -156,7 +148,6 @@ const Notifications = () => {
 
   return (
     <div className="pb-6 space-y-4">
-      {/* MOBILE OPTIMIZED HEADER */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -176,7 +167,6 @@ const Notifications = () => {
           </button>
         </div>
 
-        {/* COLLAPSIBLE ACTIONS */}
         {showActions && (
           <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-gray-700 animate-slide-up">
             {selected.size > 0 && (
@@ -204,7 +194,6 @@ const Notifications = () => {
           </div>
         )}
 
-        {/* FILTER TABS */}
         <div className={`flex gap-2 ${showActions ? 'mt-3 pt-3 border-t border-gray-200 dark:border-gray-700' : ''}`}>
           {['all', 'unread', 'read'].map(f => (
             <button
@@ -230,7 +219,6 @@ const Notifications = () => {
         )}
       </div>
 
-      {/* MOBILE OPTIMIZED NOTIFICATIONS LIST */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {filteredNotifications.length === 0 ? (
           <div className="text-center py-12 px-4">
@@ -255,7 +243,7 @@ const Notifications = () => {
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-sm text-gray-900 dark:text-white break-words leading-tight">
-                        {notif.title}
+                        {removeEmojis(notif.title)}
                       </h3>
                       {!notif.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>}
                     </div>
