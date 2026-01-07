@@ -1,7 +1,3 @@
-// ============================================
-// FILE: server/src/utils/notificationService.js
-// COMPLETE UPDATED VERSION
-// ============================================
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
@@ -17,7 +13,7 @@ export const notifyNewResearchSubmitted = async (research) => {
     const notifications = admins.map(admin => ({
       recipient: admin._id,
       type: 'NEW_RESEARCH_SUBMITTED',
-      title: '📚 New Research Submitted',
+      title: 'New Research Submitted',
       message: `"${research.title}" by ${research.submittedBy.firstName} ${research.submittedBy.lastName}`,
       link: `/dashboard?adminReview=${research._id}`,
       relatedResearch: research._id,
@@ -32,7 +28,7 @@ export const notifyNewResearchSubmitted = async (research) => {
   }
 };
 
-// FACULTY ONLY: Notify when admin approves a paper
+// FACULTY: Notify when admin approves a paper (NOW READY FOR FACULTY REVIEW)
 export const notifyFacultyOfApprovedPaper = async (research) => {
   try {
     const faculty = await User.find({ 
@@ -44,15 +40,15 @@ export const notifyFacultyOfApprovedPaper = async (research) => {
     const notifications = faculty.map(f => ({
       recipient: f._id,
       type: 'RESEARCH_APPROVED_FOR_REVIEW',
-      title: '✅ New Paper Approved - Ready for Faculty Review',
-      message: `"${research.title}" has been approved by admin. You can now provide your review.`,
-      link: `/dashboard?facultyReview=${research._id}`,
+      title: 'New Approved Paper - Ready for Review',
+      message: `"${research.title}" has been approved by admin. You can now provide your faculty review.`,
+      link: `/research/${research._id}`,
       relatedResearch: research._id,
       priority: 'high'
     }));
 
     await Notification.insertMany(notifications);
-    console.log(`✅ Notified ${notifications.length} faculty members of approved paper`);
+    console.log(`✅ Notified ${notifications.length} faculty of approved paper`);
   } catch (error) {
     console.error('❌ Faculty notification error:', error);
   }
@@ -62,36 +58,35 @@ export const notifyFacultyOfApprovedPaper = async (research) => {
 export const notifyResearchStatusChange = async (research, newStatus, reviewNotes = '') => {
   try {
     const statusConfig = {
-  approved: {
-    title: 'Research Approved',
-    message: `Your research "${research.title}" has been approved and is now published.`,
-    priority: 'high'
-  },
-  rejected: {
-    title: 'Research Needs Revision',
-    message: `Your research "${research.title}" requires revision. Reason: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
-    priority: 'high'
-  },
-  revision: {
-    title: 'Revisions Requested',
-    message: `Please revise your research "${research.title}". Feedback: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
-    priority: 'high'
-  }
-};
-
+      approved: {
+        title: 'Research Approved',
+        message: `Your research "${research.title}" has been approved and is now published.`,
+        priority: 'high'
+      },
+      rejected: {
+        title: 'Research Needs Revision',
+        message: `Your research "${research.title}" requires revision. Reason: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
+        priority: 'high'
+      },
+      revision: {
+        title: 'Revisions Requested',
+        message: `Please revise your research "${research.title}". Feedback: ${reviewNotes.substring(0, 150)}${reviewNotes.length > 150 ? '...' : ''}`,
+        priority: 'high'
+      }
+    };
 
     const config = statusConfig[newStatus];
     if (!config) return;
 
     await Notification.create({
-  recipient: research.submittedBy._id || research.submittedBy,
-  type: `RESEARCH_${newStatus.toUpperCase()}`,
-  title: config.title,
-  message: config.message,
-  link: `/research/${research._id}`,
-  relatedResearch: research._id,
-  priority: config.priority
-});
+      recipient: research.submittedBy._id || research.submittedBy,
+      type: `RESEARCH_${newStatus.toUpperCase()}`,
+      title: config.title,
+      message: config.message,
+      link: `/research/${research._id}`,
+      relatedResearch: research._id,
+      priority: config.priority
+    });
 
     console.log(`✅ ${newStatus.toUpperCase()} notification sent to author`);
   } catch (error) {
@@ -129,7 +124,7 @@ export const notifyNewUserRegistered = async (user) => {
     const notifications = admins.map(admin => ({
       recipient: admin._id,
       type: 'NEW_USER_REGISTERED',
-     title: 'New User Registration',
+      title: 'New User Registration',
       message: `${user.firstName} ${user.lastName} (${user.role}) - ${user.email}`,
       link: '/dashboard',
       relatedUser: user._id,

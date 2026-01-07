@@ -39,31 +39,31 @@ const FacultyDashboard = () => {
   useEffect(() => { fetchData(); }, [activeTab]);
 
   const fetchData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const [pendingRes, statsRes, reviewsRes, bookmarksRes, submissionsRes] = await Promise.all([
-        fetch(`${API_URL}/reviews/pending`, { headers }),
-        fetch(`${API_URL}/reviews/stats`, { headers }),
-        fetch(`${API_URL}/reviews/my-reviews`, { headers }),
-        fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }),
-        fetch(`${API_URL}/research/my-submissions`, { headers })
-      ]);
-      const [pending, reviewStats, reviews, bookmarksData, submissionsData] = await Promise.all([
-        pendingRes.json(), statsRes.json(), reviewsRes.json(), bookmarksRes.json(), submissionsRes.json()
-      ]);
-      setPendingPapers(pending.papers || []);
-      setMyReviews(reviews.reviews || []);
-      setBookmarks(bookmarksData.bookmarks || []);
-      setSubmissions(submissionsData.papers || []);
-      setStats({ reviews: reviewStats.totalReviews || 0, pending: pending.count || 0, submissions: submissionsData.count || 0 });
-    } catch (error) {
-      showToast('Failed to load data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    const [pendingRes, statsRes, reviewsRes, bookmarksRes, submissionsRes] = await Promise.all([
+      fetch(`${API_URL}/reviews/pending`, { headers }), // Now returns approved papers
+      fetch(`${API_URL}/reviews/stats`, { headers }),
+      fetch(`${API_URL}/reviews/my-reviews`, { headers }),
+      fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }),
+      fetch(`${API_URL}/research/my-submissions`, { headers })
+    ]);
+    const [pending, reviewStats, reviews, bookmarksData, submissionsData] = await Promise.all([
+      pendingRes.json(), statsRes.json(), reviewsRes.json(), bookmarksRes.json(), submissionsRes.json()
+    ]);
+    setPendingPapers(pending.papers || []);
+    setMyReviews(reviews.reviews || []);
+    setBookmarks(bookmarksData.bookmarks || []);
+    setSubmissions(submissionsData.papers || []);
+    setStats({ reviews: reviewStats.totalReviews || 0, pending: pending.count || 0, submissions: submissionsData.count || 0 });
+  } catch (error) {
+    showToast('Failed to load data', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRemoveBookmark = async (bookmarkId, researchId) => {
     try {
@@ -292,54 +292,60 @@ const FacultyDashboard = () => {
   </>
 )}
 
-          {activeTab === 'reviews' && (
-            <div ref={reviewsRef} className="space-y-6 scroll-mt-4">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Clock size={20} className="text-yellow-600" />Pending Review ({filteredPending.length})
-                  </h2>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-                  </div>
-                </div>
-                <div className="p-4 max-h-96 overflow-y-auto">
-                  {filteredPending.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Clock size={32} className="text-gray-400" />
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 font-medium">{search ? 'No papers found' : 'No pending papers'}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">{filteredPending.map(paper => <PaperCard key={paper._id} paper={paper} />)}</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <FileText size={20} className="text-blue-600" />My Reviews ({filteredReviews.length})
-                  </h2>
-                </div>
-                <div className="p-4">
-                  {filteredReviews.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FileText size={32} className="text-gray-400" />
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 font-medium">No reviews yet</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">{filteredReviews.map(review => <PaperCard key={review._id} paper={review} isReview />)}</div>
-                  )}
-                </div>
-              </div>
+      {activeTab === 'reviews' && (
+  <div ref={reviewsRef} className="space-y-6 scroll-mt-4">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Clock size={20} className="text-green-600" />
+          Approved Papers - Ready for Review ({filteredPending.length})
+        </h2>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
+            ℹ️ These papers have been approved by admin. Your review is optional and advisory.
+          </p>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+        </div>
+      </div>
+      <div className="p-4 max-h-96 overflow-y-auto">
+        {filteredPending.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock size={32} className="text-gray-400" />
             </div>
-          )}
+            <p className="text-gray-600 dark:text-gray-400 font-medium">{search ? 'No papers found' : 'No approved papers yet'}</p>
+          </div>
+        ) : (
+          <div className="space-y-4">{filteredPending.map(paper => <PaperCard key={paper._id} paper={paper} />)}</div>
+        )}
+      </div>
+    </div>
+
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <FileText size={20} className="text-blue-600" />My Reviews ({filteredReviews.length})
+        </h2>
+      </div>
+      <div className="p-4">
+        {filteredReviews.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText size={32} className="text-gray-400" />
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 font-medium">No reviews yet</p>
+          </div>
+        ) : (
+          <div className="space-y-4">{filteredReviews.map(review => <PaperCard key={review._id} paper={review} isReview />)}</div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
           {activeTab === 'submissions' && (
             <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">

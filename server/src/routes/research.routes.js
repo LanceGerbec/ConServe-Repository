@@ -307,25 +307,39 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
       userAgent: req.get('user-agent')
     });
     
-    // In-app notification
+    // In-app notification to author
     await notifyResearchStatusChange(research, status, revisionNotes);
-    if (status === 'approved') await notifyFacultyOfApprovedPaper(research);
     
-    // ✅ EMAIL NOTIFICATIONS (won't block)
-    const author = research.submittedBy;
+    // ✅ NEW: Notify faculty ONLY when approved
     if (status === 'approved') {
-      sendResearchApprovedNotification(research, author)
-        .then(r => console.log('✓ Approval email:', r.success ? 'sent' : 'failed'))
-        .catch(e => console.error('✗ Email error:', e.message));
-    } else if (status === 'revision') {
-      sendResearchRevisionNotification(research, author, revisionNotes)
-        .then(r => console.log('✓ Revision email:', r.success ? 'sent' : 'failed'))
-        .catch(e => console.error('✗ Email error:', e.message));
-    } else if (status === 'rejected') {
-      sendResearchRejectedNotification(research, author, revisionNotes)
-        .then(r => console.log('✓ Rejection email:', r.success ? 'sent' : 'failed'))
-        .catch(e => console.error('✗ Email error:', e.message));
+      await notifyFacultyOfApprovedPaper(research);
     }
+    
+   // ✅ EMAIL NOTIFICATIONS (won't block)
+const author = research.submittedBy;
+
+if (status === 'approved') {
+  sendResearchApprovedNotification(research, author)
+    .then(r => console.log('✓ Approval email:', r.success ? 'sent' : 'failed'))
+    .catch(e => console.error('✗ Email error:', e.message));
+
+  sendFacultyApprovedPaperNotification(research)
+    .then(r => console.log('✓ Faculty notification email:', r.success ? 'sent' : 'failed'))
+    .catch(e => console.error('✗ Faculty email error:', e.message));
+
+} else if (status === 'revision') {
+  sendResearchRevisionNotification(research, author, revisionNotes)
+    .then(r => console.log('✓ Revision email:', r.success ? 'sent' : 'failed'))
+    .catch(e => console.error('✗ Email error:', e.message));
+
+} else if (status === 'rejected') {
+  sendResearchRejectedNotification(research, author, revisionNotes)
+    .then(r => console.log('✓ Rejection email:', r.success ? 'sent' : 'failed'))
+    .catch(e => console.error('✗ Email error:', e.message));
+}
+
+      
+
     
     res.json({ message: 'Status updated', research });
   } catch (error) {

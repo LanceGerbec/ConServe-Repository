@@ -530,12 +530,11 @@ return (
           <span className="text-blue-200">Active</span>
         </div>
         <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
-        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
-          <Clock size={14} className="text-yellow-300 flex-shrink-0" />
-          <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
-          <span className="text-blue-200 hidden sm:inline">Pending</span>
-          <span className="text-blue-200 sm:hidden">Pend</span>
-        </div>
+<div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+  <Clock size={14} className="text-yellow-300 flex-shrink-0" />
+  <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
+  <span className="text-blue-200">Pending</span>
+</div>
       </div>
     </div>
 

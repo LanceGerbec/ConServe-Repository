@@ -82,13 +82,15 @@ export const getMyReviews = async (req, res) => {
 
 export const getPendingReviews = async (req, res) => {
   try {
-    const pendingResearch = await Research.find({ status: 'pending' })
+    // Faculty can only see APPROVED papers (not pending)
+    const approvedResearch = await Research.find({ status: 'approved' })
       .populate('submittedBy', 'firstName lastName email')
-      .sort({ createdAt: -1 });
+      .sort({ approvedDate: -1 })
+      .limit(50);
 
-    res.json({ papers: pendingResearch, count: pendingResearch.length });
+    res.json({ papers: approvedResearch, count: approvedResearch.length });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch pending reviews' });
+    res.status(500).json({ error: 'Failed to fetch papers for review' });
   }
 };
 

@@ -158,6 +158,38 @@ export const sendResearchSubmissionNotification = async (research, author) => {
   }
 };
 
+// ✅ FACULTY: Notify when paper is approved (ready for review)
+export const sendFacultyApprovedPaperNotification = async (research) => {
+  try {
+    const User = (await import('../models/User.js')).default;
+    const faculty = await User.find({ 
+      role: 'faculty', 
+      isApproved: true, 
+      isActive: true 
+    });
+
+    console.log(`📧 Sending approved paper notification to ${faculty.length} faculty...`);
+
+    const results = [];
+    for (const f of faculty) {
+      const result = await sendEmail({
+        to: f.email,
+        subject: `New Approved Paper: ${research.title}`,
+        html: facultyApprovedPaperNotificationTemplate(research)
+      });
+      results.push(result);
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    console.log(`✓ Faculty notifications: ${successCount}/${faculty.length} emails sent`);
+
+    return { success: successCount > 0, results };
+  } catch (error) {
+    console.error('✗ Faculty notification email error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // ✅ RESEARCH APPROVED NOTIFICATION (AUTHOR)
 export const sendResearchApprovedNotification = async (research, author) => {
   console.log(`📧 Sending approval email to ${author.email}...`);
