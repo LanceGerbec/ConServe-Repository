@@ -167,89 +167,100 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   }, []);
 
   const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    if (!file) {
-      setError('Please upload a PDF file');
+  e.preventDefault();
+  if (!file) {
+    setError('Please upload a PDF file');
+    return;
+  }
+
+  setLoading(true);
+  setUploadProgress(0);
+
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setError('Session expired. Please login again.');
+      setLoading(false);
+      setTimeout(() => window.location.href = '/login', 2000);
       return;
     }
 
-    setLoading(true);
-    setUploadProgress(0);
+    const data = new FormData();
+    data.append('file', file);
+    data.append('title', formData.title);
+    
+    if (uploadOnBehalf) {
+      data.append('authors', JSON.stringify(formData.authors));
+      data.append('uploadOnBehalf', 'true');
+      data.append('actualAuthors', JSON.stringify(formData.authors));
+    } else {
+      data.append('authors', JSON.stringify([...formData.authors, ...formData.coAuthors]));
+      data.append('uploadOnBehalf', 'false');
+    }
+    
+    data.append('abstract', formData.abstract);
+    data.append('keywords', JSON.stringify(formData.keywords));
+    data.append('category', formData.category);
+    data.append('subjectArea', formData.subjectArea === 'Other' ? formData.customSubjectArea : formData.subjectArea);
+    data.append('yearCompleted', formData.yearCompleted);
 
-    try {
-      const token = localStorage.getItem('token');
-      
-      // ✅ CHECK TOKEN EXISTS
-      if (!token) {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percentComplete);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 201) {
+        showToast('🎉 Research submitted successfully!', 'success');
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 1500);
+      } else if (xhr.status === 401) {
         setError('Session expired. Please login again.');
+        localStorage.removeItem('token');
         setLoading(false);
         setTimeout(() => window.location.href = '/login', 2000);
-        return;
-      }
-
-      const data = new FormData();
-      data.append('file', file);
-      data.append('title', formData.title);
-      
-      if (uploadOnBehalf) {
-        data.append('authors', JSON.stringify(formData.authors));
-        data.append('uploadOnBehalf', 'true');
-        data.append('actualAuthors', JSON.stringify(formData.authors));
       } else {
-        data.append('authors', JSON.stringify([...formData.authors, ...formData.coAuthors]));
-        data.append('uploadOnBehalf', 'false');
-      }
-      
-      data.append('abstract', formData.abstract);
-      data.append('keywords', JSON.stringify(formData.keywords));
-      data.append('category', formData.category);
-      data.append('subjectArea', formData.subjectArea === 'Other' ? formData.customSubjectArea : formData.subjectArea);
-      data.append('yearCompleted', formData.yearCompleted);
-
-      const xhr = new XMLHttpRequest();
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(percentComplete);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status === 201) {
-          showToast('🎉 Research submitted successfully!', 'success');
-          setTimeout(() => {
-            onSuccess?.();
-            onClose();
-          }, 1500);
-        } else if (xhr.status === 401) {
-          setError('Session expired. Please login again.');
-          localStorage.removeItem('token');
-          setLoading(false);
-          setTimeout(() => window.location.href = '/login', 2000);
-        } else {
+        try {
           const errorData = JSON.parse(xhr.responseText);
           setError(errorData.error || 'Submission failed');
-          setLoading(false);
+        } catch {
+          setError('Submission failed. Please try again.');
         }
-      };
-
-      xhr.onerror = () => {
-        setError('Connection error. Please try again.');
         setLoading(false);
-      };
+      }
+    };
 
-      xhr.open('POST', `${import.meta.env.VITE_API_URL}/research`);
-      // ✅ FIX: Set Authorization header BEFORE sending
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      xhr.send(data);
-
-    } catch (err) {
-      console.error('Submit error:', err);
-      setError('Submission failed. Please try again.');
+    xhr.onerror = () => {
+      setError('Connection error. Please check your internet and try again.');
       setLoading(false);
-    }
-  }, [file, formData, uploadOnBehalf, onSuccess, onClose, showToast]);
+    };
+
+    xhr.ontimeout = () => {
+      setError('Request timeout. Please try again.');
+      setLoading(false);
+    };
+
+    xhr.timeout = 60000; // 60 second timeout
+
+    xhr.open('POST', `${import.meta.env.VITE_API_URL}/research`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    
+    console.log('📤 Submitting research with token:', token.substring(0, 20) + '...');
+    xhr.send(data);
+
+  } catch (err) {
+    console.error('Submit error:', err);
+    setError(err.message || 'Submission failed. Please try again.');
+    setLoading(false);
+  }
+}, [file, formData, uploadOnBehalf, onSuccess, onClose, showToast]);
 
   const InfoTooltip = useCallback(({ text }) => (
     <div className="group relative inline-block ml-1">

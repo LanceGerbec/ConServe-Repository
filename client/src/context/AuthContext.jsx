@@ -1,4 +1,3 @@
-// client/src/context/AuthContext.jsx - AUTO-LOGOUT AFTER 20 MIN INACTIVITY
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -21,6 +20,8 @@ export const AuthProvider = ({ children }) => {
   const WARNING_2MIN = 18 * 60 * 1000; // 18 min (2 min warning)
   const WARNING_1MIN = 19 * 60 * 1000; // 19 min (1 min warning)
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
   // Toast helper
   const toast = useCallback((message, type = 'info') => {
     setShowToast({ show: true, message, type });
@@ -34,9 +35,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
-      toast('🔒 Logged out due to inactivity', 'error');
+      toast('Session expired due to inactivity', 'error');
       setTimeout(() => {
-        navigate('/login', { state: { message: '🔒 Session expired due to inactivity' } });
+        navigate('/login', { state: { message: 'Session expired due to inactivity' } });
       }, 500);
     }
   }, [navigate, toast]);
@@ -56,13 +57,13 @@ export const AuthProvider = ({ children }) => {
 
     // Warnings
     if (elapsed >= WARNING_1MIN && !warningShownRef.current.oneMin) {
-      toast('⚠️ You will be logged out in 1 minute!', 'error');
+      toast('You will be logged out in 1 minute!', 'error');
       warningShownRef.current.oneMin = true;
     } else if (elapsed >= WARNING_2MIN && !warningShownRef.current.twoMin) {
-      toast('⏰ You will be logged out in 2 minutes due to inactivity', 'warning');
+      toast('You will be logged out in 2 minutes due to inactivity', 'warning');
       warningShownRef.current.twoMin = true;
     } else if (elapsed >= WARNING_5MIN && !warningShownRef.current.fiveMin) {
-      toast('⏰ You will be logged out in 5 minutes due to inactivity', 'warning');
+      toast('You will be logged out in 5 minutes due to inactivity', 'warning');
       warningShownRef.current.fiveMin = true;
     }
   }, [user, autoLogout, toast, INACTIVITY_LIMIT, WARNING_5MIN, WARNING_2MIN, WARNING_1MIN]);
@@ -81,21 +82,79 @@ export const AuthProvider = ({ children }) => {
     }
   }, [resetInactivityTimer]);
 
-  // Initialize user from localStorage
-  useEffect(() => {
+  // ✅ Fetch current user from token
+  const fetchCurrentUser = useCallback(async () => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Failed to parse user data:', error);
+    
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Check if token is expired (client-side check)
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const isExpired = Date.now() >= payload.exp * 1000;
+      
+      if (isExpired) {
+        console.warn('⚠️ Token expired');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.error('Invalid token format:', e);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    // Try to use cached user first
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+        setLoading(false);
+        return;
+      } catch (error) {
+        console.error('Failed to parse saved user:', error);
       }
     }
-    setLoading(false);
-  }, []);
+
+    // Fetch fresh user data from server
+    try {
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      } else {
+        console.error('Failed to fetch user:', res.status);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL]);
+
+  // Initialize user on mount
+  useEffect(() => {
+    fetchCurrentUser();
+  }, [fetchCurrentUser]);
 
   // Setup inactivity detection
   useEffect(() => {
@@ -119,9 +178,10 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user, handleActivity, checkInactivity, resetInactivityTimer, location.pathname]);
 
+  // ✅ Login function
   const login = async (email, password) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -139,13 +199,15 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error };
       }
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, error: 'Connection error' };
     }
   };
 
+  // ✅ Register function
   const register = async (formData) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -159,15 +221,17 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error };
       }
     } catch (error) {
+      console.error('Register error:', error);
       return { success: false, error: 'Connection error' };
     }
   };
 
+  // ✅ Logout function
   const logout = async () => {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+        await fetch(`${API_URL}/auth/logout`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -182,17 +246,34 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
-      navigate('/login', { state: { message: '✓ Logged out successfully' } });
+      navigate('/login', { state: { message: 'Logged out successfully' } });
     }
   };
 
+  // ✅ Global 401 handler
+  useEffect(() => {
+    const handle401 = () => {
+      console.warn('⚠️ 401 Unauthorized detected - logging out');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      toast('Session expired. Please login again.', 'error');
+      setTimeout(() => {
+        navigate('/login', { state: { message: 'Session expired. Please login again.' } });
+      }, 1000);
+    };
+
+    window.addEventListener('auth:unauthorized', handle401);
+    return () => window.removeEventListener('auth:unauthorized', handle401);
+  }, [navigate, toast]);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, refetch: fetchCurrentUser }}>
       {children}
       
       {/* Toast Notification */}
       {showToast.show && (
-        <div className="fixed top-20 right-4 z-50 animate-slide-in">
+        <div className="fixed top-20 right-4 z-[200] animate-slide-in">
           <div className={`px-6 py-3 rounded-lg shadow-2xl border-2 ${
             showToast.type === 'error' ? 'bg-red-500 border-red-700' :
             showToast.type === 'warning' ? 'bg-yellow-500 border-yellow-700' :
