@@ -1,7 +1,4 @@
-// ============================================
-// FILE: server/src/utils/emailService.js
-// UPDATED WITH PROFESSIONAL TEMPLATES
-// ============================================
+// server/src/utils/emailService.js
 import brevo from '@getbrevo/brevo';
 import {
   welcomeEmailTemplate,
@@ -9,6 +6,10 @@ import {
   passwordResetEmailTemplate,
   passwordResetConfirmationTemplate,
   adminNewUserNotificationTemplate,
+  researchSubmissionNotificationTemplate,
+  researchApprovedTemplate,
+  researchRevisionRequestedTemplate,
+  researchRejectedTemplate,
   facultyReviewNotificationTemplate
 } from './emailTemplates.js';
 
@@ -47,10 +48,10 @@ export const sendEmail = async ({ to, subject, html }) => {
       messageId = result.messageId || result.response?.body?.messageId || result.body?.messageId || result.data?.messageId || JSON.stringify(result).substring(0, 50);
     }
 
-    console.log(`✓ Sent to ${to}`);
+    console.log(`✓ Email sent to ${to}`);
     return { success: true, messageId, recipient: to };
   } catch (error) {
-    console.error(`✗ Failed to ${to}:`, error.message);
+    console.error(`✗ Email failed to ${to}:`, error.message);
     return { success: false, error: error.message, recipient: to };
   }
 };
@@ -80,12 +81,9 @@ export const testEmailConnection = async () => {
   }
 };
 
+// User Registration & Approval
 export const sendWelcomeEmail = async (user) => {
-  if (!user?.email) {
-    console.error('✗ User email required');
-    return { success: false, error: 'User email required' };
-  }
-  
+  if (!user?.email) return { success: false, error: 'User email required' };
   return await sendEmail({
     to: user.email,
     subject: 'Welcome to ConServe - Registration Successful',
@@ -94,11 +92,7 @@ export const sendWelcomeEmail = async (user) => {
 };
 
 export const sendApprovalEmail = async (user) => {
-  if (!user?.email) {
-    console.error('✗ User email required');
-    return { success: false, error: 'User email required' };
-  }
-  
+  if (!user?.email) return { success: false, error: 'User email required' };
   return await sendEmail({
     to: user.email,
     subject: 'ConServe Account Approved - Login Now',
@@ -106,6 +100,7 @@ export const sendApprovalEmail = async (user) => {
   });
 };
 
+// Password Reset
 export const sendPasswordResetEmail = async (user, token) => {
   return await sendEmail({
     to: user.email,
@@ -122,6 +117,7 @@ export const sendPasswordResetConfirmation = async (user) => {
   });
 };
 
+// Admin Notifications
 export const sendAdminNewUserNotification = async (user) => {
   return await sendEmail({
     to: ADMIN_EMAIL,
@@ -130,50 +126,82 @@ export const sendAdminNewUserNotification = async (user) => {
   });
 };
 
-// Research Submission Notification (Admin)
+// ✅ RESEARCH SUBMISSION NOTIFICATION (ADMIN)
 export const sendResearchSubmissionNotification = async (research, author) => {
-  const admins = await (await import('../models/User.js')).default.find({ 
-    role: 'admin', 
-    isApproved: true, 
-    isActive: true 
-  });
-
-  const results = [];
-  for (const admin of admins) {
-    const result = await sendEmail({
-      to: admin.email,
-      subject: 'New Research Submission - Review Required',
-      html: researchSubmissionNotificationTemplate(research, author)
+  try {
+    const User = (await import('../models/User.js')).default;
+    const admins = await User.find({ 
+      role: 'admin', 
+      isApproved: true, 
+      isActive: true 
     });
-    results.push(result);
-  }
 
-  return results;
+    console.log(`📧 Sending research submission emails to ${admins.length} admins...`);
+
+    const results = [];
+    for (const admin of admins) {
+      const result = await sendEmail({
+        to: admin.email,
+        subject: `New Research Submission: ${research.title}`,
+        html: researchSubmissionNotificationTemplate(research, author)
+      });
+      results.push(result);
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    console.log(`✓ Research submission: ${successCount}/${admins.length} admin emails sent`);
+
+    return { success: successCount > 0, results };
+  } catch (error) {
+    console.error('✗ Research submission email error:', error);
+    return { success: false, error: error.message };
+  }
 };
 
-// Research Approved Notification (Author)
+// ✅ RESEARCH APPROVED NOTIFICATION (AUTHOR)
 export const sendResearchApprovedNotification = async (research, author) => {
-  return await sendEmail({
+  console.log(`📧 Sending approval email to ${author.email}...`);
+  const result = await sendEmail({
     to: author.email,
-    subject: 'Research Paper Approved - ConServe',
+    subject: `Research Approved: ${research.title}`,
     html: researchApprovedTemplate(research, author)
   });
+  console.log(result.success ? '✓ Approval email sent' : '✗ Approval email failed');
+  return result;
 };
 
-// Research Revision Requested Notification (Author)
+// ✅ RESEARCH REVISION REQUESTED (AUTHOR)
 export const sendResearchRevisionNotification = async (research, author, revisionNotes) => {
-  return await sendEmail({
+  console.log(`📧 Sending revision request to ${author.email}...`);
+  const result = await sendEmail({
     to: author.email,
-    subject: 'Revision Requested for Your Research Paper - ConServe',
+    subject: `Revision Requested: ${research.title}`,
     html: researchRevisionRequestedTemplate(research, author, revisionNotes)
   });
+  console.log(result.success ? '✓ Revision email sent' : '✗ Revision email failed');
+  return result;
 };
 
-// Research Rejected Notification (Author)
+// ✅ RESEARCH REJECTED (AUTHOR)
 export const sendResearchRejectedNotification = async (research, author, rejectionNotes) => {
-  return await sendEmail({
+  console.log(`📧 Sending rejection email to ${author.email}...`);
+  const result = await sendEmail({
     to: author.email,
-    subject: 'Research Submission Update - ConServe',
+    subject: `Research Update: ${research.title}`,
     html: researchRejectedTemplate(research, author, rejectionNotes)
   });
+  console.log(result.success ? '✓ Rejection email sent' : '✗ Rejection email failed');
+  return result;
+};
+
+// ✅ FACULTY REVIEW NOTIFICATION (AUTHOR)
+export const sendFacultyReviewNotification = async (research, reviewer, comments) => {
+  console.log(`📧 Sending faculty review to author...`);
+  const result = await sendEmail({
+    to: research.submittedBy.email,
+    subject: `Faculty Review: ${research.title}`,
+    html: facultyReviewNotificationTemplate(research, reviewer, comments)
+  });
+  console.log(result.success ? '✓ Faculty review email sent' : '✗ Faculty review email failed');
+  return result;
 };

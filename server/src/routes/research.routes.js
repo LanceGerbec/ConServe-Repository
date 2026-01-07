@@ -1,3 +1,4 @@
+// server/src/routes/research.routes.js
 import express from 'express';
 import { auth, authorize } from '../middleware/auth.js';
 import multer from 'multer';
@@ -7,44 +8,30 @@ import { getGridFSBucket } from '../config/gridfs.js';
 import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOfApprovedPaper } from '../utils/notificationService.js';
+import { sendResearchSubmissionNotification, sendResearchApprovedNotification, sendResearchRevisionNotification, sendResearchRejectedNotification } from '../utils/emailService.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ============================================
-// PDF STREAMING ENDPOINT - MUST BE FIRST
-// ============================================
+// PDF STREAMING
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
-    console.log('📄 PDF Request:', req.params.id);
-    
     const paper = await Research.findById(req.params.id).populate('submittedBy');
-    if (!paper) {
-      console.error('❌ Paper not found:', req.params.id);
-      return res.status(404).json({ error: 'Paper not found' });
-    }
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
     
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
-      console.error('❌ Access denied:', req.user.email);
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    if (!paper.gridfsId) {
-      console.error('❌ No GridFS ID:', paper._id);
-      return res.status(404).json({ error: 'PDF not available' });
-    }
+    if (!paper.gridfsId) return res.status(404).json({ error: 'PDF not available' });
 
-    // Log view for approved papers
     if (paper.status === 'approved' && !isAuthor) {
       await Research.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
     }
 
-    console.log('✅ Streaming PDF from GridFS:', paper.gridfsId);
-
-    // Stream from GridFS
     const bucket = getGridFSBucket();
     const downloadStream = bucket.openDownloadStream(new mongoose.Types.ObjectId(paper.gridfsId));
 
@@ -59,29 +46,17 @@ router.get('/:id/pdf', auth, async (req, res) => {
 
     downloadStream.on('error', (error) => {
       console.error('❌ GridFS Error:', error);
-      if (!res.headersSent) {
-        res.status(404).json({ error: 'PDF stream failed' });
-      }
-    });
-
-    downloadStream.on('end', () => {
-      console.log('✅ PDF stream completed');
+      if (!res.headersSent) res.status(404).json({ error: 'PDF stream failed' });
     });
 
     downloadStream.pipe(res);
   } catch (error) {
-    console.error('❌ PDF Endpoint Error:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Failed to load PDF' });
-    }
+    console.error('❌ PDF Error:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to load PDF' });
   }
 });
 
-// ============================================
-// OTHER ROUTES
-// ============================================
-
-// GET STATS
+// STATS
 router.get('/stats', auth, async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
@@ -110,7 +85,7 @@ router.get('/my-submissions', auth, async (req, res) => {
   }
 });
 
-// CITATION GENERATOR
+// CITATION
 router.get('/:id/citation', auth, async (req, res) => {
   try {
     const { style = 'APA' } = req.query;
@@ -150,7 +125,7 @@ router.post('/log-violation', auth, async (req, res) => {
   }
 });
 
-// GET SINGLE RESEARCH
+// GET SINGLE
 router.get('/:id', auth, async (req, res) => {
   try {
     const paper = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName email');
@@ -168,12 +143,11 @@ router.get('/:id', auth, async (req, res) => {
     
     res.json({ paper: paperObj });
   } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({ error: 'Failed to fetch paper' });
   }
 });
 
-// LIST RESEARCH WITH PAGINATION
+// LIST
 router.get('/', auth, async (req, res) => {
   try {
     const { status, category, yearCompleted, subjectArea, author, search, page = 1, limit = 20 } = req.query;
@@ -217,21 +191,14 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// SUBMIT RESEARCH
+// ✅ SUBMIT RESEARCH
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF required' });
     
     const { 
-      title, 
-      authors, 
-      abstract, 
-      keywords, 
-      category, 
-      subjectArea, 
-      yearCompleted,
-      uploadOnBehalf,
-      actualAuthors
+      title, authors, abstract, keywords, category, subjectArea, yearCompleted,
+      uploadOnBehalf, actualAuthors
     } = req.body;
     
     const canUploadOnBehalf = 
@@ -240,19 +207,13 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
       req.user.canUploadOnBehalf;
     
     if (uploadOnBehalf === 'true' && !canUploadOnBehalf) {
-      return res.status(403).json({ 
-        error: 'You do not have permission to upload on behalf of others' 
-      });
+      return res.status(403).json({ error: 'No permission to upload on behalf' });
     }
     
     const bucket = getGridFSBucket();
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: 'application/pdf',
-      metadata: { 
-        submittedBy: req.user._id,
-        title,
-        uploadDate: new Date()
-      }
+      metadata: { submittedBy: req.user._id, title, uploadDate: new Date() }
     });
 
     const readableStream = Readable.from(req.file.buffer);
@@ -297,22 +258,16 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           resourceId: research._id,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
-          details: {
-            uploadedOnBehalf: isUploadedOnBehalf,
-            actualAuthors: isUploadedOnBehalf ? realAuthors : null
-          }
+          details: { uploadedOnBehalf: isUploadedOnBehalf, actualAuthors: isUploadedOnBehalf ? realAuthors : null }
         });
         
         // In-app notification
         await notifyNewResearchSubmitted(research);
         
-        // ✅ EMAIL NOTIFICATION TO ADMINS
-        try {
-          const { sendResearchSubmissionNotification } = await import('../utils/emailService.js');
-          await sendResearchSubmissionNotification(research, req.user);
-        } catch (emailError) {
-          console.error('⚠️ Admin email notification failed:', emailError);
-        }
+        // ✅ EMAIL NOTIFICATION (won't block response)
+        sendResearchSubmissionNotification(research, req.user)
+          .then(result => console.log('✓ Admin emails:', result.success ? 'sent' : 'failed'))
+          .catch(err => console.error('✗ Email error:', err.message));
         
         res.status(201).json({ message: 'Research submitted', research });
       } catch (error) {
@@ -331,7 +286,7 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
   }
 });
 
-// UPDATE STATUS
+// ✅ UPDATE STATUS
 router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
@@ -356,25 +311,20 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
     await notifyResearchStatusChange(research, status, revisionNotes);
     if (status === 'approved') await notifyFacultyOfApprovedPaper(research);
     
-    // ✅ EMAIL NOTIFICATIONS TO AUTHOR
-    try {
-      const { 
-        sendResearchApprovedNotification,
-        sendResearchRevisionNotification,
-        sendResearchRejectedNotification
-      } = await import('../utils/emailService.js');
-      
-      const author = research.submittedBy;
-      
-      if (status === 'approved') {
-        await sendResearchApprovedNotification(research, author);
-      } else if (status === 'revision') {
-        await sendResearchRevisionNotification(research, author, revisionNotes);
-      } else if (status === 'rejected') {
-        await sendResearchRejectedNotification(research, author, revisionNotes);
-      }
-    } catch (emailError) {
-      console.error('⚠️ Author email notification failed:', emailError);
+    // ✅ EMAIL NOTIFICATIONS (won't block)
+    const author = research.submittedBy;
+    if (status === 'approved') {
+      sendResearchApprovedNotification(research, author)
+        .then(r => console.log('✓ Approval email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Email error:', e.message));
+    } else if (status === 'revision') {
+      sendResearchRevisionNotification(research, author, revisionNotes)
+        .then(r => console.log('✓ Revision email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Email error:', e.message));
+    } else if (status === 'rejected') {
+      sendResearchRejectedNotification(research, author, revisionNotes)
+        .then(r => console.log('✓ Rejection email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Email error:', e.message));
     }
     
     res.json({ message: 'Status updated', research });
@@ -383,7 +333,7 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// DELETE RESEARCH
+// DELETE
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
     const research = await Research.findById(req.params.id);

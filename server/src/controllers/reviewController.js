@@ -1,8 +1,9 @@
+// server/src/controllers/reviewController.js
 import Review from '../models/Review.js';
 import Research from '../models/Research.js';
 import AuditLog from '../models/AuditLog.js';
 import Notification from '../models/Notification.js';
-import { sendEmail } from '../utils/emailService.js';
+import { sendFacultyReviewNotification } from '../utils/emailService.js';
 
 export const submitReview = async (req, res) => {
   try {
@@ -34,7 +35,7 @@ export const submitReview = async (req, res) => {
     await Notification.create({
       recipient: research.submittedBy._id,
       type: 'REVIEW_RECEIVED',
-      title: '📋 Faculty Review Received',
+      title: 'Faculty Review Received',
       message: `Your research "${research.title}" has received feedback from ${req.user.firstName} ${req.user.lastName}.`,
       link: `/research/${researchId}`,
       relatedResearch: researchId,
@@ -42,17 +43,10 @@ export const submitReview = async (req, res) => {
       priority: 'high'
     });
 
-     try {
-      const { facultyReviewNotificationTemplate } = await import('../utils/emailTemplates.js');
-      await sendEmail({
-        to: research.submittedBy.email,
-        subject: 'Faculty Review Received - ConServe',
-        html: facultyReviewNotificationTemplate(research, req.user, comments)
-      });
-      
-    } catch (emailError) {
-      console.error('⚠️ Email send failed:', emailError);
-    }
+    // ✅ EMAIL NOTIFICATION (won't block response)
+    sendFacultyReviewNotification(research, req.user, comments)
+      .then(result => console.log('✓ Faculty review email:', result.success ? 'sent' : 'failed'))
+      .catch(err => console.error('✗ Faculty review email error:', err.message));
 
     res.json({ message: 'Review submitted successfully', review });
   } catch (error) {
