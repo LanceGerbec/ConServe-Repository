@@ -218,8 +218,6 @@ router.get('/', auth, async (req, res) => {
 });
 
 // SUBMIT RESEARCH
-// REPLACE the POST '/' route (around line 95) with this:
-
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF required' });
@@ -232,11 +230,10 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
       category, 
       subjectArea, 
       yearCompleted,
-      uploadOnBehalf, // 🆕 NEW
-      actualAuthors   // 🆕 NEW
+      uploadOnBehalf,
+      actualAuthors
     } = req.body;
     
-    // 🆕 CHECK PERMISSION FOR "UPLOAD ON BEHALF"
     const canUploadOnBehalf = 
       req.user.role === 'admin' || 
       req.user.role === 'faculty' || 
@@ -263,18 +260,15 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
 
     uploadStream.on('finish', async () => {
       try {
-        // 🆕 HANDLE AUTHOR NAMES
         let authorNames = [];
         let isUploadedOnBehalf = false;
         let realAuthors = [];
         
         if (uploadOnBehalf === 'true' && actualAuthors) {
-          // Uploading on behalf - use provided author names
           isUploadedOnBehalf = true;
           realAuthors = JSON.parse(actualAuthors);
           authorNames = realAuthors;
         } else {
-          // Normal upload - use parsed authors
           authorNames = JSON.parse(authors);
         }
         
@@ -291,8 +285,8 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           fileSize: req.file.size,
           fileUrl: `/research/${uploadStream.id}/pdf`,
           submittedBy: req.user._id,
-          uploadedOnBehalf: isUploadedOnBehalf, // 🆕
-          actualAuthors: isUploadedOnBehalf ? realAuthors : [], // 🆕
+          uploadedOnBehalf: isUploadedOnBehalf,
+          actualAuthors: isUploadedOnBehalf ? realAuthors : [],
           status: 'pending'
         });
         
@@ -309,7 +303,16 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           }
         });
         
+        // In-app notification
         await notifyNewResearchSubmitted(research);
+        
+        // ✅ EMAIL NOTIFICATION TO ADMINS
+        try {
+          const { sendResearchSubmissionNotification } = await import('../utils/emailService.js');
+          await sendResearchSubmissionNotification(research, req.user);
+        } catch (emailError) {
+          console.error('⚠️ Admin email notification failed:', emailError);
+        }
         
         res.status(201).json({ message: 'Research submitted', research });
       } catch (error) {
@@ -349,8 +352,30 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
       userAgent: req.get('user-agent')
     });
     
+    // In-app notification
     await notifyResearchStatusChange(research, status, revisionNotes);
     if (status === 'approved') await notifyFacultyOfApprovedPaper(research);
+    
+    // ✅ EMAIL NOTIFICATIONS TO AUTHOR
+    try {
+      const { 
+        sendResearchApprovedNotification,
+        sendResearchRevisionNotification,
+        sendResearchRejectedNotification
+      } = await import('../utils/emailService.js');
+      
+      const author = research.submittedBy;
+      
+      if (status === 'approved') {
+        await sendResearchApprovedNotification(research, author);
+      } else if (status === 'revision') {
+        await sendResearchRevisionNotification(research, author, revisionNotes);
+      } else if (status === 'rejected') {
+        await sendResearchRejectedNotification(research, author, revisionNotes);
+      }
+    } catch (emailError) {
+      console.error('⚠️ Author email notification failed:', emailError);
+    }
     
     res.json({ message: 'Status updated', research });
   } catch (error) {

@@ -456,3 +456,164 @@ export const facultyReviewNotificationTemplate = (research, reviewer, comments) 
   </body>
   </html>
 `;
+
+// Research Submission Notification (Admin)
+export const researchSubmissionNotificationTemplate = (research, author) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:20px;background:#f3f4f6">
+  <div style="${styles.container}">
+    ${emailHeader('New Research Submission', 'Pending Review')}
+    <div style="${styles.body}">
+      <p style="font-size:16px;color:#374151;line-height:1.8;margin-bottom:20px">A new research paper has been submitted and requires your review.</p>
+      
+      <div style="background:#eff6ff;padding:25px;margin:25px 0;border-radius:10px;border:1px solid #bfdbfe">
+        <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.document} Title:</strong> ${research.title}</p>
+        <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.user} Author:</strong> ${author.firstName} ${author.lastName}</p>
+        <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.envelope} Email:</strong> ${author.email}</p>
+        <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>${icons.calendar} Submitted:</strong> ${new Date(research.createdAt).toLocaleDateString()}</p>
+        <p style="margin:10px 0;color:#1e40af;font-size:15px"><strong>Category:</strong> ${research.category}</p>
+      </div>
+
+      <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0">
+        <p style="margin:0 0 10px 0;font-weight:bold;color:#111827">Abstract:</p>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6">${research.abstract.substring(0, 200)}${research.abstract.length > 200 ? '...' : ''}</p>
+      </div>
+
+      ${infoBox(`
+        <p style="margin:0;color:#92400e;font-size:15px;font-weight:bold">${icons.clock} Action Required</p>
+        <p style="margin:10px 0 0 0;color:#92400e;font-size:14px">Please review this submission and approve or request revisions.</p>
+      `, 'warning')}
+
+      ${emailButton(CLIENT_URL + '/dashboard?adminReview=' + research._id, 'Review Paper')}
+    </div>
+    ${emailFooter()}
+  </div>
+</body>
+</html>
+`;
+
+// Research Approved Notification (Author)
+export const researchApprovedTemplate = (research, author) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:20px;background:#f3f4f6">
+  <div style="${styles.container}">
+    ${emailHeader('Research Paper Approved', 'Published Successfully')}
+    <div style="${styles.body}">
+      <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${author.firstName} ${author.lastName}</strong>,</p>
+      <p style="font-size:16px;color:#374151;line-height:1.8">Congratulations! Your research paper has been approved and is now published in the repository.</p>
+      
+      ${infoBox(`
+        <p style="margin:0 0 10px 0;color:#166534;font-size:16px;font-weight:bold">${icons.check} Paper Approved</p>
+        <p style="margin:0;color:#166534;font-size:15px"><strong>Title:</strong> ${research.title}</p>
+        <p style="margin:10px 0 0 0;color:#166534;font-size:14px">Your paper is now accessible to all users in the repository.</p>
+      `, 'success')}
+
+      <div style="background:#f9fafb;padding:25px;margin:25px 0;border-radius:10px;border:1px solid #e5e7eb">
+        <p style="margin:0 0 15px 0;color:#111827;font-size:16px;font-weight:bold">Paper Details:</p>
+        <p style="margin:8px 0;color:#374151"><strong>Status:</strong> Published</p>
+        <p style="margin:8px 0;color:#374151"><strong>Approved Date:</strong> ${new Date().toLocaleDateString()}</p>
+        <p style="margin:8px 0;color:#374151"><strong>Category:</strong> ${research.category}</p>
+      </div>
+
+      ${emailButton(CLIENT_URL + '/research/' + research._id, 'View Published Paper')}
+
+      <p style="font-size:14px;color:#6b7280;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
+        Questions? Contact us at <a href="mailto:conserve2025@gmail.com" style="color:#2563eb;text-decoration:none">conserve2025@gmail.com</a>
+      </p>
+    </div>
+    ${emailFooter()}
+  </div>
+</body>
+</html>
+`;
+
+// Research Revision Requested Notification (Author)
+export const researchRevisionRequestedTemplate = (research, author, revisionNotes) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:20px;background:#f3f4f6">
+  <div style="${styles.container}">
+    ${emailHeader('Revision Requested', 'Action Required')}
+    <div style="${styles.body}">
+      <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${author.firstName} ${author.lastName}</strong>,</p>
+      <p style="font-size:16px;color:#374151;line-height:1.8">Your research paper requires revisions before it can be approved.</p>
+      
+      <div style="background:#eff6ff;padding:25px;margin:25px 0;border-radius:10px;border:1px solid #bfdbfe">
+        <p style="margin:0 0 10px 0;color:#1e40af;font-size:16px;font-weight:bold">${icons.document} ${research.title}</p>
+        <p style="margin:8px 0;color:#1e40af;font-size:14px"><strong>Submitted:</strong> ${new Date(research.createdAt).toLocaleDateString()}</p>
+      </div>
+
+      ${infoBox(`
+        <p style="margin:0 0 10px 0;color:#92400e;font-size:16px;font-weight:bold">${icons.warning} Revision Notes</p>
+        <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6">${revisionNotes || 'Please review the feedback and resubmit your paper.'}</p>
+      `, 'warning')}
+
+      <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0">
+        <p style="margin:0 0 10px 0;font-weight:bold;color:#111827">Next Steps:</p>
+        <ol style="margin:10px 0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8">
+          <li>Review the revision notes carefully</li>
+          <li>Make the requested changes</li>
+          <li>Resubmit your paper through the dashboard</li>
+        </ol>
+      </div>
+
+      ${emailButton(CLIENT_URL + '/dashboard', 'View Paper Details')}
+
+      <p style="font-size:14px;color:#6b7280;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
+        Need help? Contact us at <a href="mailto:conserve2025@gmail.com" style="color:#2563eb;text-decoration:none">conserve2025@gmail.com</a>
+      </p>
+    </div>
+    ${emailFooter()}
+  </div>
+</body>
+</html>
+`;
+
+// Research Rejected Notification (Author)
+export const researchRejectedTemplate = (research, author, rejectionNotes) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:20px;background:#f3f4f6">
+  <div style="${styles.container}">
+    ${emailHeader('Research Review Update', 'Further Review Needed')}
+    <div style="${styles.body}">
+      <p style="font-size:18px;color:#111827;margin-bottom:20px">Hello <strong>${author.firstName} ${author.lastName}</strong>,</p>
+      <p style="font-size:16px;color:#374151;line-height:1.8">Thank you for your submission. After careful review, your paper requires additional work before it can be accepted.</p>
+      
+      <div style="background:#eff6ff;padding:25px;margin:25px 0;border-radius:10px;border:1px solid #bfdbfe">
+        <p style="margin:0 0 10px 0;color:#1e40af;font-size:16px;font-weight:bold">${icons.document} ${research.title}</p>
+        <p style="margin:8px 0;color:#1e40af;font-size:14px"><strong>Submitted:</strong> ${new Date(research.createdAt).toLocaleDateString()}</p>
+      </div>
+
+      ${infoBox(`
+        <p style="margin:0 0 10px 0;color:#92400e;font-size:16px;font-weight:bold">${icons.warning} Reviewer Feedback</p>
+        <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6">${rejectionNotes || 'Your submission does not meet the current requirements. Please review the guidelines and consider resubmitting with improvements.'}</p>
+      `, 'warning')}
+
+      <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0">
+        <p style="margin:0 0 10px 0;font-weight:bold;color:#111827">What You Can Do:</p>
+        <ul style="margin:10px 0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8">
+          <li>Review the submission guidelines</li>
+          <li>Address the feedback provided</li>
+          <li>Consider submitting a new, revised paper</li>
+          <li>Contact support if you have questions</li>
+        </ul>
+      </div>
+
+      ${emailButton(CLIENT_URL + '/dashboard', 'Go to Dashboard')}
+
+      <p style="font-size:14px;color:#6b7280;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
+        Questions? We're here to help: <a href="mailto:conserve2025@gmail.com" style="color:#2563eb;text-decoration:none">conserve2025@gmail.com</a>
+      </p>
+    </div>
+    ${emailFooter()}
+  </div>
+</body>
+</html>
+`;

@@ -129,3 +129,51 @@ export const sendAdminNewUserNotification = async (user) => {
     html: adminNewUserNotificationTemplate(user)
   });
 };
+
+// Research Submission Notification (Admin)
+export const sendResearchSubmissionNotification = async (research, author) => {
+  const admins = await (await import('../models/User.js')).default.find({ 
+    role: 'admin', 
+    isApproved: true, 
+    isActive: true 
+  });
+
+  const results = [];
+  for (const admin of admins) {
+    const result = await sendEmail({
+      to: admin.email,
+      subject: 'New Research Submission - Review Required',
+      html: researchSubmissionNotificationTemplate(research, author)
+    });
+    results.push(result);
+  }
+
+  return results;
+};
+
+// Research Approved Notification (Author)
+export const sendResearchApprovedNotification = async (research, author) => {
+  return await sendEmail({
+    to: author.email,
+    subject: 'Research Paper Approved - ConServe',
+    html: researchApprovedTemplate(research, author)
+  });
+};
+
+// Research Revision Requested Notification (Author)
+export const sendResearchRevisionNotification = async (research, author, revisionNotes) => {
+  return await sendEmail({
+    to: author.email,
+    subject: 'Revision Requested for Your Research Paper - ConServe',
+    html: researchRevisionRequestedTemplate(research, author, revisionNotes)
+  });
+};
+
+// Research Rejected Notification (Author)
+export const sendResearchRejectedNotification = async (research, author, rejectionNotes) => {
+  return await sendEmail({
+    to: author.email,
+    subject: 'Research Submission Update - ConServe',
+    html: researchRejectedTemplate(research, author, rejectionNotes)
+  });
+};
