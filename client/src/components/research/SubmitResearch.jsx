@@ -11,8 +11,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  
-  // 🆕 NEW STATE
   const [uploadOnBehalf, setUploadOnBehalf] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -37,7 +35,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
     'Surgical Nursing', 'Emergency Nursing', 'Public Health Nursing', 'Other'
   ], []);
 
-  // 🆕 YEARS GO BACK TO 2000
   const years = useMemo(() => 
     Array.from({ length: new Date().getFullYear() - 1999 }, (_, i) => new Date().getFullYear() - i),
     []
@@ -45,7 +42,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
 
   const progress = useMemo(() => (step / 3) * 100, [step]);
 
-  // 🆕 CHECK PERMISSION
   const canUploadOnBehalf = useMemo(() => 
     user?.role === 'admin' || 
     user?.role === 'faculty' || 
@@ -57,7 +53,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
     setToast({ show: true, message: msg, type });
   }, []);
 
-  // 🆕 HANDLE TOGGLE
   const handleToggleUploadOnBehalf = useCallback((checked) => {
     setUploadOnBehalf(checked);
     if (checked) {
@@ -115,7 +110,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
     setFormData(prev => ({ ...prev, keywords: prev.keywords.filter(x => x !== k) }));
   }, []);
 
-  // 🆕 MODIFIED: Author management (works for both modes)
   const addCoAuthor = useCallback(() => {
     const trimmed = currentCoAuthor.trim();
     if (trimmed) {
@@ -143,7 +137,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       setError('Title and subject area are required');
       return false;
     }
-    // 🆕 VALIDATE AUTHORS IF UPLOADING ON BEHALF
     if (uploadOnBehalf && formData.authors.length === 0) {
       setError('Please add at least one author');
       return false;
@@ -185,11 +178,19 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
 
     try {
       const token = localStorage.getItem('token');
+      
+      // ✅ CHECK TOKEN EXISTS
+      if (!token) {
+        setError('Session expired. Please login again.');
+        setLoading(false);
+        setTimeout(() => window.location.href = '/login', 2000);
+        return;
+      }
+
       const data = new FormData();
       data.append('file', file);
       data.append('title', formData.title);
       
-      // 🆕 HANDLE AUTHORS BASED ON MODE
       if (uploadOnBehalf) {
         data.append('authors', JSON.stringify(formData.authors));
         data.append('uploadOnBehalf', 'true');
@@ -221,6 +222,11 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
             onSuccess?.();
             onClose();
           }, 1500);
+        } else if (xhr.status === 401) {
+          setError('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          setLoading(false);
+          setTimeout(() => window.location.href = '/login', 2000);
         } else {
           const errorData = JSON.parse(xhr.responseText);
           setError(errorData.error || 'Submission failed');
@@ -229,16 +235,18 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
       };
 
       xhr.onerror = () => {
-        setError('Connection error');
+        setError('Connection error. Please try again.');
         setLoading(false);
       };
 
       xhr.open('POST', `${import.meta.env.VITE_API_URL}/research`);
+      // ✅ FIX: Set Authorization header BEFORE sending
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.send(data);
 
     } catch (err) {
-      setError('Submission failed');
+      console.error('Submit error:', err);
+      setError('Submission failed. Please try again.');
       setLoading(false);
     }
   }, [file, formData, uploadOnBehalf, onSuccess, onClose, showToast]);
@@ -290,7 +298,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {step === 1 && (
               <div className="space-y-5 animate-slide-up">
-                {/* 🆕 UPLOAD ON BEHALF TOGGLE */}
                 {canUploadOnBehalf && (
                   <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 rounded-xl border-2 border-purple-200 dark:border-purple-800">
                     <label className="flex items-start gap-3 cursor-pointer">
@@ -382,7 +389,6 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                   )}
                 </div>
 
-                {/* 🆕 DYNAMIC AUTHORS SECTION */}
                 <div>
                   <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     {uploadOnBehalf ? 'Authors *' : 'Co-Authors (Optional)'}
@@ -414,176 +420,182 @@ const SubmitResearch = ({ onClose, onSuccess }) => {
                     </button>
                   </div>
                   
-                  {/* Display authors/co-authors */}
-                  {!uploadOnBehalf && formData.authors.length > 0 && ( <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg"> <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Primary Author:</p> <span className="inline-block bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold"> {formData.authors[0]} </span> </div> )}
-{((uploadOnBehalf && formData.authors.length > 0) || (!uploadOnBehalf && formData.coAuthors.length > 0)) && (
-                <div className="flex flex-wrap gap-2">
-                  {(uploadOnBehalf ? formData.authors : formData.coAuthors).map((a, i) => (
-                    <span 
-                      key={i} 
-                      className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 animate-scale-in"
-                    >
-                      {a}
-                      <button 
-                        type="button" 
-                        onClick={() => removeCoAuthor(i)} 
-                        className="hover:text-red-600 transition"
-                      >
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-5 animate-slide-up">
-            <div>
-              <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Abstract *
-                <InfoTooltip text="Minimum 100 characters. Summarize objectives, methods, results, and conclusions" />
-              </label>
-              <textarea 
-                rows={8} 
-                value={formData.abstract} 
-                onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition"
-                placeholder="Provide a comprehensive summary..."
-                autoFocus
-              />
-              <div className="flex items-center justify-between mt-2">
-                <p className={`text-xs font-medium ${formData.abstract.length >= 100 ? 'text-green-600' : 'text-gray-500'}`}>
-                  {formData.abstract.length}/100 characters minimum
-                </p>
-                {formData.abstract.length >= 100 && (
-                  <span className="text-xs text-green-600 flex items-center gap-1 animate-slide-up">
-                    <CheckCircle size={14} /> Requirement met
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Keywords (Recommended: 3-8)
-                <InfoTooltip text="Press Enter or click Add after typing each keyword" />
-              </label>
-              <div className="flex gap-2 mb-3">
-                <input 
-                  value={currentKeyword} 
-                  onChange={(e) => setCurrentKeyword(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                  placeholder="Enter keyword"
-                  className="flex-1 px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition"
-                />
-                <button 
-                  type="button" 
-                  onClick={addKeyword} 
-                  className="px-5 py-2.5 bg-navy text-white rounded-xl hover:bg-navy-800 transition font-semibold shadow-md hover:shadow-lg"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-              {formData.keywords.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.keywords.map((k, i) => (
-                    <span 
-                      key={i} 
-                      className="bg-navy/10 text-navy dark:bg-navy/20 dark:text-accent px-3 py-1.5 rounded-full text-sm flex items-center gap-2 animate-scale-in"
-                    >
-                      {k}
-                      <button 
-                        type="button" 
-                        onClick={() => removeKeyword(k)} 
-                        className="hover:text-red-600 transition"
-                      >
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-5 animate-slide-up">
-            <div>
-              <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Upload PDF *
-                <InfoTooltip text="PDF only, max 10MB. Must be in IMRaD format" />
-              </label>
-              <div 
-                onDragEnter={handleDrag} 
-                onDragLeave={handleDrag} 
-                onDragOver={handleDrag} 
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-                  dragActive 
-                    ? 'border-navy bg-navy/5 dark:bg-navy/10 scale-105' 
-                    : file 
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/10' 
-                      : 'border-gray-300 dark:border-gray-600 hover:border-navy hover:bg-gray-50 dark:hover:bg-gray-900'
-                }`}
-              >
-                <input 
-                  type="file" 
-                  accept=".pdf" 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                  id="pdf-upload" 
-                />
-                {file ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <FileText className="text-green-600 dark:text-green-400 flex-shrink-0 animate-scale-in" size={40} />
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="font-semibold text-sm truncate text-gray-900 dark:text-white">{file.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+                  {!uploadOnBehalf && formData.authors.length > 0 && (
+                    <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Primary Author:</p>
+                      <span className="inline-block bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+                        {formData.authors[0]}
+                      </span>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => setFile(null)} 
-                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg text-red-600 transition flex-shrink-0"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                ) : (
-                  <label htmlFor="pdf-upload" className="cursor-pointer block">
-                    <Upload className="mx-auto text-gray-400 mb-4 animate-pulse" size={48} />
-                    <p className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {dragActive ? '📄 Drop your PDF here!' : '📄 Drag & drop PDF or click to browse'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Maximum file size: 10MB • PDF format only
-                    </p>
-                  </label>
-                )}
-              </div>
-            </div>
+                  )}
 
-            {loading && uploadProgress > 0 && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 animate-slide-up">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Uploading...</span>
-                  <span className="text-sm font-bold text-navy dark:text-accent">{uploadProgress}%</span>
-                </div>
-                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-2 bg-navy dark:bg-accent transition-all duration-300 ease-out rounded-full"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+                  {((uploadOnBehalf && formData.authors.length > 0) || (!uploadOnBehalf && formData.coAuthors.length > 0)) && (
+                    <div className="flex flex-wrap gap-2">
+                      {(uploadOnBehalf ? formData.authors : formData.coAuthors).map((a, i) => (
+                        <span 
+                          key={i} 
+                          className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 animate-scale-in"
+                        >
+                          {a}
+                          <button 
+                            type="button" 
+                            onClick={() => removeCoAuthor(i)} 
+                            className="hover:text-red-600 transition"
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-5 border border-blue-200 dark:border-blue-800">
+            {step === 2 && (
+              <div className="space-y-5 animate-slide-up">
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Abstract *
+                    <InfoTooltip text="Minimum 100 characters. Summarize objectives, methods, results, and conclusions" />
+                  </label>
+                  <textarea 
+                    rows={8} 
+                    value={formData.abstract} 
+                    onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition"
+                    placeholder="Provide a comprehensive summary..."
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <p className={`text-xs font-medium ${formData.abstract.length >= 100 ? 'text-green-600' : 'text-gray-500'}`}>
+                      {formData.abstract.length}/100 characters minimum
+                    </p>
+                    {formData.abstract.length >= 100 && (
+                      <span className="text-xs text-green-600 flex items-center gap-1 animate-slide-up">
+                        <CheckCircle size={14} /> Requirement met
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Keywords (Recommended: 3-8)
+                    <InfoTooltip text="Press Enter or click Add after typing each keyword" />
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <input 
+                      value={currentKeyword} 
+                      onChange={(e) => setCurrentKeyword(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                      placeholder="Enter keyword"
+                      className="flex-1 px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={addKeyword} 
+                      className="px-5 py-2.5 bg-navy text-white rounded-xl hover:bg-navy-800 transition font-semibold shadow-md hover:shadow-lg"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  {formData.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.keywords.map((k, i) => (
+                        <span 
+                          key={i} 
+                          className="bg-navy/10 text-navy dark:bg-navy/20 dark:text-accent px-3 py-1.5 rounded-full text-sm flex items-center gap-2 animate-scale-in"
+                        >
+                          {k}
+                          <button 
+                            type="button" 
+                            onClick={() => removeKeyword(k)} 
+                            className="hover:text-red-600 transition"
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-5 animate-slide-up">
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Upload PDF *
+                    <InfoTooltip text="PDF only, max 10MB. Must be in IMRaD format" />
+                  </label>
+                  <div 
+                    onDragEnter={handleDrag} 
+                    onDragLeave={handleDrag} 
+                    onDragOver={handleDrag} 
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                      dragActive 
+                        ? 'border-navy bg-navy/5 dark:bg-navy/10 scale-105' 
+                        : file 
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900/10' 
+                          : 'border-gray-300 dark:border-gray-600 hover:border-navy hover:bg-gray-50 dark:hover:bg-gray-900'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      accept=".pdf" 
+                      onChange={handleFileChange} 
+                      className="hidden" 
+                      id="pdf-upload" 
+                    />
+                    {file ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <FileText className="text-green-600 dark:text-green-400 flex-shrink-0 animate-scale-in" size={40} />
+                        <div className="flex-1 text-left min-w-0">
+                          <p className="font-semibold text-sm truncate text-gray-900 dark:text-white">{file.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => setFile(null)} 
+                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg text-red-600 transition flex-shrink-0"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label htmlFor="pdf-upload" className="cursor-pointer block">
+                        <Upload className="mx-auto text-gray-400 mb-4 animate-pulse" size={48} />
+                        <p className="font-semibold text-gray-900 dark:text-white mb-2">
+                          {dragActive ? '📄 Drop your PDF here!' : '📄 Drag & drop PDF or click to browse'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Maximum file size: 10MB • PDF format only
+                        </p>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {loading && uploadProgress > 0 && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 animate-slide-up">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Uploading...</span>
+                      <span className="text-sm font-bold text-navy dark:text-accent">{uploadProgress}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+<div
+className="h-2 bg-navy dark:bg-accent transition-all duration-300 ease-out rounded-full" style={{ width: `${uploadProgress}%` }}
+/>
+</div>
+</div>
+)}
+
+<div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-5 border border-blue-200 dark:border-blue-800">
               <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <CheckCircle size={18} className="text-green-600" />
                 Review Your Submission
