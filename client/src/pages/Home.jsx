@@ -40,11 +40,11 @@ const Home = () => {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-4 animate-fade-in tracking-tight leading-tight">
+          <h1 className="text-5xl md:text-8xl lg:text-9xl font-black mb-4 animate-fade-in tracking-tight leading-tight">
             <span className="text-navy-800 dark:text-white">CON</span><span className="text-navy-900 dark:text-white">serve</span>
           </h1>
           
-          <p className="text-xl md:text-2xl lg:text-3xl text-navy-700 dark:text-gray-300 mb-3 font-bold tracking-wide">
+          <p className="text-xl md:text-3xl lg:text-4xl text-navy-700 dark:text-gray-300 mb-3 font-bold tracking-wide">
             Where Knowledge Flows and Nursing Grows
           </p>
           
@@ -55,25 +55,25 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
             {user ? (
               <>
-                <Link to="/explore" className="group px-8 py-4 bg-gradient-to-r from-navy-900 to-navy-800 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 hover:scale-105">
-                  <Search size={20} />
+                <Link to="/explore" className="group px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-navy-900 to-navy-800 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 hover:scale-105 text-sm sm:text-base whitespace-nowrap">
+                  <Search size={18} />
                   Browse Research
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
                 {(user.role === 'student' || user.role === 'faculty') && (
-                  <button onClick={() => setShowSubmitModal(true)} className="px-8 py-4 bg-transparent text-navy-900 dark:text-white rounded-lg font-bold shadow-xl transition-all border-2 border-navy-900 dark:border-navy-600 flex items-center justify-center gap-2 hover:scale-105 hover:bg-navy-900 hover:text-white">
-                    <Upload size={20} />
+                  <button onClick={() => setShowSubmitModal(true)} className="px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-navy-900 dark:text-white rounded-lg font-bold shadow-xl transition-all border-2 border-navy-900 dark:border-navy-600 flex items-center justify-center gap-2 hover:scale-105 hover:bg-navy-900 hover:text-white text-sm sm:text-base whitespace-nowrap">
+                    <Upload size={18} />
                     Submit Paper
                   </button>
                 )}
               </>
             ) : (
               <>
-                <Link to="/register" className="group px-8 py-4 bg-gradient-to-r from-navy-900 to-navy-800 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 hover:scale-105">
+                <Link to="/register" className="group px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-navy-900 to-navy-800 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 hover:scale-105 text-sm sm:text-base whitespace-nowrap">
                   Get Started Free
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link to="/about" className="px-8 py-4 bg-transparent text-navy-900 dark:text-white rounded-lg font-bold shadow-xl transition-all border-2 border-navy-900 dark:border-navy-600 hover:scale-105 hover:bg-navy-900 hover:text-white">
+                <Link to="/about" className="px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-navy-900 dark:text-white rounded-lg font-bold shadow-xl transition-all border-2 border-navy-900 dark:border-navy-600 hover:scale-105 hover:bg-navy-900 hover:text-white text-sm sm:text-base whitespace-nowrap">
                   Learn More
                 </Link>
               </>
@@ -194,7 +194,7 @@ const Home = () => {
               </p>
               <Link 
                 to="/register" 
-                className="group inline-flex items-center gap-2 px-12 py-4 bg-white text-navy-900 rounded-xl font-black shadow-2xl hover:scale-105 transition-all text-lg"
+                className="group inline-flex items-center gap-2 px-10 sm:px-12 py-3 sm:py-4 bg-white text-navy-900 rounded-xl font-black shadow-2xl hover:scale-105 transition-all text-base sm:text-lg whitespace-nowrap"
               >
                 Get Started Free
                 <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} strokeWidth={3} />
@@ -213,7 +213,7 @@ const Home = () => {
                 {(user.role === 'student' || user.role === 'faculty') && (
                   <button 
                     onClick={() => setShowSubmitModal(true)} 
-                    className="group px-10 py-4 bg-white text-navy-900 rounded-xl font-black shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2"
+                    className="group px-8 sm:px-10 py-3 sm:py-4 bg-white text-navy-900 rounded-xl font-black shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
                   >
                     <Upload size={18} strokeWidth={2.5} />
                     Submit Research
@@ -222,7 +222,7 @@ const Home = () => {
                 )}
                 <Link 
                   to="/explore" 
-                  className="px-10 py-4 bg-white/10 backdrop-blur-md text-white rounded-xl font-black hover:bg-white/20 transition-all border-2 border-white/30 hover:scale-105 flex items-center justify-center gap-2 shadow-xl"
+                  className="px-8 sm:px-10 py-3 sm:py-4 bg-white/10 backdrop-blur-md text-white rounded-xl font-black hover:bg-white/20 transition-all border-2 border-white/30 hover:scale-105 flex items-center justify-center gap-2 shadow-xl text-sm sm:text-base whitespace-nowrap"
                 >
                   <Search size={18} strokeWidth={2.5} />
                   Browse Papers
