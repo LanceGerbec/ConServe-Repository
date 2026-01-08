@@ -1,4 +1,4 @@
-// server/src/controllers/analyticsController.js
+// server/src/controllers/analyticsController.js - ENHANCED VERSION
 import Research from '../models/Research.js';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
@@ -40,6 +40,204 @@ const getMonthlySubmissions = async () => {
   ]);
 
   return data.map(d => ({ month: d._id, submissions: d.count }));
+};
+
+// 🆕 LOGIN/LOGOUT TRENDS
+export const getLoginLogoutTrends = async (req, res) => {
+  try {
+    const { days = 30, role } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+
+    // Build match query
+    const matchQuery = {
+      action: { $in: ['USER_LOGIN', 'USER_LOGOUT'] },
+      timestamp: { $gte: startDate }
+    };
+
+    // Get daily trends with role filter
+    const pipeline = [
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userDetails'
+        }
+      },
+      { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } }
+    ];
+
+    // Add role filter if specified
+    if (role && role !== 'all') {
+      pipeline.push({ $match: { 'userDetails.role': role } });
+    }
+
+    pipeline.push(
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            action: '$action',
+            role: '$userDetails.role'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.date': 1 } }
+    );
+
+    const results = await AuditLog.aggregate(pipeline);
+
+    // Transform data for frontend
+    const dailyTrends = {};
+    const roleBreakdown = { student: 0, faculty: 0, admin: 0 };
+
+    results.forEach(item => {
+      const date = item._id.date;
+      if (!dailyTrends[date]) {
+        dailyTrends[date] = { date, logins: 0, logouts: 0, student: 0, faculty: 0, admin: 0 };
+      }
+      
+      if (item._id.action === 'USER_LOGIN') {
+        dailyTrends[date].logins += item.count;
+        if (item._id.role) {
+          dailyTrends[date][item._id.role] += item.count;
+          roleBreakdown[item._id.role] += item.count;
+        }
+      } else {
+        dailyTrends[date].logouts += item.count;
+      }
+    });
+
+    // Peak hours analysis
+    const peakHours = await AuditLog.aggregate([
+      { $match: { ...matchQuery, action: 'USER_LOGIN' } },
+      {
+        $group: {
+          _id: { $hour: '$timestamp' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // Calculate summary
+    const totalLogins = Object.values(dailyTrends).reduce((sum, day) => sum + day.logins, 0);
+    const totalLogouts = Object.values(dailyTrends).reduce((sum, day) => sum + day.logouts, 0);
+
+    res.json({
+      dailyTrends: Object.values(dailyTrends),
+      peakHours: peakHours.map(h => ({ hour: h._id, count: h.count })),
+      roleBreakdown,
+      summary: {
+        totalLogins,
+        totalLogouts,
+        avgLoginsPerDay: Math.round(totalLogins / parseInt(days)),
+        dateRange: { start: startDate, end: new Date() }
+      }
+    });
+  } catch (error) {
+    console.error('Login trends error:', error);
+    res.status(500).json({ error: 'Failed to fetch login trends' });
+  }
+};
+
+// 🆕 WEEKLY SUBMISSION TRENDS
+export const getWeeklySubmissionTrends = async (req, res) => {
+  try {
+    const { weeks = 8 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (parseInt(weeks) * 7));
+
+    const weeklyData = await Research.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'submittedBy',
+          foreignField: '_id',
+          as: 'submitter'
+        }
+      },
+      { $unwind: '$submitter' },
+      {
+        $group: {
+          _id: {
+            week: { $week: '$createdAt' },
+            year: { $year: '$createdAt' },
+            status: '$status',
+            role: '$submitter.role',
+            category: '$category'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.week': 1 } }
+    ]);
+
+    // Transform data
+    const weeklyMap = {};
+    const categoryBreakdown = {};
+    const roleBreakdown = { student: 0, faculty: 0 };
+
+    weeklyData.forEach(item => {
+      const weekKey = `${item._id.year}-W${item._id.week}`;
+      
+      if (!weeklyMap[weekKey]) {
+        weeklyMap[weekKey] = {
+          week: weekKey,
+          total: 0,
+          approved: 0,
+          pending: 0,
+          rejected: 0,
+          student: 0,
+          faculty: 0
+        };
+      }
+
+      weeklyMap[weekKey].total += item.count;
+      weeklyMap[weekKey][item._id.status] += item.count;
+      
+      if (item._id.role === 'student' || item._id.role === 'faculty') {
+        weeklyMap[weekKey][item._id.role] += item.count;
+        roleBreakdown[item._id.role] += item.count;
+      }
+
+      // Category tracking
+      if (item._id.category) {
+        categoryBreakdown[item._id.category] = (categoryBreakdown[item._id.category] || 0) + item.count;
+      }
+    });
+
+    const sortedWeeks = Object.values(weeklyMap).sort((a, b) => {
+      const [aYear, aWeek] = a.week.split('-W').map(Number);
+      const [bYear, bWeek] = b.week.split('-W').map(Number);
+      return aYear === bYear ? aWeek - bWeek : aYear - bYear;
+    });
+
+    // Calculate week-over-week growth
+    const thisWeek = sortedWeeks[sortedWeeks.length - 1]?.total || 0;
+    const lastWeek = sortedWeeks[sortedWeeks.length - 2]?.total || 0;
+    const growth = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek * 100).toFixed(1) : 0;
+
+    res.json({
+      weeklyData: sortedWeeks,
+      categoryBreakdown,
+      roleBreakdown,
+      comparison: {
+        thisWeek,
+        lastWeek,
+        growth: `${growth > 0 ? '+' : ''}${growth}%`,
+        trend: growth > 0 ? 'up' : growth < 0 ? 'down' : 'stable'
+      }
+    });
+  } catch (error) {
+    console.error('Weekly trends error:', error);
+    res.status(500).json({ error: 'Failed to fetch weekly trends' });
+  }
 };
 
 export const getActivityLogs = async (req, res) => {
@@ -100,8 +298,6 @@ export const deleteActivityLog = async (req, res) => {
 export const clearAllLogs = async (req, res) => {
   try {
     const result = await AuditLog.deleteMany({});
-    
-    // Don't create audit log if all logs are deleted (would create infinite loop)
     res.json({ 
       message: 'All activity logs cleared successfully', 
       count: result.deletedCount 
@@ -114,10 +310,8 @@ export const clearAllLogs = async (req, res) => {
 
 export const clearMyLogs = async (req, res) => {
   try {
-    // First delete all logs for this user
     const result = await AuditLog.deleteMany({ user: req.user._id });
     
-    // Then create a single audit log entry for this action
     await AuditLog.create({
       user: req.user._id,
       action: 'MY_LOGS_CLEARED',

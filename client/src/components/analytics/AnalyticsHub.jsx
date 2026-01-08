@@ -18,11 +18,14 @@ const AnalyticsHub = () => {
   ];
 
   const dateRanges = [
-    { value: '7', label: 'Last 7 Days' },
-    { value: '30', label: 'Last 30 Days' },
-    { value: '90', label: 'Last 90 Days' },
-    { value: 'all', label: 'All Time' }
-  ];
+  { value: '7', label: 'Last 7 Days' },
+  { value: '14', label: 'Last 2 Weeks' },
+  { value: '30', label: 'Last 30 Days' },
+  { value: '60', label: 'Last 60 Days' },
+  { value: '90', label: 'Last 90 Days' },
+  { value: '180', label: 'Last 6 Months' },
+  { value: '365', label: 'Last Year' }
+];
 
   return (
     <div className="space-y-6">
