@@ -94,8 +94,15 @@ const FacultyDashboard = () => {
     }
   };
 
-  const handleDeleteRejected = async (paperId, title) => {
-  if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
+
+const handleDeleteRejected = async (paperId, title) => {
+  setDeleteModal({ show: true, paperId, title });
+};
+
+const confirmDelete = async () => {
+  const { paperId, title } = deleteModal;
+  setDeleteModal({ show: false, paperId: null, title: '' });
   
   try {
     const token = localStorage.getItem('token');
@@ -577,4 +584,59 @@ fetchData();
 </>
 );
 };
+
+{/* Delete Confirmation Modal */}
+{deleteModal.show && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border-2 border-red-200 dark:border-red-800 animate-scale-in">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/20">
+            <Trash2 size={24} className="text-red-600 dark:text-red-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+              Delete Rejected Paper?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              This action cannot be undone. The paper and its PDF will be permanently deleted.
+            </p>
+          </div>
+          <button 
+            onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6 bg-gray-50 dark:bg-gray-900/50">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Paper to delete:</p>
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+          <p className="text-sm text-gray-900 dark:text-white font-medium line-clamp-2">
+            {deleteModal.title}
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
+            className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmDelete}
+            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+          >
+            <Trash2 size={18} />
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
 export default FacultyDashboard;
