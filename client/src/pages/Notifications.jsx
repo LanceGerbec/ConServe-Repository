@@ -1,4 +1,4 @@
-// client/src/pages/Notifications.jsx
+// client/src/pages/Notifications.jsx - CORRECTED VERSION
 import { useState, useEffect } from 'react';
 import { Bell, Check, Trash2, CheckCheck, X, Filter, CheckCircle, XCircle, FileEdit, BookOpen, ClipboardList, UserPlus, Eye, Star, AlertCircle } from 'lucide-react';
 import NotificationConfirmModal from '../components/common/NotificationConfirmModal';
@@ -9,7 +9,7 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(new Set());
   const [showActions, setShowActions] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [modalState, setModalState] = useState({ isOpen: false, type: '', action: null });
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => { fetchNotifications(); }, []);
@@ -46,7 +46,15 @@ const Notifications = () => {
     }
   };
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = () => {
+    setModalState({
+      isOpen: true,
+      type: 'markRead',
+      action: handleConfirmMarkAllRead
+    });
+  };
+
+  const handleConfirmMarkAllRead = async () => {
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_URL}/notifications/mark-all-read`, {
@@ -72,8 +80,16 @@ const Notifications = () => {
     }
   };
 
-  const bulkDelete = async () => {
-    if (!confirm(`Delete ${selected.size} notification(s)?`)) return;
+  const bulkDelete = () => {
+    // ✅ REMOVED: if (!confirm(...)) return;
+    setModalState({
+      isOpen: true,
+      type: 'delete',
+      action: handleConfirmBulkDelete
+    });
+  };
+
+  const handleConfirmBulkDelete = async () => {
     try {
       const token = localStorage.getItem('token');
       await Promise.all([...selected].map(id =>
@@ -90,10 +106,14 @@ const Notifications = () => {
   };
 
   const clearAll = () => {
-    setShowConfirmModal(true);
+    setModalState({
+      isOpen: true,
+      type: 'warning',
+      action: handleConfirmClearAll
+    });
   };
 
-  const handleConfirmClear = async () => {
+  const handleConfirmClearAll = async () => {
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_URL}/notifications/clear-read/all`, {
@@ -137,6 +157,29 @@ const Notifications = () => {
     return <Icon size={20} className={color} />;
   };
 
+  const getModalContent = () => {
+    const { type } = modalState;
+    
+    if (type === 'delete') {
+      return {
+        title: `Delete ${selected.size} Notification(s)`,
+        message: `Are you sure you want to delete ${selected.size} selected notification(s)? This action cannot be undone.`
+      };
+    }
+    
+    if (type === 'markRead') {
+      return {
+        title: 'Mark All as Read',
+        message: `This will mark all ${unreadCount} unread notification(s) as read. Continue?`
+      };
+    }
+    
+    return {
+      title: 'Clear Read Notifications',
+      message: 'This will permanently delete all read notifications. This action cannot be undone.'
+    };
+  };
+
   const filteredNotifications = notifications.filter(n =>
     filter === 'all' ? true : filter === 'unread' ? !n.isRead : n.isRead
   );
@@ -151,14 +194,17 @@ const Notifications = () => {
     );
   }
 
+  const modalContent = getModalContent();
+
   return (
     <>
       <NotificationConfirmModal
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleConfirmClear}
-        title="Clear Read Notifications"
-        message="This will permanently delete all read notifications. This action cannot be undone."
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, type: '', action: null })}
+        onConfirm={modalState.action}
+        title={modalContent.title}
+        message={modalContent.message}
+        type={modalState.type}
       />
 
       <div className="pb-6 space-y-4">
@@ -196,7 +242,7 @@ const Notifications = () => {
                   onClick={markAllAsRead}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-semibold"
                 >
-                  <CheckCheck size={16} />Mark all read
+                  <CheckCheck size={16} />Mark all as read
                 </button>
               )}
               <button
