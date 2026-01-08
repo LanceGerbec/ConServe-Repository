@@ -1,8 +1,34 @@
 // client/src/components/common/NotificationConfirmModal.jsx
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, Trash2, CheckCheck } from 'lucide-react';
 
-const NotificationConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+const NotificationConfirmModal = ({ isOpen, onClose, onConfirm, title, message, type = 'warning' }) => {
   if (!isOpen) return null;
+
+  const config = {
+    warning: {
+      icon: AlertTriangle,
+      iconBg: 'bg-orange-100 dark:bg-orange-900/30',
+      iconColor: 'text-orange-600 dark:text-orange-400',
+      buttonBg: 'bg-orange-600 hover:bg-orange-700',
+      buttonText: 'Clear'
+    },
+    delete: {
+      icon: Trash2,
+      iconBg: 'bg-red-100 dark:bg-red-900/30',
+      iconColor: 'text-red-600 dark:text-red-400',
+      buttonBg: 'bg-red-600 hover:bg-red-700',
+      buttonText: 'Delete'
+    },
+    markRead: {
+      icon: CheckCheck,
+      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      buttonBg: 'bg-blue-600 hover:bg-blue-700',
+      buttonText: 'Mark Read'
+    }
+  };
+
+  const { icon: Icon, iconBg, iconColor, buttonBg, buttonText } = config[type];
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
@@ -11,8 +37,8 @@ const NotificationConfirmModal = ({ isOpen, onClose, onConfirm, title, message }
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle size={18} className="text-orange-600 dark:text-orange-400" />
+            <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center`}>
+              <Icon size={18} className={iconColor} />
             </div>
             <h3 className="font-bold text-gray-900 dark:text-white text-sm">{title}</h3>
           </div>
@@ -44,9 +70,9 @@ const NotificationConfirmModal = ({ isOpen, onClose, onConfirm, title, message }
               onConfirm();
               onClose();
             }}
-            className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold text-sm transition shadow-md"
+            className={`flex-1 px-4 py-2.5 ${buttonBg} text-white rounded-xl font-semibold text-sm transition shadow-md`}
           >
-            Clear
+            {buttonText}
           </button>
         </div>
       </div>
