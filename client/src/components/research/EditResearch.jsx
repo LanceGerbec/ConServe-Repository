@@ -10,6 +10,7 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
     keywords: [],
     category: '',
     subjectArea: '',
+    customSubjectArea: '',
     yearCompleted: new Date().getFullYear()
   });
   const [newKeyword, setNewKeyword] = useState('');
@@ -31,13 +32,15 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (research) {
+      const isOther = !subjectAreas.slice(0, -1).includes(research.subjectArea);
       setFormData({
         title: research.title || '',
         authors: research.authors || [],
         abstract: research.abstract || '',
         keywords: research.keywords || [],
         category: research.category || '',
-        subjectArea: research.subjectArea || '',
+        subjectArea: isOther ? 'Other' : research.subjectArea || '',
+        customSubjectArea: isOther ? research.subjectArea : '',
         yearCompleted: research.yearCompleted || currentYear
       });
     }
@@ -80,6 +83,15 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
     }
   };
 
+  const handleSubjectAreaChange = (e) => {
+    const value = e.target.value;
+    setFormData({ 
+      ...formData, 
+      subjectArea: value,
+      customSubjectArea: value === 'Other' ? formData.customSubjectArea : ''
+    });
+  };
+
   const showToast = (msg, type) => setToast({ show: true, message: msg, type });
 
   const handleSubmit = async (e) => {
@@ -91,6 +103,9 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
     if (formData.abstract.trim().length < 100) return showToast('Abstract must be at least 100 characters', 'error');
     if (formData.keywords.length === 0) return showToast('At least one keyword is required', 'error');
     if (!formData.category) return showToast('Category is required', 'error');
+    if (formData.subjectArea === 'Other' && !formData.customSubjectArea.trim()) {
+      return showToast('Please specify the subject area', 'error');
+    }
 
     setLoading(true);
 
@@ -103,12 +118,10 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
       data.append('abstract', formData.abstract.trim());
       data.append('keywords', JSON.stringify(formData.keywords));
       data.append('category', formData.category);
-      data.append('subjectArea', formData.subjectArea);
+      data.append('subjectArea', formData.subjectArea === 'Other' ? formData.customSubjectArea.trim() : formData.subjectArea);
       data.append('yearCompleted', formData.yearCompleted);
       
-      if (pdfFile) {
-        data.append('file', pdfFile);
-      }
+      if (pdfFile) data.append('file', pdfFile);
 
       const res = await fetch(`${API_URL}/research/${research._id}`, {
         method: 'PATCH',
@@ -302,7 +315,7 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
                 </label>
                 <select
                   value={formData.subjectArea}
-                  onChange={(e) => setFormData({ ...formData, subjectArea: e.target.value })}
+                  onChange={handleSubjectAreaChange}
                   className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none bg-white dark:bg-gray-900"
                 >
                   <option value="">Select Subject Area</option>
@@ -312,6 +325,22 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
                 </select>
               </div>
             </div>
+
+            {/* Custom Subject Area (shown when "Other" is selected) */}
+            {formData.subjectArea === 'Other' && (
+              <div className="animate-slide-up">
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  Specify Subject Area *
+                </label>
+                <input
+                  type="text"
+                  value={formData.customSubjectArea}
+                  onChange={(e) => setFormData({ ...formData, customSubjectArea: e.target.value })}
+                  placeholder="Enter custom subject area"
+                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none bg-white dark:bg-gray-900"
+                />
+              </div>
+            )}
 
             {/* Year Completed */}
             <div>
