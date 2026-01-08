@@ -108,7 +108,7 @@ const RoleSelect = () => {
           </div>
 
           {/* Footer */}
-          <p className="text-center mt-6 sm:mt-8 text-xs sm:text-sm text-gray-300 px-4">© 2025 NEUST College of Nursing • Secure Research Repository</p>
+          <p className="text-center mt-6 sm:mt-8 text-xs sm:text-sm text-gray-300 px-4">© 2026 NEUST College of Nursing • Secure Research Repository</p>
         </div>
       </div>
     </>
