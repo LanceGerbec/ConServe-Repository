@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText, Edit3 } from 'lucide-react';
+import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
 import EditResearch from '../research/EditResearch';
@@ -62,6 +62,29 @@ const StudentDashboard = () => {
     }
   };
 
+  const handleDeleteRejected = async (paperId, title) => {
+  if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/research/${paperId}/author-delete`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to delete');
+    }
+    
+    setSubmissions(prev => prev.filter(p => p._id !== paperId));
+    setStats(prev => ({ ...prev, submissions: prev.submissions - 1 }));
+    showToast('Paper deleted successfully', 'success');
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+};
+
   const scrollToSection = (ref, tab) => {
     setActiveTab(tab);
     setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -97,59 +120,65 @@ const StudentDashboard = () => {
     </div>
   );
 
-  const PaperCard = ({ paper, onRemove, isBookmark = false, isSubmission = false }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-md border border-gray-200 dark:border-gray-700 active:scale-98 transition-all">
-      <div className="flex items-start gap-3 mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white line-clamp-2 mb-2 active:text-navy cursor-pointer" onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}>
-            {isBookmark ? paper.research.title : paper.title}
-          </h3>
+ const PaperCard = ({ paper, onRemove, isBookmark = false, isSubmission = false, isReview = false }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-md border border-gray-200 dark:border-gray-700 active:scale-98 transition-all">
+    <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 mb-3">
+      <div className="flex-1 min-w-0 w-full sm:w-auto">
+        <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white line-clamp-2 mb-2 active:text-navy cursor-pointer" onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : isReview ? paper.research._id : paper._id}`}>
+          {isBookmark ? paper.research.title : isReview ? paper.research.title : paper.title}
+        </h3>
+        {/* AUTHORS LIST */}
+        <div className="mb-2 flex items-start gap-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">BY:</span>
+          <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+            {isBookmark ? paper.research.authors?.join(', ') : isReview ? paper.research.authors?.join(', ') : paper.authors?.join(', ')}
+          </p>
         </div>
-        {isSubmission && (
-          <div className="flex items-center gap-2">
-            <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${getStatusBadge(paper.status)}`}>
-              {paper.status?.toUpperCase()}
-            </span>
-            {(paper.status === 'pending' || paper.status === 'revision') && (
-              <button
-                onClick={() => {
-                  setEditingPaper(paper);
-                  setShowEditModal(true);
-                }}
-                className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs font-bold flex items-center gap-1"
-              >
-                <Edit3 size={14} />
-                <span className="hidden sm:inline">Edit</span>
-              </button>
-            )}
-          </div>
+      </div>
+      {isSubmission && (
+        <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold whitespace-nowrap self-start ${getStatusBadge(paper.status)}`}>
+          {paper.status?.toUpperCase()}
+        </span>
+      )}
+    </div>
+    
+    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
+      {isBookmark ? paper.research.abstract : isReview ? paper.research.abstract : paper.abstract}
+    </p>
+    
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex flex-wrap gap-2 sm:gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <span className="flex items-center gap-1.5">
+          <Calendar size={14} />
+          <span className="hidden sm:inline">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          <span className="sm:hidden">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+        </span>
+        {isSubmission && paper.status === 'approved' && (
+          <span className="flex items-center gap-1.5">
+            <Eye size={14} />
+            {paper.views || 0}
+          </span>
         )}
       </div>
-      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
-        {isBookmark ? paper.research.abstract : paper.abstract}
-      </p>
-      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex gap-3 sm:gap-4 text-xs text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1.5">
-            <Calendar size={14} />
-            <span className="hidden sm:inline">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-            <span className="sm:hidden">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
-          </span>
-          {!isBookmark && paper.status === 'approved' && (
-            <span className="flex items-center gap-1.5">
-              <Eye size={14} />
-              {paper.views || 0}
-            </span>
-          )}
-        </div>
-        {isBookmark && (
-          <button onClick={() => onRemove(paper._id, paper.research._id)} className="px-2 sm:px-3 py-1 sm:py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95">
+      
+      <div className="w-full sm:w-auto flex gap-2">
+        {isBookmark ? (
+          <button onClick={() => onRemove(paper._id, paper.research._id)} className="w-full sm:w-auto px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95">
             Remove
+          </button>
+        ) : isSubmission && paper.status === 'rejected' && (
+          <button 
+            onClick={() => handleDeleteRejected(paper._id, paper.title)} 
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95"
+          >
+            <Trash2 size={14} />
+            Delete
           </button>
         )}
       </div>
     </div>
-  );
+  </div>
+);
 
   if (loading) {
     return (

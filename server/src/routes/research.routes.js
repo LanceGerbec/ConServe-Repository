@@ -467,4 +467,38 @@ router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   }
 });
 
+// DELETE REJECTED PAPER (Author Only)
+router.delete('/:id/author-delete', auth, async (req, res) => {
+  try {
+    const research = await Research.findById(req.params.id);
+    if (!research) return res.status(404).json({ error: 'Paper not found' });
+
+    const isAuthor = research.submittedBy.toString() === req.user._id.toString();
+    if (!isAuthor) return res.status(403).json({ error: 'Only author can delete' });
+    if (research.status !== 'rejected') return res.status(400).json({ error: 'Only rejected papers can be deleted' });
+
+    if (research.gridfsId) {
+      const bucket = getGridFSBucket();
+      await bucket.delete(new mongoose.Types.ObjectId(research.gridfsId));
+    }
+
+    await research.deleteOne();
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'REJECTED_RESEARCH_DELETED_BY_AUTHOR',
+      resource: 'Research',
+      resourceId: research._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { title: research.title }
+    });
+
+    res.json({ message: 'Paper deleted successfully' });
+  } catch (error) {
+    console.error('Delete rejected paper error:', error);
+    res.status(500).json({ error: 'Failed to delete paper' });
+  }
+});
+
 export default router;
