@@ -97,7 +97,7 @@ const About = () => {
         </div>
       </div>
 
-      {/* Team - FIXED ALIGNMENT */}
+      {/* Team - ADJUSTED SPACING */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 mb-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Meet Our Team</h2>
@@ -129,15 +129,15 @@ const About = () => {
                   )}
                 </div>
                 
-                {/* Text Content - Fixed Height Container */}
-                <div className="text-center flex flex-col items-center min-h-[80px] sm:min-h-[70px]">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight mb-1 line-clamp-2">
+                {/* Text Content - REDUCED SPACING */}
+                <div className="text-center flex flex-col items-center min-h-[70px] sm:min-h-[65px]">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight mb-0.5 line-clamp-2">
                     {member.name}
                   </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 line-clamp-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1">
                     {member.role}
                   </p>
-                  <p className="text-xs text-navy mt-auto line-clamp-1">
+                  <p className="text-[10px] sm:text-xs text-navy mt-0.5 line-clamp-1">
                     NEUST College of Nursing
                   </p>
                 </div>
