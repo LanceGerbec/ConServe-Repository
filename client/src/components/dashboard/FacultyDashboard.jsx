@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Clock, Eye, BookOpen, Activity, Bookmark, Calendar, Users, Upload, Search, X, ChevronRight, Filter, Info, Trash2 } from 'lucide-react';
+import { FileText, Clock, Eye, BookOpen, Activity, Bookmark, Calendar, Users, Upload, Search, X, ChevronRight, Filter, Info, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SubmitResearch from '../research/SubmitResearch';
@@ -95,12 +95,17 @@ const FacultyDashboard = () => {
     }
   };
 
+  const handleEdit = (paper) => {
+    setEditingPaper(paper);
+    setShowEditModal(true);
+  };
+
   const handleDeleteRejected = async (paperId, title) => {
     setDeleteModal({ show: true, paperId, title });
   };
 
   const confirmDelete = async () => {
-    const { paperId, title } = deleteModal;
+    const { paperId } = deleteModal;
     setDeleteModal({ show: false, paperId: null, title: '' });
     
     try {
@@ -139,6 +144,9 @@ const FacultyDashboard = () => {
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
+
+  const canEdit = (status) => status === 'pending' || status === 'revision';
+  const canDelete = (status) => status === 'rejected';
 
   const getReviewBadge = (paper) => {
     if (paper.reviewedByCurrentUser) {
@@ -242,19 +250,32 @@ const FacultyDashboard = () => {
             <button onClick={() => onRemove(paper._id, paper.research._id)} className="w-full sm:w-auto px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95">
               Remove
             </button>
-          ) : isSubmission && paper.status === 'rejected' ? (
-            <button 
-              onClick={() => handleDeleteRejected(paper._id, paper.title)} 
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95"
-            >
-              <Trash2 size={14} />
-              Delete
-            </button>
-          ) : !isSubmission && !isReview ? (
+          ) : isSubmission ? (
+            <>
+              {canEdit(paper.status) && (
+                <button 
+                  onClick={() => handleEdit(paper)} 
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-xs font-bold transition active:scale-95"
+                >
+                  <Edit2 size={14} />
+                  Edit
+                </button>
+              )}
+              {canDelete(paper.status) && (
+                <button 
+                  onClick={() => handleDeleteRejected(paper._id, paper.title)} 
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              )}
+            </>
+          ) : !isReview ? (
             <button onClick={() => window.location.href = `/research/${paper._id}`} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs font-bold shadow-md active:scale-95">
               <Eye size={14} />{paper.reviewedByCurrentUser ? 'View' : 'Review'}
             </button>
-          ) : isReview && (
+          ) : (
             <button onClick={() => window.location.href = `/research/${paper.research._id}`} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-navy text-white rounded-lg hover:bg-navy-800 transition text-xs font-bold shadow-md active:scale-95">
               <Eye size={14} />View
             </button>
@@ -277,6 +298,7 @@ const FacultyDashboard = () => {
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
+        {/* Header - same as before */}
         <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
@@ -329,6 +351,7 @@ const FacultyDashboard = () => {
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="px-3 sm:px-4 mb-4 sm:mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {[
@@ -357,6 +380,7 @@ const FacultyDashboard = () => {
           </div>
         </div>
 
+        {/* Content */}
         <div className="px-3 sm:px-4 space-y-4 sm:space-y-6">
           {activeTab === 'overview' && (
             <>
@@ -459,184 +483,182 @@ const FacultyDashboard = () => {
                   <div className="flex items-center gap-2">
                     <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <FileText size={18} className="text-blue-600" />
-My Reviews
-</h2>
-<Tooltip
-  content={`You submitted ${stats.reviews} review${stats.reviews !== 1 ? 's' : ''}`}
-  position="bottom"
->
-
-<div className="flex items-center gap-1 text-navy dark:text-accent cursor-help">
-<span className="font-bold text-sm">({filteredReviews.length})</span>
-<Info size={14} />
-</div>
-</Tooltip>
-</div>
-</div>
-<div className="p-3 sm:p-4">
-{filteredReviews.length === 0 ? (
-<div className="text-center py-8 sm:py-12">
-<div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-<FileText size={28} className="text-gray-400" />
-</div>
-<p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">No reviews yet</p>
-</div>
-) : (
-<div className="space-y-3 sm:space-y-4">{filteredReviews.map(review => <PaperCard key={review._id} paper={review} isReview />)}</div>
-)}
-</div>
-</div>
-</div>
-)}
-{activeTab === 'submissions' && (
-        <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
-          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Upload size={18} className="text-green-600" />
-                  My Submissions
-                </h2>
-                <Tooltip content={`You have ${stats.submissions} paper${stats.submissions !== 1 ? 's' : ''}`} position="bottom">
-                  <div className="flex items-center gap-1 text-navy dark:text-accent cursor-help">
-                    <span className="font-bold text-sm">({filteredSubmissions.length})</span>
-                    <Info size={14} />
+                      My Reviews
+                    </h2>
+                    <Tooltip content={`You submitted ${stats.reviews} review${stats.reviews !== 1 ? 's' : ''}`} position="bottom">
+                      <div className="flex items-center gap-1 text-navy dark:text-accent cursor-help">
+                        <span className="font-bold text-sm">({filteredReviews.length})</span>
+                        <Info size={14} />
+                      </div>
+                    </Tooltip>
                   </div>
-                </Tooltip>
+                </div>
+                <div className="p-3 sm:p-4">
+                  {filteredReviews.length === 0 ? (
+                    <div className="text-center py-8 sm:py-12">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                        <FileText size={28} className="text-gray-400" />
+                      </div>
+                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">No reviews yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 sm:space-y-4">{filteredReviews.map(review => <PaperCard key={review._id} paper={review} isReview />)}</div>
+                  )}
+                </div>
               </div>
             </div>
-            <button onClick={() => setShowSubmitModal(true)} className="w-full flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-navy text-white rounded-xl font-semibold shadow-lg active:scale-95 transition-all text-sm">
-              <Upload size={16} />Submit Research
-            </button>
-          </div>
-          <div className="p-3 sm:p-4">
-            {filteredSubmissions.length === 0 ? (
-              <div className="text-center py-8 sm:py-12">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                  <Upload size={28} className="text-gray-400" />
+          )}
+
+          {activeTab === 'submissions' && (
+            <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
+              <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Upload size={18} className="text-green-600" />
+                      My Submissions
+                    </h2>
+                    <Tooltip content={`You have ${stats.submissions} paper${stats.submissions !== 1 ? 's' : ''}`} position="bottom">
+                      <div className="flex items-center gap-1 text-navy dark:text-accent cursor-help">
+                        <span className="font-bold text-sm">({filteredSubmissions.length})</span>
+                        <Info size={14} />
+                      </div>
+                    </Tooltip>
+                  </div>
                 </div>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">No submissions yet</p>
-                <button onClick={() => setShowSubmitModal(true)} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Submit Your First Paper</button>
+                <button onClick={() => setShowSubmitModal(true)} className="w-full flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-navy text-white rounded-xl font-semibold shadow-lg active:scale-95 transition-all text-sm">
+                  <Upload size={16} />Submit Research
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3 sm:space-y-4">{filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} isSubmission />)}</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'bookmarks' && (
-        <div ref={bookmarksRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
-          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Bookmark size={18} className="text-purple-600" />
-                Bookmarks
-              </h2>
-              <Tooltip content={`You have ${bookmarks.length} bookmark${bookmarks.length !== 1 ? 's' : ''}`} position="bottom">
-                <div className="flex items-center gap-1 text-navy dark:text-accent cursor-help">
-                  <span className="font-bold text-sm">({filteredBookmarks.length})</span>
-                  <Info size={14} />
-                </div>
-              </Tooltip>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full pl-9 pr-9 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-              {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={16} /></button>}
-            </div>
-          </div>
-          <div className="p-3 sm:p-4">
-            {filteredBookmarks.length === 0 ? (
-              <div className="text-center py-8 sm:py-12">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                  <Bookmark size={28} className="text-gray-400" />
-                </div>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">{search ? 'No bookmarks found' : 'No bookmarks yet'}</p>
-                {!search && <button onClick={() => window.location.href = '/explore'} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Browse Papers</button>}
+              <div className="p-3 sm:p-4">
+                {filteredSubmissions.length === 0 ? (
+                  <div className="text-center py-8 sm:py-12">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                      <Upload size={28} className="text-gray-400" />
+                    </div>
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">No submissions yet</p>
+                    <button onClick={() => setShowSubmitModal(true)} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Submit Your First Paper</button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 sm:space-y-4">{filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} isSubmission />)}</div>
+                )}
               </div>
-            ) : (
-              <div className="space-y-3 sm:space-y-4">{filteredBookmarks.map(b => <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />)}</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'activity' && <ActivityLogs />}
-    </div>
-  </div>
-
-  {showSubmitModal && <SubmitResearch onClose={() => setShowSubmitModal(false)} onSuccess={() => { setShowSubmitModal(false); fetchData(); }} />}
-  
-  {showEditModal && editingPaper && (
-    <EditResearch 
-      research={editingPaper}
-      onClose={() => {
-        setShowEditModal(false);
-        setEditingPaper(null);
-      }}
-      onSuccess={() => {
-        setShowEditModal(false);
-        setEditingPaper(null);
-        fetchData();
-      }}
-    />
-  )}
-
-  {/* Delete Confirmation Modal */}
-  {deleteModal.show && (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border-2 border-red-200 dark:border-red-800 animate-scale-in">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/20">
-              <Trash2 size={24} className="text-red-600 dark:text-red-400" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                Delete Rejected Paper?
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                This action cannot be undone. The paper and its PDF will be permanently deleted.
-              </p>
+          )}
+
+          {activeTab === 'bookmarks' && (
+            <div ref={bookmarksRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
+              <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-4">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Bookmark size={18} className="text-purple-600" />
+                    Bookmarks
+                  </h2>
+                  <Tooltip content={`You have ${bookmarks.length} bookmark${bookmarks.length !== 1 ? 's' : ''}`} position="bottom">
+                    <div className="flex items-center gap-1 text-navy dark:text-accent cursor-help">
+                      <span className="font-bold text-sm">({filteredBookmarks.length})</span>
+                      <Info size={14} />
+                    </div>
+                  </Tooltip>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full pl-9 pr-9 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={16} /></button>}
+                </div>
+              </div>
+              <div className="p-3 sm:p-4">
+                {filteredBookmarks.length === 0 ? (
+                  <div className="text-center py-8 sm:py-12">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                      <Bookmark size={28} className="text-gray-400" />
+                    </div>
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">{search ? 'No bookmarks found' : 'No bookmarks yet'}</p>
+                    {!search && <button onClick={() => window.location.href = '/explore'} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Browse Papers</button>}
+                  </div>
+                ) : (
+                  <div className="space-y-3 sm:space-y-4">{filteredBookmarks.map(b => <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />)}</div>
+                )}
+              </div>
             </div>
-            <button 
-              onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <X size={20} className="text-gray-500" />
-            </button>
-          </div>
-        </div>
+          )}
 
-        <div className="p-6 bg-gray-50 dark:bg-gray-900/50">
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Paper to delete:</p>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
-            <p className="text-sm text-gray-900 dark:text-white font-medium line-clamp-2">
-              {deleteModal.title}
-            </p>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
-              className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
-            >
-              <Trash2 size={18} />
-              Delete
-            </button>
-          </div>
+          {activeTab === 'activity' && <ActivityLogs />}
         </div>
       </div>
-    </div>
-  )}
-</>
-);
+
+      {showSubmitModal && <SubmitResearch onClose={() => setShowSubmitModal(false)} onSuccess={() => { setShowSubmitModal(false); fetchData(); }} />}
+      
+      {showEditModal && editingPaper && (
+        <EditResearch 
+          research={editingPaper}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingPaper(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setEditingPaper(null);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border-2 border-red-200 dark:border-red-800 animate-scale-in">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/20">
+                  <Trash2 size={24} className="text-red-600 dark:text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                    Delete Rejected Paper?
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    This action cannot be undone. The paper and its PDF will be permanently deleted.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 dark:bg-gray-900/50">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Paper to delete:</p>
+              <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+                <p className="text-sm text-gray-900 dark:text-white font-medium line-clamp-2">
+                  {deleteModal.title}
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={18} />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
+
 export default FacultyDashboard;
