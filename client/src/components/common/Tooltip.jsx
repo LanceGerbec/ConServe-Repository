@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
-const Tooltip = ({ content, children, position = 'top' }) => {
+const Tooltip = ({ children, content, position = 'top' }) => {
   const [show, setShow] = useState(false);
-
-  const positions = {
-    top: '-top-12 left-1/2 -translate-x-1/2',
-    bottom: '-bottom-12 left-1/2 -translate-x-1/2',
-    left: 'right-full mr-2 top-1/2 -translate-y-1/2',
-    right: 'left-full ml-2 top-1/2 -translate-y-1/2'
+  
+  const positionClasses = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2'
   };
 
   return (
@@ -15,16 +15,15 @@ const Tooltip = ({ content, children, position = 'top' }) => {
       <div
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        onFocus={() => setShow(true)}
-        onBlur={() => setShow(false)}
+        className="cursor-help"
       >
         {children}
       </div>
       {show && (
-        <div className={`absolute ${positions[position]} z-50 animate-fade-in`}>
-          <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-xl whitespace-nowrap max-w-xs">
+        <div className={`absolute ${positionClasses[position]} z-50 animate-fade-in`}>
+          <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-xl">
             {content}
-            <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 left-1/2 -translate-x-1/2 -bottom-1"></div>
+            <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 left-1/2 -translate-x-1/2 -bottom-1" />
           </div>
         </div>
       )}

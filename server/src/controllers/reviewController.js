@@ -43,7 +43,6 @@ export const submitReview = async (req, res) => {
       priority: 'high'
     });
 
-    // ✅ EMAIL NOTIFICATION (won't block response)
     sendFacultyReviewNotification(research, req.user, comments)
       .then(result => console.log('✓ Faculty review email:', result.success ? 'sent' : 'failed'))
       .catch(err => console.error('✗ Faculty review email error:', err.message));
@@ -82,14 +81,30 @@ export const getMyReviews = async (req, res) => {
 
 export const getPendingReviews = async (req, res) => {
   try {
-    // Faculty can only see APPROVED papers (not pending)
     const approvedResearch = await Research.find({ status: 'approved' })
       .populate('submittedBy', 'firstName lastName email')
       .sort({ approvedDate: -1 })
-      .limit(50);
+      .limit(50)
+      .lean();
 
-    res.json({ papers: approvedResearch, count: approvedResearch.length });
+    const papersWithReviewInfo = await Promise.all(
+      approvedResearch.map(async (paper) => {
+        const [totalReviews, userReview] = await Promise.all([
+          Review.countDocuments({ research: paper._id }),
+          Review.findOne({ research: paper._id, reviewer: req.user._id }).select('_id')
+        ]);
+        
+        return {
+          ...paper,
+          totalReviewsCount: totalReviews,
+          reviewedByCurrentUser: !!userReview
+        };
+      })
+    );
+
+    res.json({ papers: papersWithReviewInfo, count: papersWithReviewInfo.length });
   } catch (error) {
+    console.error('Pending reviews error:', error);
     res.status(500).json({ error: 'Failed to fetch papers for review' });
   }
 };
@@ -104,6 +119,25 @@ export const getReviewStats = async (req, res) => {
     res.json({ totalReviews, approved, rejected, revisions });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch review stats' });
+  }
+};
+
+export const checkMyReviewStatus = async (req, res) => {
+  try {
+    const { researchId } = req.params;
+    const review = await Review.findOne({ 
+      research: researchId, 
+      reviewer: req.user._id 
+    }).select('_id createdAt');
+    
+    res.json({ 
+      hasReviewed: !!review, 
+      reviewId: review?._id,
+      reviewedAt: review?.createdAt
+    });
+  } catch (error) {
+    console.error('Check review status error:', error);
+    res.status(500).json({ error: 'Failed to check review status' });
   }
 };
 

@@ -5,7 +5,8 @@ import {
   getMyReviews, 
   getPendingReviews,
   getReviewStats,
-  deleteReview
+  deleteReview,
+  checkMyReviewStatus
 } from '../controllers/reviewController.js';
 import { auth, authorize } from '../middleware/auth.js';
 
@@ -15,7 +16,8 @@ router.post('/', auth, authorize('faculty', 'admin'), submitReview);
 router.get('/my-reviews', auth, authorize('faculty', 'admin'), getMyReviews);
 router.get('/pending', auth, authorize('faculty', 'admin'), getPendingReviews);
 router.get('/stats', auth, authorize('faculty', 'admin'), getReviewStats);
+router.get('/check-status/:researchId', auth, authorize('faculty', 'admin'), checkMyReviewStatus);
 router.get('/:researchId', auth, getReviewsForResearch);
 router.delete('/:reviewId', auth, deleteReview);
 
-export default router;  
+export default router;
