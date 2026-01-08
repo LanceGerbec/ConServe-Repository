@@ -18,6 +18,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
   
   const submissionsRef = useRef(null);
   const bookmarksRef = useRef(null);
@@ -62,7 +63,6 @@ const StudentDashboard = () => {
     }
   };
 
-const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
 
 const handleDeleteRejected = async (paperId, title) => {
   setDeleteModal({ show: true, paperId, title });

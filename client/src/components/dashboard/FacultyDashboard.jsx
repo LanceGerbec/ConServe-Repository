@@ -25,6 +25,7 @@ const FacultyDashboard = () => {
   const [search, setSearch] = useState('');
   const [showReviewedPapers, setShowReviewedPapers] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
 
   const reviewsRef = useRef(null);
   const submissionsRef = useRef(null);
@@ -94,7 +95,6 @@ const FacultyDashboard = () => {
     }
   };
 
-  const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
 
 const handleDeleteRejected = async (paperId, title) => {
   setDeleteModal({ show: true, paperId, title });
