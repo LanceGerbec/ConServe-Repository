@@ -97,7 +97,7 @@ const About = () => {
         </div>
       </div>
 
-      {/* Team */}
+      {/* Team - FIXED ALIGNMENT */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 mb-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Meet Our Team</h2>
@@ -115,21 +115,32 @@ const About = () => {
         ) : teamMembers.length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-sm">No team members added yet</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5 items-start">
             {teamMembers.map((member) => (
-              <div key={member._id} className="text-center group">
-                <div className="w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent group-hover:scale-110 transition shadow-md">
+              <div key={member._id} className="flex flex-col items-center group h-full">
+                {/* Image Container - Fixed Size */}
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent group-hover:scale-110 transition shadow-md flex-shrink-0">
                   {member.imageUrl ? (
                     <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold">
+                    <div className="w-full h-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
                       {member.name.charAt(0)}
                     </div>
                   )}
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm">{member.name}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">{member.role}</p>
-                <p className="text-xs text-navy mt-1">NEUST College of Nursing</p>
+                
+                {/* Text Content - Fixed Height Container */}
+                <div className="text-center flex flex-col items-center min-h-[80px] sm:min-h-[70px]">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight mb-1 line-clamp-2">
+                    {member.name}
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 line-clamp-1">
+                    {member.role}
+                  </p>
+                  <p className="text-xs text-navy mt-auto line-clamp-1">
+                    NEUST College of Nursing
+                  </p>
+                </div>
               </div>
             ))}
           </div>
