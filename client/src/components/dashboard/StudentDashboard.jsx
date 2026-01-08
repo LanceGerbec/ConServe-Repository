@@ -1,8 +1,8 @@
-// client/src/components/dashboard/StudentDashboard.jsx
 import { useState, useEffect, useRef } from 'react';
-import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText } from 'lucide-react';
+import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText, Edit3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
+import EditResearch from '../research/EditResearch';
 import ActivityLogs from '../analytics/ActivityLogs';
 import Toast from '../common/Toast';
 
@@ -10,6 +10,8 @@ const StudentDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPaper, setEditingPaper] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
   const [stats, setStats] = useState({ submissions: 0, views: 0 });
@@ -71,7 +73,8 @@ const StudentDashboard = () => {
     const badges = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
       approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+      rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      revision: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
@@ -94,7 +97,7 @@ const StudentDashboard = () => {
     </div>
   );
 
-  const PaperCard = ({ paper, onRemove, isBookmark = false }) => (
+  const PaperCard = ({ paper, onRemove, isBookmark = false, isSubmission = false }) => (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-md border border-gray-200 dark:border-gray-700 active:scale-98 transition-all">
       <div className="flex items-start gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -102,10 +105,24 @@ const StudentDashboard = () => {
             {isBookmark ? paper.research.title : paper.title}
           </h3>
         </div>
-        {!isBookmark && (
-          <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${getStatusBadge(paper.status)}`}>
-            {paper.status?.toUpperCase()}
-          </span>
+        {isSubmission && (
+          <div className="flex items-center gap-2">
+            <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${getStatusBadge(paper.status)}`}>
+              {paper.status?.toUpperCase()}
+            </span>
+            {(paper.status === 'pending' || paper.status === 'revision') && (
+              <button
+                onClick={() => {
+                  setEditingPaper(paper);
+                  setShowEditModal(true);
+                }}
+                className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs font-bold flex items-center gap-1"
+              >
+                <Edit3 size={14} />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
@@ -147,7 +164,6 @@ const StudentDashboard = () => {
       {toast.show && <Toast {...toast} onClose={() => setToast({ ...toast, show: false })} />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-        {/* Responsive Header */}
         <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
@@ -155,7 +171,6 @@ const StudentDashboard = () => {
           </div>
 
           <div className="relative flex items-center gap-3 sm:gap-6">
-            {/* Avatar - Hidden on very small screens */}
             <div className="hidden xs:block flex-shrink-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
                 <span className="text-lg sm:text-2xl font-bold text-white tracking-tight">
@@ -189,7 +204,6 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            {/* Status Badge - Hidden on small screens */}
             <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
               <Activity size={16} className="text-green-300" />
               <span className="text-xs sm:text-sm font-semibold text-white">Active</span>
@@ -197,7 +211,6 @@ const StudentDashboard = () => {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="px-3 sm:px-4 mb-4 sm:mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {[
@@ -277,7 +290,7 @@ const StudentDashboard = () => {
                     {!search && <button onClick={() => setShowSubmitModal(true)} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Submit Your First Paper</button>}
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4">{filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} />)}</div>
+                  <div className="space-y-3 sm:space-y-4">{filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} isSubmission />)}</div>
                 )}
               </div>
             </div>
@@ -317,6 +330,21 @@ const StudentDashboard = () => {
       </div>
 
       {showSubmitModal && <SubmitResearch onClose={() => setShowSubmitModal(false)} onSuccess={() => { setShowSubmitModal(false); fetchData(); }} />}
+      
+      {showEditModal && editingPaper && (
+        <EditResearch 
+          research={editingPaper}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingPaper(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setEditingPaper(null);
+            fetchData();
+          }}
+        />
+      )}
     </>
   );
 };

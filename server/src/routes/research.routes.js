@@ -13,6 +13,98 @@ import { sendResearchSubmissionNotification, sendResearchApprovedNotification, s
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// ✅ EDIT RESEARCH (must be before GET /:id)
+router.patch('/:id', auth, upload.single('file'), async (req, res) => {
+  try {
+    const research = await Research.findById(req.params.id).populate('submittedBy');
+    if (!research) return res.status(404).json({ error: 'Research not found' });
+
+    // Check authorization
+    const isAuthor = research.submittedBy._id.toString() === req.user._id.toString();
+    if (!isAuthor) return res.status(403).json({ error: 'Only the author can edit this research' });
+
+    // Check if editable
+    if (research.status !== 'pending' && research.status !== 'revision') {
+      return res.status(403).json({ error: `Cannot edit ${research.status} research` });
+    }
+
+    const { title, authors, abstract, keywords, category, subjectArea, yearCompleted } = req.body;
+
+    // Update fields
+    if (title) research.title = title;
+    if (authors) research.authors = JSON.parse(authors);
+    if (abstract) research.abstract = abstract;
+    if (keywords) research.keywords = JSON.parse(keywords);
+    if (category) research.category = category;
+    if (subjectArea) research.subjectArea = subjectArea;
+    if (yearCompleted) research.yearCompleted = parseInt(yearCompleted);
+
+    // Handle PDF replacement
+    if (req.file) {
+      const bucket = getGridFSBucket();
+      
+      // Delete old PDF
+      if (research.gridfsId) {
+        try {
+          await bucket.delete(new mongoose.Types.ObjectId(research.gridfsId));
+        } catch (err) {
+          console.error('Old PDF deletion error:', err);
+        }
+      }
+
+      // Upload new PDF
+      const uploadStream = bucket.openUploadStream(req.file.originalname, {
+        contentType: 'application/pdf',
+        metadata: { submittedBy: req.user._id, title: research.title, uploadDate: new Date() }
+      });
+
+      const readableStream = Readable.from(req.file.buffer);
+      await new Promise((resolve, reject) => {
+        readableStream.pipe(uploadStream);
+        uploadStream.on('finish', resolve);
+        uploadStream.on('error', reject);
+      });
+
+      research.gridfsId = uploadStream.id;
+      research.fileName = req.file.originalname;
+      research.fileSize = req.file.size;
+      research.fileUrl = `/research/${uploadStream.id}/pdf`;
+    }
+
+    // Save version to history
+    if (!research.versionHistory) research.versionHistory = [];
+    research.versionHistory.push({
+      fileUrl: research.fileUrl,
+      uploadedAt: new Date(),
+      changes: 'Research edited by author'
+    });
+
+    // Change revision → pending
+    const wasRevision = research.status === 'revision';
+    if (wasRevision) {
+      research.status = 'pending';
+      research.revisionNotes = '';
+    }
+
+    await research.save();
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'RESEARCH_EDITED',
+      resource: 'Research',
+      resourceId: research._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { wasRevision, pdfReplaced: !!req.file }
+    });
+
+    res.json({ message: 'Research updated successfully', research });
+  } catch (error) {
+    console.error('Edit research error:', error);
+    res.status(500).json({ error: 'Failed to update research' });
+  }
+});
+
 // PDF STREAMING
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
