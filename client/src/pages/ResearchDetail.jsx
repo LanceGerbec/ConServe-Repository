@@ -140,8 +140,8 @@ const ResearchDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy dark:border-blue-500"></div>
       </div>
     );
   }
@@ -154,27 +154,27 @@ const ResearchDetail = () => {
 
   if (error || !canAccess) {
     const statusInfo = {
-      rejected: { icon: XCircle, color: 'red', title: 'Research Not Available', message: 'This research paper has been rejected.', bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-500' },
-      pending: { icon: Clock, color: 'yellow', title: 'Research Under Review', message: 'This research paper is under review.', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' },
-      default: { icon: Lock, color: 'gray', title: 'Access Denied', message: error || 'Only approved research can be viewed.', bgClass: 'bg-gray-50 dark:bg-gray-900/20 border-gray-500' }
+      rejected: { icon: XCircle, color: 'red', title: 'Research Not Available', message: 'This research paper has been rejected.', bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-700' },
+      pending: { icon: Clock, color: 'yellow', title: 'Research Under Review', message: 'This research paper is under review.', bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 dark:border-yellow-700' },
+      default: { icon: Lock, color: 'gray', title: 'Access Denied', message: error || 'Only approved research can be viewed.', bgClass: 'bg-gray-50 dark:bg-gray-900/20 border-gray-500 dark:border-gray-700' }
     };
 
     const info = statusInfo[paper?.status] || statusInfo.default;
     const IconComponent = info.icon;
 
     return (
-      <div className="px-4 py-8">
-        <div className={`${info.bgClass} rounded-2xl p-8 shadow-xl border-2 text-center`}>
-          <IconComponent className={`mx-auto text-${info.color}-500 mb-4`} size={64} />
+      <div className="px-4 py-8 bg-gray-50 dark:bg-gray-950 min-h-screen">
+        <div className={`${info.bgClass} rounded-2xl p-8 shadow-xl border-2 text-center max-w-2xl mx-auto`}>
+          <IconComponent className={`mx-auto text-${info.color}-500 dark:text-${info.color}-400 mb-4`} size={64} />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{info.title}</h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">{info.message}</p>
           
           <div className="flex flex-col gap-3">
-            <button onClick={() => navigate('/explore')} className="flex items-center justify-center gap-2 bg-navy text-white px-6 py-3 rounded-xl hover:bg-navy-800 transition font-semibold shadow-lg">
+            <button onClick={() => navigate('/explore')} className="flex items-center justify-center gap-2 bg-navy dark:bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-navy-800 dark:hover:bg-blue-700 transition font-semibold shadow-lg">
               <ArrowLeft size={18} />Browse Papers
             </button>
             {user?.role === 'admin' && (
-              <button onClick={() => navigate('/dashboard')} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg">
+              <button onClick={() => navigate('/dashboard')} className="flex items-center justify-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition font-semibold shadow-lg">
                 Dashboard
               </button>
             )}
@@ -189,14 +189,14 @@ const ResearchDetail = () => {
   const submitterName = paper?.submittedBy ? `${paper.submittedBy.firstName || ''} ${paper.submittedBy.lastName || ''}`.trim() || 'Unknown' : 'Unknown';
 
   return (
-    <div className="min-h-screen pb-6">
+    <div className="min-h-screen pb-6 bg-gray-50 dark:bg-gray-950">
       {toast.show && (
         <div className={`fixed top-20 right-4 left-4 md:left-auto md:w-auto z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white animate-slide-up`}>
           <Check size={18} /><span className="text-sm">{toast.message}</span>
         </div>
       )}
 
-      <button onClick={() => navigate(-1)} className="flex items-center text-navy hover:text-navy-700 mb-4 px-4 py-2">
+      <button onClick={() => navigate(-1)} className="flex items-center text-navy dark:text-blue-400 hover:text-navy-700 dark:hover:text-blue-300 mb-4 px-4 py-2">
         <ArrowLeft size={18} className="mr-2" />
         <span className="text-sm font-semibold">Back</span>
       </button>
@@ -204,8 +204,8 @@ const ResearchDetail = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
         <div className="p-4 space-y-4">
           {paper.status !== 'approved' && (
-            <div className={`p-3 rounded-lg border-l-4 flex items-center gap-2 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
-              <AlertTriangle size={16} className={paper.status === 'pending' ? 'text-yellow-600' : 'text-red-600'} />
+            <div className={`p-3 rounded-lg border-l-4 flex items-center gap-2 ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 dark:border-yellow-600' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-600'}`}>
+              <AlertTriangle size={16} className={paper.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'} />
               <p className="font-bold text-xs text-gray-900 dark:text-white">{paper.status.toUpperCase()} PAPER</p>
             </div>
           )}
@@ -216,21 +216,21 @@ const ResearchDetail = () => {
 
           <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-2">
-              <User size={14} className="flex-shrink-0" />
+              <User size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
               <span className="break-words">{authorNames}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Calendar size={14} className="flex-shrink-0" />
+              <Calendar size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
               <span>{new Date(paper.createdAt).toLocaleDateString()}</span>
             </div>
             {paper.status === 'approved' && (
               <div className="flex items-center gap-2">
-                <Eye size={14} className="flex-shrink-0" />
+                <Eye size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
                 <span>{paper.views} views</span>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <Tag size={14} className="flex-shrink-0" />
+              <Tag size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
               <span>{paper.category}</span>
             </div>
           </div>
@@ -239,21 +239,21 @@ const ResearchDetail = () => {
             <div className="grid grid-cols-2 gap-2">
               <button 
                 onClick={toggleBookmark} 
-                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${bookmarked ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${bookmarked ? 'bg-navy dark:bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
               >
                 <Bookmark size={16} className={bookmarked ? 'fill-current' : ''} />
                 {bookmarked ? 'Saved' : 'Save'}
               </button>
               <button 
                 onClick={() => setShowCitation(true)} 
-                className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition text-gray-700 dark:text-gray-300"
               >
                 <Quote size={16} />
                 Cite
               </button>
               <button 
                 onClick={handleShare} 
-                className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition text-gray-700 dark:text-gray-300"
               >
                 <Share2 size={16} />
                 Share
@@ -261,7 +261,7 @@ const ResearchDetail = () => {
               {isFaculty && (
                 <button 
                   onClick={() => setShowReviewModal(true)} 
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-semibold transition"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-500 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 text-sm font-semibold transition"
                 >
                   <MessageSquare size={16} />
                   Review
@@ -273,7 +273,7 @@ const ResearchDetail = () => {
           {isAdmin && (
             <button 
               onClick={() => setShowAwardsModal(true)} 
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-semibold transition"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-yellow-500 dark:bg-yellow-600 text-white rounded-lg hover:bg-yellow-600 dark:hover:bg-yellow-700 text-sm font-semibold transition"
             >
               <Award size={16} />
               Manage Awards
@@ -294,12 +294,12 @@ const ResearchDetail = () => {
                 className="w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">
                     <MessageSquare size={20} className="text-white" />
                   </div>
                   <div className="text-left">
                     <p className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-                      <CheckCircle size={16} className="text-blue-600" />
+                      <CheckCircle size={16} className="text-blue-600 dark:text-blue-400" />
                       Faculty Reviews ({reviews.length})
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -317,18 +317,18 @@ const ResearchDetail = () => {
           {paper.awards?.length > 0 && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Award size={18} className="text-yellow-600" />
+                <Award size={18} className="text-yellow-600 dark:text-yellow-500" />
                 Awards & Recognition
               </h2>
               <div className="flex flex-wrap gap-2">
                 {paper.awards.map((award, i) => {
                   const colorMap = {
-                    gold: 'bg-yellow-100 text-yellow-800 border-yellow-500',
-                    silver: 'bg-gray-100 text-gray-800 border-gray-500',
-                    bronze: 'bg-orange-100 text-orange-800 border-orange-500',
-                    blue: 'bg-blue-100 text-blue-800 border-blue-500',
-                    green: 'bg-green-100 text-green-800 border-green-500',
-                    purple: 'bg-purple-100 text-purple-800 border-purple-500'
+                    gold: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 border-yellow-500 dark:border-yellow-600',
+                    silver: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-500 dark:border-gray-600',
+                    bronze: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 border-orange-500 dark:border-orange-600',
+                    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border-blue-500 dark:border-blue-600',
+                    green: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border-green-500 dark:border-green-600',
+                    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 border-purple-500 dark:border-purple-600'
                   };
                   return (
                     <div key={i} className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border-2 ${colorMap[award.color] || colorMap.gold} font-bold text-sm`}>
@@ -346,7 +346,7 @@ const ResearchDetail = () => {
               <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">Keywords</h2>
               <div className="flex flex-wrap gap-2">
                 {paper.keywords.map((keyword, i) => (
-                  <span key={i} className="px-2 py-1 bg-navy/10 text-navy dark:bg-accent/10 dark:text-accent rounded-full text-xs font-semibold break-words">
+                  <span key={i} className="px-2 py-1 bg-navy/10 dark:bg-blue-500/20 text-navy dark:text-blue-400 rounded-full text-xs font-semibold break-words">
                     {keyword}
                   </span>
                 ))}
@@ -367,7 +367,7 @@ const ResearchDetail = () => {
         <div className="p-4">
           <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Full Document</h2>
           <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-6 text-center border-2 border-dashed border-red-300 dark:border-red-700">
-            <FileText className="mx-auto text-red-600 mb-3" size={48} />
+            <FileText className="mx-auto text-red-600 dark:text-red-500 mb-3" size={48} />
             <p className="text-gray-900 dark:text-white mb-1 font-bold text-sm flex items-center justify-center gap-2">
               <Lock size={16} />
               View-Only Protected Document
@@ -377,7 +377,7 @@ const ResearchDetail = () => {
             </p>
             <button 
               onClick={handleViewPDF} 
-              className="inline-flex items-center justify-center gap-2 bg-navy text-white px-6 py-3 rounded-lg hover:bg-navy-800 shadow-lg text-sm font-semibold w-full md:w-auto"
+              className="inline-flex items-center justify-center gap-2 bg-navy dark:bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-navy-800 dark:hover:bg-blue-700 shadow-lg text-sm font-semibold w-full md:w-auto"
             >
               <FileText size={18} />
               Open Viewer
