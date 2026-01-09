@@ -48,7 +48,7 @@ const Privacy = () => {
     <div className="max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-navy rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+        <div className="w-16 h-16 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
           <Shield size={32} className="text-white" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Privacy Policy</h1>
@@ -61,7 +61,7 @@ const Privacy = () => {
       {/* Introduction */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-5">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <Shield className="text-navy" size={24} />
+          <Shield className="text-navy dark:text-blue-400" size={24} />
           Our Commitment
         </h2>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
@@ -79,8 +79,8 @@ const Privacy = () => {
           {dataTypes.map((type, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-navy/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <type.icon className="text-navy" size={20} />
+                <div className="w-10 h-10 bg-navy/10 dark:bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <type.icon className="text-navy dark:text-blue-400" size={20} />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{type.title}</h3>
@@ -90,7 +90,7 @@ const Privacy = () => {
             </div>
           ))}
         </div>
-        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-3 rounded">
+        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-600 p-3 rounded">
           <p className="text-xs text-gray-700 dark:text-gray-300">
             <strong>Note:</strong> We collect only the minimum information necessary to provide our services.
           </p>
@@ -104,7 +104,7 @@ const Privacy = () => {
         <ul className="space-y-2">
           {purposes.map((purpose, i) => (
             <li key={i} className="flex items-start text-sm">
-              <span className="w-1.5 h-1.5 bg-navy rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
+              <span className="w-1.5 h-1.5 bg-navy dark:bg-blue-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
               <span className="text-gray-700 dark:text-gray-300">{purpose}</span>
             </li>
           ))}
@@ -112,17 +112,17 @@ const Privacy = () => {
       </div>
 
       {/* Security */}
-      <div className="bg-navy text-white rounded-xl p-5 shadow-lg mb-5">
+      <div className="bg-navy dark:bg-gray-800 text-white rounded-xl p-5 shadow-lg mb-5 border-2 border-navy dark:border-blue-600">
         <div className="flex items-center gap-2 mb-3">
-          <Lock size={24} />
+          <Lock size={24} className="text-white dark:text-blue-400" />
           <h2 className="text-xl font-bold">Data Security Measures</h2>
         </div>
-        <p className="text-sm mb-3 text-blue-100">We implement comprehensive security measures:</p>
+        <p className="text-sm mb-3 text-blue-100 dark:text-gray-300">We implement comprehensive security measures:</p>
         <div className="grid grid-cols-2 gap-2">
           {security.map((measure, i) => (
-            <div key={i} className="flex items-start bg-white/10 rounded-lg p-2">
+            <div key={i} className="flex items-start bg-white/10 dark:bg-blue-900/20 rounded-lg p-2">
               <span className="text-green-400 mr-2 text-sm">✓</span>
-              <span className="text-xs">{measure}</span>
+              <span className="text-xs text-white dark:text-gray-300">{measure}</span>
             </div>
           ))}
         </div>
@@ -131,10 +131,10 @@ const Privacy = () => {
       {/* Data Sharing */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-5">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <AlertTriangle className="text-orange-500" size={24} />
+          <AlertTriangle className="text-orange-500 dark:text-orange-400" size={24} />
           Data Sharing
         </h2>
-        <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-3 rounded mb-3">
+        <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 dark:border-orange-600 p-3 rounded mb-3">
           <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">We do NOT sell, trade, or rent your information.</p>
           <p className="text-xs text-gray-700 dark:text-gray-300">Your privacy is our priority.</p>
         </div>
@@ -148,7 +148,7 @@ const Privacy = () => {
             'To trusted service providers (e.g., hosting)'
           ].map((item, i) => (
             <li key={i} className="flex items-start text-sm">
-              <span className="text-navy mr-2 font-bold">{i + 1}.</span>
+              <span className="text-navy dark:text-blue-400 mr-2 font-bold">{i + 1}.</span>
               <span className="text-gray-700 dark:text-gray-300">{item}</span>
             </li>
           ))}
@@ -161,16 +161,16 @@ const Privacy = () => {
         <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Under the Data Privacy Act, you have:</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {rights.map((right, i) => (
-            <div key={i} className="bg-navy/5 dark:bg-navy/20 p-3 rounded-lg border border-navy/20">
-              <h3 className="font-bold text-navy text-sm mb-1">{right.title}</h3>
+            <div key={i} className="bg-navy/5 dark:bg-blue-900/20 p-3 rounded-lg border border-navy/20 dark:border-blue-700">
+              <h3 className="font-bold text-navy dark:text-blue-400 text-sm mb-1">{right.title}</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400">{right.desc}</p>
             </div>
           ))}
         </div>
-        <div className="mt-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-3 rounded">
+        <div className="mt-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-600 p-3 rounded">
           <p className="text-xs text-gray-700 dark:text-gray-300">
             <strong>To exercise these rights:</strong> Contact our Data Protection Officer at{' '}
-            <a href="mailto:conserve2025@gmail.com" className="text-navy font-bold hover:underline">
+            <a href="mailto:conserve2025@gmail.com" className="text-navy dark:text-blue-400 font-bold hover:underline">
               conserve2025@gmail.com
             </a>
           </p>
@@ -201,14 +201,14 @@ const Privacy = () => {
       </div>
 
       {/* Contact */}
-      <div className="bg-gradient-to-r from-navy to-accent text-white rounded-xl p-6 text-center shadow-lg mb-5">
+      <div className="bg-gradient-to-r from-navy to-accent dark:from-blue-700 dark:to-blue-900 text-white rounded-xl p-6 text-center shadow-lg mb-5">
         <Database size={40} className="mx-auto mb-3" />
         <h2 className="text-xl font-bold mb-2">Questions About Privacy?</h2>
-        <p className="mb-4 text-blue-100 text-sm">Contact our Data Protection Officer</p>
-        <a href="mailto:conserve2025@gmail.com" className="inline-block bg-white text-navy px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition">
+        <p className="mb-4 text-blue-100 dark:text-blue-200 text-sm">Contact our Data Protection Officer</p>
+        <a href="mailto:conserve2025@gmail.com" className="inline-block bg-white text-navy dark:text-blue-900 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition">
           conserve2025@gmail.com
         </a>
-        <p className="mt-3 text-xs text-blue-100">Response time: Within 48 hours</p>
+        <p className="mt-3 text-xs text-blue-100 dark:text-blue-200">Response time: Within 48 hours</p>
       </div>
 
       {/* NPC Info */}
