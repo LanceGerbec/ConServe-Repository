@@ -213,7 +213,7 @@ const Register = () => {
     if (fieldErrors[fieldName]) {
       return `${baseClass} border-2 border-red-500 bg-red-50 dark:bg-red-900/10`;
     }
-    return `${baseClass} border-2 border-gray-300 dark:border-gray-700 focus:border-navy`;
+    return `${baseClass} border-2 border-gray-300 dark:border-gray-700 focus:border-navy dark:focus:border-blue-500`;
   };
 
   return (
@@ -235,7 +235,7 @@ const Register = () => {
       <div className="bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 md:p-8 border border-gray-200 dark:border-gray-800 my-4 sm:my-8 animate-scale-in relative">
         {/* Header with Close Buttons */}
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-navy rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-navy dark:bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
             {logo ? <img src={logo} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-white font-bold text-xl sm:text-2xl">C</span>}
           </div>
           <div className="flex space-x-2">
@@ -255,8 +255,8 @@ const Register = () => {
         </div>
 
         {/* Info Banner */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy p-3 rounded-lg mb-4 flex items-start space-x-2">
-          <Info size={16} className="text-navy flex-shrink-0 mt-0.5" />
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy dark:border-blue-500 p-3 rounded-lg mb-4 flex items-start space-x-2">
+          <Info size={16} className="text-navy dark:text-blue-400 flex-shrink-0 mt-0.5" />
           <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
             <strong>Note:</strong> Account requires admin approval
           </p>
@@ -339,7 +339,7 @@ const Register = () => {
                 setStudentIdValid(null);
                 setStudentInfo(null);
               }}
-              className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-navy dark:focus:border-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
             >
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
@@ -361,11 +361,11 @@ const Register = () => {
                 className={`w-full px-3 py-2.5 pr-10 rounded-xl focus:outline-none text-sm ${
                   studentIdValid === true ? 'border-2 border-green-500 bg-green-50 dark:bg-green-900/10' :
                   studentIdValid === false ? 'border-2 border-red-500 bg-red-50 dark:bg-red-900/10' :
-                  'border-2 border-gray-300 dark:border-gray-700 focus:border-navy'
+                  'border-2 border-gray-300 dark:border-gray-700 focus:border-navy dark:focus:border-blue-500'
                 } bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
                 placeholder={formData.role === 'faculty' ? 'FAC-12345' : '2021-12345'}
               />
-              {checkingId && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-navy"></div></div>}
+              {checkingId && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-navy dark:border-blue-500"></div></div>}
               {!checkingId && studentIdValid === true && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />}
               {!checkingId && studentIdValid === false && <X className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500" size={18} />}
             </div>
@@ -400,7 +400,7 @@ const Register = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 p-1"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -437,7 +437,7 @@ const Register = () => {
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 p-1"
               >
                 {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -453,12 +453,12 @@ const Register = () => {
                 type="checkbox"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 cursor-pointer flex-shrink-0"
+                className="w-4 h-4 text-navy dark:text-blue-500 border-gray-300 dark:border-gray-600 rounded focus:ring-navy dark:focus:ring-blue-500 mt-0.5 cursor-pointer flex-shrink-0 bg-white dark:bg-gray-700"
                 required
               />
               <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                I agree to the <Link to="/terms" target="_blank" className="text-navy hover:underline font-semibold">Terms</Link>
-                {' '}& <Link to="/privacy" target="_blank" className="text-navy hover:underline font-semibold">Privacy</Link>
+                I agree to the <Link to="/terms" target="_blank" className="text-navy dark:text-blue-400 hover:underline font-semibold">Terms</Link>
+                {' '}& <Link to="/privacy" target="_blank" className="text-navy dark:text-blue-400 hover:underline font-semibold">Privacy</Link>
                 <span className="text-red-500">*</span>
               </span>
             </label>
@@ -468,7 +468,7 @@ const Register = () => {
           <button
             type="submit"
             disabled={loading || !agreedToTerms || studentIdValid !== true}
-            className="w-full bg-navy hover:bg-navy-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm sm:text-base"
+            className="w-full bg-navy dark:bg-blue-600 hover:bg-navy-800 dark:hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm sm:text-base"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
             <span>{loading ? 'Creating...' : 'Create Account'}</span>
@@ -477,7 +477,7 @@ const Register = () => {
 
         {/* Footer */}
         <p className="text-center text-gray-600 dark:text-gray-400 mt-4 text-xs sm:text-sm">
-          Have an account? <Link to="/login" className="text-navy hover:text-navy-700 font-semibold">Sign in</Link>
+          Have an account? <Link to="/login" className="text-navy dark:text-blue-400 hover:text-navy-700 dark:hover:text-blue-300 font-semibold">Sign in</Link>
         </p>
       </div>
     </div>
