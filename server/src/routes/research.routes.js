@@ -9,9 +9,46 @@ import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOfApprovedPaper } from '../utils/notificationService.js';
 import { sendResearchSubmissionNotification, sendResearchApprovedNotification, sendResearchRevisionNotification, sendResearchRejectedNotification } from '../utils/emailService.js';
+import AuditLog from '../models/AuditLog.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// ✅ CRITICAL: log-violation MUST BE BEFORE /:id
+router.post('/log-violation', auth, async (req, res) => {
+  try {
+    const { researchId, violationType, researchTitle, severity, attemptCount } = req.body;
+    
+    console.log('🔴 [VIOLATION] Received:', {
+      user: req.user.email,
+      type: violationType,
+      paper: researchTitle,
+      severity: severity || 'medium'
+    });
+    
+    const log = await AuditLog.create({
+      user: req.user._id,
+      action: 'PDF_PROTECTION_VIOLATION',
+      resource: 'Research',
+      resourceId: researchId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { 
+        violationType,
+        researchTitle: researchTitle || 'Unknown',
+        severity: severity || 'medium',
+        attemptCount: attemptCount || 1,
+        timestamp: new Date()
+      }
+    });
+    
+    console.log('✅ [VIOLATION] Saved:', log._id);
+    res.json({ message: 'Violation logged', logId: log._id });
+  } catch (error) {
+    console.error('❌ [VIOLATION] Error:', error);
+    res.status(500).json({ error: 'Failed to log violation' });
+  }
+});
 
 // ✅ EDIT RESEARCH (must be before GET /:id)
 router.patch('/:id', auth, upload.single('file'), async (req, res) => {
@@ -198,42 +235,6 @@ router.get('/:id/citation', auth, async (req, res) => {
   }
 });
 
-// LOG VIOLATION (ENHANCED)
-router.post('/log-violation', auth, async (req, res) => {
-  try {
-    const { researchId, violationType, researchTitle, severity, attemptCount } = req.body;
-    
-    console.log('🔴 VIOLATION RECEIVED:', {
-      user: req.user.email,
-      type: violationType,
-      paper: researchTitle,
-      severity: severity || 'medium',
-      attempts: attemptCount
-    });
-    
-    const log = await AuditLog.create({
-      user: req.user._id,
-      action: 'PDF_PROTECTION_VIOLATION',
-      resource: 'Research',
-      resourceId: researchId,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      details: { 
-        violationType,
-        researchTitle: researchTitle || 'Unknown',
-        severity: severity || 'medium',
-        attemptCount: attemptCount || 1,
-        loggedAt: new Date().toISOString()
-      }
-    });
-    
-    console.log('✅ VIOLATION SAVED:', log._id);
-    res.json({ message: 'Violation logged', severity, logId: log._id });
-  } catch (error) {
-    console.error('❌ Violation logging error:', error);
-    res.status(500).json({ error: 'Failed to log violation' });
-  }
-});
 
 // GET SINGLE
 router.get('/:id', auth, async (req, res) => {
