@@ -1,6 +1,5 @@
-// client/src/components/analytics/ActivityLogs.jsx - COMPLETE FIXED VERSION
 import { useState, useEffect } from 'react';
-import { Activity, Trash2, Download, Search, Filter, Calendar, User, RefreshCw, X } from 'lucide-react';
+import { Activity, Trash2, Download, Search, Filter, Calendar, User, RefreshCw, X, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
@@ -112,13 +111,14 @@ const ActivityLogs = () => {
 
   const exportLogs = () => {
     const csv = [
-      ['Action', 'User', 'Email', 'Timestamp', 'IP'].join(','),
+      ['Action', 'User', 'Email', 'Timestamp', 'IP', 'Details'].join(','),
       ...filteredLogs.map(l => [
         l.action,
         `${l.user?.firstName || ''} ${l.user?.lastName || ''}`,
         l.user?.email || '',
         new Date(l.timestamp).toLocaleString(),
-        l.ipAddress || ''
+        l.ipAddress || '',
+        l.details?.violationType || ''
       ].join(','))
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -132,6 +132,7 @@ const ActivityLogs = () => {
   };
 
   const getActionColor = (action) => {
+    if (action?.includes('VIOLATION')) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-2 border-red-400 dark:border-red-600';
     if (action?.includes('APPROVED') || action?.includes('LOGIN')) return 'text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900/30';
     if (action?.includes('REJECTED') || action?.includes('DELETED')) return 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30';
     if (action?.includes('UPDATED') || action?.includes('ADDED')) return 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30';
@@ -139,7 +140,7 @@ const ActivityLogs = () => {
     return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800';
   };
 
-  const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED'];
+  const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'VIOLATION'];
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
@@ -161,7 +162,6 @@ const ActivityLogs = () => {
       />
 
       <div className="space-y-4 pb-6">
-        {/* HEADER */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -178,7 +178,6 @@ const ActivityLogs = () => {
             </button>
           </div>
 
-          {/* SEARCH */}
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
             <input
@@ -190,7 +189,6 @@ const ActivityLogs = () => {
             />
           </div>
 
-          {/* FILTER TOGGLE */}
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -215,7 +213,6 @@ const ActivityLogs = () => {
             </button>
           </div>
 
-          {/* COLLAPSIBLE FILTERS */}
           {showFilters && (
             <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700 animate-slide-up">
               <select
@@ -247,7 +244,6 @@ const ActivityLogs = () => {
           )}
         </div>
 
-        {/* LOGS LIST */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {filteredLogs.length === 0 ? (
             <div className="text-center py-12 px-4">
@@ -259,11 +255,25 @@ const ActivityLogs = () => {
               {filteredLogs.map((log, i) => (
                 <div key={log._id || i} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                   <div className="flex items-start gap-3">
-                    <Activity size={16} className={`${getActionColor(log.action).split(' ')[0]} flex-shrink-0 mt-0.5`} />
+                    {log.action === 'PDF_PROTECTION_VIOLATION' ? (
+                      <Shield size={16} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <Activity size={16} className={`${getActionColor(log.action).split(' ')[0]} flex-shrink-0 mt-0.5`} />
+                    )}
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getActionColor(log.action)} break-words`}>
                         {log.action?.replace(/_/g, ' ')}
                       </span>
+                      
+                      {log.action === 'PDF_PROTECTION_VIOLATION' && log.details && (
+                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/30 rounded-lg border-l-4 border-red-500 dark:border-red-600">
+                          <p className="text-xs font-bold text-red-800 dark:text-red-300 flex items-center gap-1.5">
+                            <Shield size={12} />
+                            {log.details.violationType}
+                          </p>
+                        </div>
+                      )}
+
                       {isAdmin && log.user && (
                         <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                           <User size={12} className="flex-shrink-0" />
@@ -275,7 +285,7 @@ const ActivityLogs = () => {
                           <Calendar size={12} className="flex-shrink-0" />
                           <span className="whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</span>
                         </span>
-                        {log.ipAddress && <span className="whitespace-nowrap">IP: {log.ipAddress}</span>}
+                        {log.ipAddress && <span className="whitespace-nowrap font-mono">IP: {log.ipAddress}</span>}
                       </div>
                     </div>
                     <button
@@ -291,7 +301,6 @@ const ActivityLogs = () => {
           )}
         </div>
 
-        {/* STATS */}
         {filteredLogs.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <div className="grid grid-cols-2 gap-3 text-center">
@@ -304,8 +313,8 @@ const ActivityLogs = () => {
                 <div className="text-xs text-gray-600 dark:text-gray-400">Success</div>
               </div>
               <div className="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
-                <div className="text-xl font-bold text-red-600 dark:text-red-400">{filteredLogs.filter(l => l.action?.includes('REJECTED')).length}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Errors</div>
+                <div className="text-xl font-bold text-red-600 dark:text-red-400">{filteredLogs.filter(l => l.action?.includes('VIOLATION')).length}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Violations</div>
               </div>
               <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
                 <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{new Set(filteredLogs.map(l => l.user?.email)).size}</div>
