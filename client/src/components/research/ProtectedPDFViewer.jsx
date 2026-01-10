@@ -116,32 +116,26 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
 const logViolation = async (type) => {
-  console.log('🔵🔵🔵 [FRONTEND] Logging violation...');
-  console.log('Type:', type);
-  console.log('Paper Title:', paperTitle);
-  console.log('PDF URL:', pdfUrl);
-  
   try {
     const token = localStorage.getItem('token');
-    const researchId = pdfUrl?.split('/').pop();
     
-    console.log('ResearchID extracted:', researchId);
-    
-    if (!researchId) {
-      console.error('❌ [FRONTEND] No researchId found');
-      return;
+    // Extract research ID from URL
+    let researchId = null;
+    if (pdfUrl) {
+      const parts = pdfUrl.split('/');
+      researchId = parts[parts.length - 2]; // Get ID from /research/:id/pdf
     }
     
-    const payload = { 
-      researchId, 
-      violationType: type,
-      researchTitle: paperTitle || 'Unknown',
-      severity: type.includes('Screenshot') ? 'critical' : 'high',
-      attemptCount: screenshotAttempts.current
-    };
+    console.log('🔵 LOGGING VIOLATION');
+    console.log('ResearchID:', researchId);
+    console.log('Type:', type);
+    console.log('API URL:', `${API_BASE}/research/log-violation`);
     
-    console.log('🔵 [FRONTEND] Sending payload:', payload);
-    console.log('🔵 [FRONTEND] API URL:', `${API_BASE}/research/log-violation`);
+    if (!researchId) {
+      console.error('❌ NO RESEARCH ID FOUND');
+      console.error('PDF URL:', pdfUrl);
+      return;
+    }
     
     const response = await fetch(`${API_BASE}/research/log-violation`, {
       method: 'POST',
@@ -149,21 +143,28 @@ const logViolation = async (type) => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        researchId: researchId,
+        violationType: type,
+        researchTitle: paperTitle || 'Unknown Paper',
+        severity: 'critical',
+        attemptCount: screenshotAttempts.current + 1
+      })
     });
     
-    console.log('🔵 [FRONTEND] Response status:', response.status);
+    console.log('🔵 Response Status:', response.status);
     
     const result = await response.json();
-    console.log('🔵 [FRONTEND] Response body:', result);
+    console.log('🔵 Response Body:', result);
     
-    if (!response.ok) {
-      console.error('❌ [FRONTEND] Failed:', response.status, result);
+    if (response.ok) {
+      console.log('✅ VIOLATION LOGGED:', result.logId);
     } else {
-      console.log('✅ [FRONTEND] Violation logged! LogID:', result.logId);
+      console.error('❌ FAILED:', result);
     }
-  } catch (err) {
-    console.error('❌ [FRONTEND] Network/Parse error:', err);
+    
+  } catch (error) {
+    console.error('❌ ERROR:', error);
   }
 };
 
