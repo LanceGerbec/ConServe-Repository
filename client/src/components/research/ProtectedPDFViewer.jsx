@@ -116,31 +116,32 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
 const logViolation = async (type) => {
-  console.log('🔵 [STEP 1] logViolation called with:', type);
-  console.log('🔵 [STEP 2] paperTitle:', paperTitle);
-  console.log('🔵 [STEP 3] pdfUrl:', pdfUrl);
+  console.log('🔵🔵🔵 [FRONTEND] Logging violation...');
+  console.log('Type:', type);
+  console.log('Paper Title:', paperTitle);
+  console.log('PDF URL:', pdfUrl);
   
   try {
     const token = localStorage.getItem('token');
     const researchId = pdfUrl?.split('/').pop();
     
-    console.log('🔵 [STEP 4] researchId extracted:', researchId);
+    console.log('ResearchID extracted:', researchId);
     
     if (!researchId) {
-      console.error('❌ [ERROR] No researchId found');
+      console.error('❌ [FRONTEND] No researchId found');
       return;
     }
     
     const payload = { 
       researchId, 
       violationType: type,
-      researchTitle: paperTitle,
+      researchTitle: paperTitle || 'Unknown',
       severity: type.includes('Screenshot') ? 'critical' : 'high',
       attemptCount: screenshotAttempts.current
     };
     
-    console.log('🔵 [STEP 5] Payload:', payload);
-    console.log('🔵 [STEP 6] Making fetch to:', `${API_BASE}/research/log-violation`);
+    console.log('🔵 [FRONTEND] Sending payload:', payload);
+    console.log('🔵 [FRONTEND] API URL:', `${API_BASE}/research/log-violation`);
     
     const response = await fetch(`${API_BASE}/research/log-violation`, {
       method: 'POST',
@@ -151,18 +152,18 @@ const logViolation = async (type) => {
       body: JSON.stringify(payload)
     });
     
-    console.log('🔵 [STEP 7] Response status:', response.status);
+    console.log('🔵 [FRONTEND] Response status:', response.status);
     
     const result = await response.json();
-    console.log('🔵 [STEP 8] Response body:', result);
+    console.log('🔵 [FRONTEND] Response body:', result);
     
     if (!response.ok) {
-      console.error('❌ [FAILED] Status:', response.status, 'Error:', result);
+      console.error('❌ [FRONTEND] Failed:', response.status, result);
     } else {
-      console.log('✅ [SUCCESS] Violation logged! LogID:', result.logId);
+      console.log('✅ [FRONTEND] Violation logged! LogID:', result.logId);
     }
   } catch (err) {
-    console.error('❌ [ERROR] Network/Parse error:', err);
+    console.error('❌ [FRONTEND] Network/Parse error:', err);
   }
 };
 

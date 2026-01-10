@@ -20,9 +20,9 @@ import notificationRoutes from './src/routes/notification.routes.js';
 import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
 import searchRoutes from './src/routes/search.routes.js';
 import awardsRoutes from './src/routes/awards.routes.js';
+import reportRoutes from './src/routes/report.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
-import reportRoutes from './src/routes/report.routes.js';
 
 dotenv.config();
 
@@ -66,13 +66,10 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Allow all origins in development
       callback(null, true);
     }
   },
@@ -106,7 +103,6 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
-  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -154,7 +150,7 @@ app.get('/health', (req, res) => {
 // ============================================
 console.log('📋 Registering routes...');
 
-// RESEARCH ROUTES MUST BE FIRST (for /:id/pdf to work)
+// ✅ RESEARCH ROUTES MUST BE FIRST (for /log-violation and /:id/pdf)
 app.use('/api/research', researchRoutes);
 console.log('✅ Research routes registered');
 
@@ -195,6 +191,7 @@ app.use('/api/search', searchRoutes);
 console.log('✅ Search routes registered');
 
 app.use('/api/research', awardsRoutes);
+console.log('✅ Awards routes registered');
 
 app.use('/api/reports', reportRoutes);
 console.log('✅ Report routes registered');
@@ -222,7 +219,6 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.stack || err);
   
-  // Don't send stack trace in production
   const errorResponse = {
     error: err.message || 'Internal server error',
     timestamp: new Date().toISOString()
@@ -250,6 +246,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('\n📋 Registered Routes:');
   console.log('   ✅ POST   /api/auth/register');
   console.log('   ✅ POST   /api/auth/login');
+  console.log('   ✅ POST   /api/research/log-violation (PRIORITY)');
   console.log('   ✅ GET    /api/research (list)');
   console.log('   ✅ GET    /api/research/:id (details)');
   console.log('   ✅ GET    /api/research/:id/pdf (stream PDF)');
@@ -260,13 +257,14 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('   ✅ GET    /api/reviews/:researchId');
   console.log('   ✅ POST   /api/reviews (submit)');
   console.log('   ✅ GET    /api/analytics/dashboard');
+  console.log('   ✅ GET    /api/analytics/activity-logs');
+  console.log('   ✅ DELETE /api/analytics/activity-logs/clear-all');
   console.log('   ✅ GET    /api/settings');
   console.log('   ✅ GET    /api/notifications');
   console.log('   ✅ GET    /api/users (admin)');
   console.log('   ✅ POST   /api/search/advanced');
   console.log('='.repeat(60) + '\n');
   
-  // Log important warnings
   if (!process.env.MONGO_URI) {
     console.error('⚠️  WARNING: MONGO_URI not set!');
   }

@@ -18,12 +18,23 @@ router.post('/log-violation', auth, async (req, res) => {
   try {
     const { researchId, violationType, researchTitle, severity, attemptCount } = req.body;
     
-    console.log('🔴 [VIOLATION] Received:', {
-      user: req.user.email,
-      type: violationType,
-      paper: researchTitle,
-      severity: severity || 'medium'
-    });
+    console.log('🔴🔴🔴 [VIOLATION RECEIVED] 🔴🔴🔴');
+    console.log('User:', req.user.email);
+    console.log('Type:', violationType);
+    console.log('Paper:', researchTitle);
+    console.log('ResearchID:', researchId);
+    console.log('Body:', req.body);
+    
+    // Validate required fields
+    if (!researchId) {
+      console.error('❌ Missing researchId');
+      return res.status(400).json({ error: 'ResearchId required' });
+    }
+    
+    if (!violationType) {
+      console.error('❌ Missing violationType');
+      return res.status(400).json({ error: 'ViolationType required' });
+    }
     
     const log = await AuditLog.create({
       user: req.user._id,
@@ -33,18 +44,28 @@ router.post('/log-violation', auth, async (req, res) => {
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       details: { 
-        violationType,
-        researchTitle: researchTitle || 'Unknown',
+        violationType: violationType || 'Unknown',
+        researchTitle: researchTitle || 'Unknown Paper',
         severity: severity || 'medium',
         attemptCount: attemptCount || 1,
         timestamp: new Date()
       }
     });
     
-    console.log('✅ [VIOLATION] Saved:', log._id);
-    res.json({ message: 'Violation logged', logId: log._id });
+    console.log('✅✅✅ [VIOLATION SAVED] ✅✅✅');
+    console.log('LogID:', log._id);
+    console.log('Action:', log.action);
+    console.log('Details:', log.details);
+    
+    res.json({ 
+      success: true,
+      message: 'Violation logged', 
+      logId: log._id 
+    });
   } catch (error) {
-    console.error('❌ [VIOLATION] Error:', error);
+    console.error('❌❌❌ [VIOLATION ERROR] ❌❌❌');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({ error: 'Failed to log violation' });
   }
 });

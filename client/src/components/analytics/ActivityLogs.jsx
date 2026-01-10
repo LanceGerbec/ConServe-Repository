@@ -199,7 +199,16 @@ const ActivityLogs = () => {
         log.user?.lastName?.toLowerCase().includes(s)
       );
     }
-    if (filterAction !== 'all') filtered = filtered.filter(log => log.action?.includes(filterAction));
+   if (filterAction !== 'all') {
+  if (filterAction === 'PDF_VIOLATION') {
+    filtered = filtered.filter(log => 
+      log.action?.includes('PDF_PROTECTION_VIOLATION') || 
+      log.action?.includes('VIOLATION')
+    );
+  } else {
+    filtered = filtered.filter(log => log.action?.includes(filterAction));
+  }
+}
     if (dateRange !== 'all') {
       const cutoff = new Date();
       if (dateRange === 'today') cutoff.setHours(0,0,0,0);
@@ -295,7 +304,7 @@ const ActivityLogs = () => {
     return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800';
   };
 
-  const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'VIOLATION', 'PDF_PROTECTION_VIOLATION'];
+ const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'PDF_VIOLATION'];
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
