@@ -116,23 +116,35 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
   const logViolation = async (type) => {
-    try {
-      const token = localStorage.getItem('token');
-      const researchId = pdfUrl?.split('/').pop();
-      if (researchId) {
-        await fetch(`${API_BASE}/research/log-violation`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ researchId, violationType: type })
-        });
+  try {
+    const token = localStorage.getItem('token');
+    const researchId = pdfUrl?.split('/').pop();
+    if (researchId) {
+      console.log('🔴 VIOLATION LOGGED:', type, 'on', paperTitle);
+      const response = await fetch(`${API_BASE}/research/log-violation`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          researchId, 
+          violationType: type,
+          researchTitle: paperTitle,
+          severity: type.includes('Screenshot') ? 'critical' : 'high',
+          attemptCount: screenshotAttempts.current
+        })
+      });
+      if (!response.ok) {
+        console.error('❌ Violation log failed:', response.status);
+      } else {
+        console.log('✅ Violation logged successfully');
       }
-    } catch (err) {
-      console.error('Log error:', err);
     }
-  };
+  } catch (err) {
+    console.error('❌ Log error:', err);
+  }
+};
 
   // MacOS Protection
   useEffect(() => {

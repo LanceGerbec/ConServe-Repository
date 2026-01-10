@@ -4,6 +4,76 @@ import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
 
+// 🆕 VIOLATION STATISTICS COMPONENT
+const ViolationStats = ({ logs }) => {
+  const violations = logs.filter(l => l.action === 'PDF_PROTECTION_VIOLATION');
+  const today = violations.filter(v => {
+    const logDate = new Date(v.timestamp).toDateString();
+    return logDate === new Date().toDateString();
+  });
+  
+  const byType = {};
+  violations.forEach(v => {
+    const type = v.details?.violationType || 'Unknown';
+    byType[type] = (byType[type] || 0) + 1;
+  });
+  
+  const critical = violations.filter(v => v.details?.severity === 'critical').length;
+  const uniqueUsers = new Set(violations.map(v => v.user?.email)).size;
+  
+  if (violations.length === 0) return null;
+  
+  return (
+    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl shadow-sm border-2 border-red-300 dark:border-red-700 p-4 mb-4 animate-slide-up">
+      <div className="flex items-center gap-2 mb-3">
+        <Shield size={20} className="text-red-600 dark:text-red-400" />
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+          🚨 Security Violations Dashboard
+        </h3>
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-red-400 dark:border-red-600 shadow-sm">
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{today.length}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Today</div>
+        </div>
+        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-orange-400 dark:border-orange-600 shadow-sm">
+          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{violations.length}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total</div>
+        </div>
+        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-purple-400 dark:border-purple-600 shadow-sm">
+          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{critical}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Critical</div>
+        </div>
+        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-sm">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{uniqueUsers}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Users</div>
+        </div>
+      </div>
+
+      {Object.keys(byType).length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+            <Activity size={12} />
+            Violation Types:
+          </p>
+          <div className="space-y-1.5">
+            {Object.entries(byType)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([type, count]) => (
+                <div key={type} className="flex justify-between items-center text-xs p-2 bg-gray-50 dark:bg-gray-900 rounded">
+                  <span className="text-gray-700 dark:text-gray-300 truncate font-medium">{type}</span>
+                  <span className="font-bold text-red-600 dark:text-red-400 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 rounded">{count}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ActivityLogs = () => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
@@ -20,6 +90,17 @@ const ActivityLogs = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => { fetchLogs(); }, []);
+  
+  // 🆕 AUTO-REFRESH EVERY 10 SECONDS (ADMIN ONLY)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing logs...');
+      fetchLogs();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
   useEffect(() => { applyFilters(); }, [logs, search, filterAction, dateRange]);
 
   const showToast = (message, type = 'success') => setToast({ show: true, message, type });
@@ -132,6 +213,7 @@ const ActivityLogs = () => {
   };
 
   const getActionColor = (action) => {
+    if (action === 'PDF_PROTECTION_VIOLATION') return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-2 border-red-400 dark:border-red-600 animate-pulse';
     if (action?.includes('VIOLATION')) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-2 border-red-400 dark:border-red-600';
     if (action?.includes('APPROVED') || action?.includes('LOGIN')) return 'text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900/30';
     if (action?.includes('REJECTED') || action?.includes('DELETED')) return 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30';
@@ -140,7 +222,7 @@ const ActivityLogs = () => {
     return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800';
   };
 
-  const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'VIOLATION'];
+  const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'VIOLATION', 'PDF_PROTECTION_VIOLATION'];
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
@@ -151,6 +233,10 @@ const ActivityLogs = () => {
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} />}
+      
+      {/* 🆕 VIOLATION STATISTICS (ADMIN ONLY) */}
+      {isAdmin && <ViolationStats logs={filteredLogs} />}
+      
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false, logId: null, action: '' })}
@@ -266,11 +352,36 @@ const ActivityLogs = () => {
                       </span>
                       
                       {log.action === 'PDF_PROTECTION_VIOLATION' && log.details && (
-                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/30 rounded-lg border-l-4 border-red-500 dark:border-red-600">
-                          <p className="text-xs font-bold text-red-800 dark:text-red-300 flex items-center gap-1.5">
-                            <Shield size={12} />
-                            {log.details.violationType}
-                          </p>
+                        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/30 rounded-lg border-l-4 border-red-500 dark:border-red-600 shadow-sm">
+                          <div className="flex items-start gap-2 mb-1.5">
+                            <Shield size={14} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-red-800 dark:text-red-300 mb-1">
+                                {log.details.violationType}
+                              </p>
+                              {log.details.researchTitle && (
+                                <p className="text-xs text-gray-700 dark:text-gray-400 truncate">
+                                  📄 {log.details.researchTitle}
+                                </p>
+                              )}
+                              <div className="flex flex-wrap gap-2 mt-1.5">
+                                {log.details.severity && (
+                                  <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                                    log.details.severity === 'critical' 
+                                      ? 'bg-red-600 text-white' 
+                                      : 'bg-orange-500 text-white'
+                                  }`}>
+                                    {log.details.severity.toUpperCase()}
+                                  </span>
+                                )}
+                                {log.details.attemptCount > 1 && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 font-bold">
+                                    {log.details.attemptCount} attempts
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
 

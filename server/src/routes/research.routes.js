@@ -198,22 +198,40 @@ router.get('/:id/citation', auth, async (req, res) => {
   }
 });
 
-// LOG VIOLATION
+// LOG VIOLATION (ENHANCED)
 router.post('/log-violation', auth, async (req, res) => {
   try {
-    const { researchId, violationType } = req.body;
-    await AuditLog.create({
+    const { researchId, violationType, researchTitle, severity, attemptCount } = req.body;
+    
+    console.log('🔴 VIOLATION RECEIVED:', {
+      user: req.user.email,
+      type: violationType,
+      paper: researchTitle,
+      severity: severity || 'medium',
+      attempts: attemptCount
+    });
+    
+    const log = await AuditLog.create({
       user: req.user._id,
       action: 'PDF_PROTECTION_VIOLATION',
       resource: 'Research',
       resourceId: researchId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      details: { violationType }
+      details: { 
+        violationType,
+        researchTitle: researchTitle || 'Unknown',
+        severity: severity || 'medium',
+        attemptCount: attemptCount || 1,
+        loggedAt: new Date().toISOString()
+      }
     });
-    res.json({ message: 'Logged' });
+    
+    console.log('✅ VIOLATION SAVED:', log._id);
+    res.json({ message: 'Violation logged', severity, logId: log._id });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to log' });
+    console.error('❌ Violation logging error:', error);
+    res.status(500).json({ error: 'Failed to log violation' });
   }
 });
 
