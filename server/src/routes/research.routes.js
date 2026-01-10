@@ -8,8 +8,7 @@ import { getGridFSBucket } from '../config/gridfs.js';
 import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOfApprovedPaper } from '../utils/notificationService.js';
-import { sendResearchSubmissionNotification, sendResearchApprovedNotification, sendResearchRevisionNotification, sendResearchRejectedNotification } from '../utils/emailService.js';
-import AuditLog from '../models/AuditLog.js';
+import { sendResearchSubmissionNotification, sendResearchApprovedNotification, sendResearchRevisionNotification, sendResearchRejectedNotification, sendFacultyApprovedPaperNotification } from '../utils/emailService.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -56,18 +55,15 @@ router.patch('/:id', auth, upload.single('file'), async (req, res) => {
     const research = await Research.findById(req.params.id).populate('submittedBy');
     if (!research) return res.status(404).json({ error: 'Research not found' });
 
-    // Check authorization
     const isAuthor = research.submittedBy._id.toString() === req.user._id.toString();
     if (!isAuthor) return res.status(403).json({ error: 'Only the author can edit this research' });
 
-    // Check if editable
     if (research.status !== 'pending' && research.status !== 'revision') {
       return res.status(403).json({ error: `Cannot edit ${research.status} research` });
     }
 
     const { title, authors, abstract, keywords, category, subjectArea, yearCompleted } = req.body;
 
-    // Update fields
     if (title) research.title = title;
     if (authors) research.authors = JSON.parse(authors);
     if (abstract) research.abstract = abstract;
@@ -76,11 +72,9 @@ router.patch('/:id', auth, upload.single('file'), async (req, res) => {
     if (subjectArea) research.subjectArea = subjectArea;
     if (yearCompleted) research.yearCompleted = parseInt(yearCompleted);
 
-    // Handle PDF replacement
     if (req.file) {
       const bucket = getGridFSBucket();
       
-      // Delete old PDF
       if (research.gridfsId) {
         try {
           await bucket.delete(new mongoose.Types.ObjectId(research.gridfsId));
@@ -89,7 +83,6 @@ router.patch('/:id', auth, upload.single('file'), async (req, res) => {
         }
       }
 
-      // Upload new PDF
       const uploadStream = bucket.openUploadStream(req.file.originalname, {
         contentType: 'application/pdf',
         metadata: { submittedBy: req.user._id, title: research.title, uploadDate: new Date() }
@@ -108,7 +101,6 @@ router.patch('/:id', auth, upload.single('file'), async (req, res) => {
       research.fileUrl = `/research/${uploadStream.id}/pdf`;
     }
 
-    // Save version to history
     if (!research.versionHistory) research.versionHistory = [];
     research.versionHistory.push({
       fileUrl: research.fileUrl,
@@ -116,7 +108,6 @@ router.patch('/:id', auth, upload.single('file'), async (req, res) => {
       changes: 'Research edited by author'
     });
 
-    // Change revision → pending
     const wasRevision = research.status === 'revision';
     if (wasRevision) {
       research.status = 'pending';
@@ -235,7 +226,6 @@ router.get('/:id/citation', auth, async (req, res) => {
   }
 });
 
-
 // GET SINGLE
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -302,7 +292,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// ✅ SUBMIT RESEARCH
+// SUBMIT RESEARCH
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF required' });
@@ -372,10 +362,8 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           details: { uploadedOnBehalf: isUploadedOnBehalf, actualAuthors: isUploadedOnBehalf ? realAuthors : null }
         });
         
-        // In-app notification
         await notifyNewResearchSubmitted(research);
         
-        // ✅ EMAIL NOTIFICATION (won't block response)
         sendResearchSubmissionNotification(research, req.user)
           .then(result => console.log('✓ Admin emails:', result.success ? 'sent' : 'failed'))
           .catch(err => console.error('✗ Email error:', err.message));
@@ -397,7 +385,7 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
   }
 });
 
-// ✅ UPDATE STATUS
+// UPDATE STATUS
 router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
@@ -418,39 +406,33 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
       userAgent: req.get('user-agent')
     });
     
-    // In-app notification to author
     await notifyResearchStatusChange(research, status, revisionNotes);
     
-    // ✅ NEW: Notify faculty ONLY when approved
     if (status === 'approved') {
       await notifyFacultyOfApprovedPaper(research);
     }
     
-   // ✅ EMAIL NOTIFICATIONS (won't block)
-const author = research.submittedBy;
+    const author = research.submittedBy;
 
-if (status === 'approved') {
-  sendResearchApprovedNotification(research, author)
-    .then(r => console.log('✓ Approval email:', r.success ? 'sent' : 'failed'))
-    .catch(e => console.error('✗ Email error:', e.message));
+    if (status === 'approved') {
+      sendResearchApprovedNotification(research, author)
+        .then(r => console.log('✓ Approval email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Email error:', e.message));
 
-  sendFacultyApprovedPaperNotification(research)
-    .then(r => console.log('✓ Faculty notification email:', r.success ? 'sent' : 'failed'))
-    .catch(e => console.error('✗ Faculty email error:', e.message));
+      sendFacultyApprovedPaperNotification(research)
+        .then(r => console.log('✓ Faculty notification email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Faculty email error:', e.message));
 
-} else if (status === 'revision') {
-  sendResearchRevisionNotification(research, author, revisionNotes)
-    .then(r => console.log('✓ Revision email:', r.success ? 'sent' : 'failed'))
-    .catch(e => console.error('✗ Email error:', e.message));
+    } else if (status === 'revision') {
+      sendResearchRevisionNotification(research, author, revisionNotes)
+        .then(r => console.log('✓ Revision email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Email error:', e.message));
 
-} else if (status === 'rejected') {
-  sendResearchRejectedNotification(research, author, revisionNotes)
-    .then(r => console.log('✓ Rejection email:', r.success ? 'sent' : 'failed'))
-    .catch(e => console.error('✗ Email error:', e.message));
-}
-
-      
-
+    } else if (status === 'rejected') {
+      sendResearchRejectedNotification(research, author, revisionNotes)
+        .then(r => console.log('✓ Rejection email:', r.success ? 'sent' : 'failed'))
+        .catch(e => console.error('✗ Email error:', e.message));
+    }
     
     res.json({ message: 'Status updated', research });
   } catch (error) {
