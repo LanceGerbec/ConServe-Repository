@@ -199,16 +199,18 @@ const ActivityLogs = () => {
         log.user?.lastName?.toLowerCase().includes(s)
       );
     }
-   if (filterAction !== 'all') {
-  if (filterAction === 'PDF_VIOLATION') {
-    filtered = filtered.filter(log => 
-      log.action?.includes('PDF_PROTECTION_VIOLATION') || 
-      log.action?.includes('VIOLATION')
-    );
-  } else {
-    filtered = filtered.filter(log => log.action?.includes(filterAction));
-  }
-}
+    
+    if (filterAction !== 'all') {
+      if (filterAction === 'PDF_VIOLATION') {
+        filtered = filtered.filter(log => 
+          log.action?.includes('PDF_PROTECTION_VIOLATION') || 
+          log.action?.includes('VIOLATION')
+        );
+      } else {
+        filtered = filtered.filter(log => log.action?.includes(filterAction));
+      }
+    }
+    
     if (dateRange !== 'all') {
       const cutoff = new Date();
       if (dateRange === 'today') cutoff.setHours(0,0,0,0);
@@ -273,14 +275,17 @@ const ActivityLogs = () => {
 
   const exportLogs = () => {
     const csv = [
-      ['Action', 'User', 'Email', 'Timestamp', 'IP', 'Details'].join(','),
+      ['Action', 'User', 'Email', 'Student ID', 'Timestamp', 'IP', 'Violation Type', 'Paper', 'Severity'].join(','),
       ...filteredLogs.map(l => [
         l.action,
         `${l.user?.firstName || ''} ${l.user?.lastName || ''}`,
         l.user?.email || '',
+        l.user?.studentId || '',
         new Date(l.timestamp).toLocaleString(),
         l.ipAddress || '',
-        l.details?.violationType || ''
+        l.details?.violationType || '',
+        l.details?.researchTitle || '',
+        l.details?.severity || ''
       ].join(','))
     ].join('\n');
     
@@ -304,7 +309,7 @@ const ActivityLogs = () => {
     return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800';
   };
 
- const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'PDF_VIOLATION'];
+  const actionTypes = ['all', 'USER', 'RESEARCH', 'LOGIN', 'APPROVED', 'REJECTED', 'DELETED', 'UPDATED', 'PDF_VIOLATION'];
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
@@ -456,11 +461,31 @@ const ActivityLogs = () => {
                               <p className="text-xs font-bold text-red-800 dark:text-red-300 mb-1">
                                 {log.details.violationType}
                               </p>
+                              
+                              {/* Show User Info for Violations */}
+                              {log.user && (
+                                <div className="mb-1.5 p-2 bg-white dark:bg-gray-800 rounded border border-red-300 dark:border-red-700">
+                                  <p className="text-xs text-gray-900 dark:text-gray-100 font-bold flex items-center gap-1">
+                                    <User size={12} />
+                                    {log.user.firstName} {log.user.lastName}
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                    📧 {log.user.email}
+                                  </p>
+                                  {log.user.studentId && (
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      🆔 {log.user.studentId}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              
                               {log.details.researchTitle && (
                                 <p className="text-xs text-gray-700 dark:text-gray-400 truncate">
                                   📄 {log.details.researchTitle}
                                 </p>
                               )}
+                              
                               <div className="flex flex-wrap gap-2 mt-1.5">
                                 {log.details.severity && (
                                   <span className={`text-xs px-2 py-0.5 rounded font-bold ${
@@ -482,12 +507,20 @@ const ActivityLogs = () => {
                         </div>
                       )}
 
-                      {isAdmin && log.user && (
+                      {log.user && (
                         <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                           <User size={12} className="flex-shrink-0" />
-                          <span className="truncate">{log.user.firstName} {log.user.lastName}</span>
+                          <span className="truncate font-semibold">
+                            {log.user.firstName} {log.user.lastName}
+                          </span>
+                          {log.user.email && (
+                            <span className="text-gray-500 dark:text-gray-500">
+                              ({log.user.email})
+                            </span>
+                          )}
                         </div>
                       )}
+                      
                       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span className="flex items-center gap-1">
                           <Calendar size={12} className="flex-shrink-0" />
@@ -509,28 +542,42 @@ const ActivityLogs = () => {
           )}
         </div>
 
-        {filteredLogs.length > 0 && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <div className="text-xl font-bold text-navy dark:text-blue-400">{filteredLogs.length}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Total</div>
-              </div>
-              <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-<div className="text-xl font-bold text-green-600 dark:text-green-400">{filteredLogs.filter(l => l.action?.includes('APPROVED')).length}</div>
-<div className="text-xs text-gray-600 dark:text-gray-400">Success</div>
-</div>
-<div className="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
-<div className="text-xl font-bold text-red-600 dark:text-red-400">{filteredLogs.filter(l => l.action?.includes('VIOLATION')).length}</div>
-<div className="text-xs text-gray-600 dark:text-gray-400">Violations</div>
-</div>
-<div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-<div className="text-xl font-bold text-purple-600 dark:text-purple-400">{new Set(filteredLogs.map(l => l.user?.email)).size}</div>
-<div className="text-xs text-gray-600 dark:text-gray-400">Users</div>
-</div>
-</div>
-</div>
+       {filteredLogs.length > 0 && (
+  <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+    <div className="grid grid-cols-2 gap-3 text-center">
+
+      <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+        <div className="text-xl font-bold text-navy dark:text-blue-400">
+          {filteredLogs.length}
+        </div>
+        <div className="text-xs text-gray-600 dark:text-gray-400">Total</div>
+      </div>
+
+      <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+        <div className="text-xl font-bold text-green-600 dark:text-green-400">
+          {filteredLogs.filter(l => l.action?.includes('APPROVED')).length}
+        </div>
+        <div className="text-xs text-gray-600 dark:text-gray-400">Success</div>
+      </div>
+
+      <div className="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
+        <div className="text-xl font-bold text-red-600 dark:text-red-400">
+          {filteredLogs.filter(l => l.action?.includes('VIOLATION')).length}
+        </div>
+        <div className="text-xs text-gray-600 dark:text-gray-400">Violations</div>
+      </div>
+
+      <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+          {new Set(filteredLogs.map(l => l.user?.email)).size}
+        </div>
+        <div className="text-xs text-gray-600 dark:text-gray-400">Users</div>
+      </div>
+
+    </div>
+  </div>
 )}
+
 </div>
 </>
 );
