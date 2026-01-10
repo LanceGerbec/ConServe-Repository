@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Activity, Trash2, Download, Search, Filter, Calendar, User, RefreshCw, X, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../common/Toast';
@@ -85,36 +85,102 @@ const ActivityLogs = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, logId: null, action: '' });
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [lastLogCount, setLastLogCount] = useState(0);
 
   const isAdmin = user?.role === 'admin';
   const API_URL = import.meta.env.VITE_API_URL;
+  const scrollPositionRef = useRef(0);
 
-  useEffect(() => { fetchLogs(); }, []);
-  
-  // 🆕 AUTO-REFRESH EVERY 10 SECONDS (ADMIN ONLY)
+  useEffect(() => { 
+    fetchLogs(); 
+  }, []);
+
+  useEffect(() => { 
+    applyFilters(); 
+  }, [logs, search, filterAction, dateRange]);
+
+  // 🆕 OPTIMIZED AUTO-REFRESH (Silent, every 15 seconds)
   useEffect(() => {
     if (!isAdmin) return;
+    
     const interval = setInterval(() => {
-      console.log('🔄 Auto-refreshing logs...');
-      fetchLogs();
-    }, 10000);
+      silentFetchLogs();
+    }, 15000); // 15 seconds
+    
     return () => clearInterval(interval);
-  }, [isAdmin]);
-
-  useEffect(() => { applyFilters(); }, [logs, search, filterAction, dateRange]);
+  }, [isAdmin, lastLogCount]);
 
   const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 
+  // 🆕 SILENT FETCH (No loading spinner, preserves scroll)
+  const silentFetchLogs = async () => {
+    setIsAutoRefreshing(true);
+    
+    // Save current scroll position
+    if (window.pageYOffset) {
+      scrollPositionRef.current = window.pageYOffset;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = isAdmin 
+        ? `${API_URL}/analytics/activity-logs?limit=500` 
+        : `${API_URL}/analytics/my-logs?limit=500`;
+      
+      const res = await fetch(endpoint, { 
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const newLogs = data.logs || [];
+        const newCount = newLogs.length;
+        
+        // Show toast only if NEW logs detected
+        if (newCount > lastLogCount && lastLogCount > 0) {
+          const diff = newCount - lastLogCount;
+          showToast(`🔔 ${diff} new activity log${diff > 1 ? 's' : ''}`, 'info');
+        }
+        
+        setLogs(newLogs);
+        setLastLogCount(newCount);
+        
+        // Restore scroll position
+        setTimeout(() => {
+          if (scrollPositionRef.current) {
+            window.scrollTo(0, scrollPositionRef.current);
+          }
+        }, 0);
+      }
+    } catch (error) {
+      console.error('Silent refresh error:', error);
+    } finally {
+      setIsAutoRefreshing(false);
+    }
+  };
+
+  // Regular fetch (with loading spinner)
   const fetchLogs = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const endpoint = isAdmin ? `${API_URL}/analytics/activity-logs` : `${API_URL}/analytics/my-logs`;
-      const res = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` }});
+      const endpoint = isAdmin 
+        ? `${API_URL}/analytics/activity-logs?limit=500` 
+        : `${API_URL}/analytics/my-logs?limit=500`;
+      
+      const res = await fetch(endpoint, { 
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
       if (res.ok) {
         const data = await res.json();
-        setLogs(data.logs || []);
-      } else showToast('Failed to load logs', 'error');
+        const newLogs = data.logs || [];
+        setLogs(newLogs);
+        setLastLogCount(newLogs.length);
+      } else {
+        showToast('Failed to load logs', 'error');
+      }
     } catch (error) {
       showToast('Connection error', 'error');
     } finally {
@@ -168,16 +234,22 @@ const ActivityLogs = () => {
   const confirmClearAll = async () => {
     try {
       const token = localStorage.getItem('token');
-      const endpoint = isAdmin ? `${API_URL}/analytics/activity-logs/clear-all` : `${API_URL}/analytics/my-logs/clear-all`;
+      const endpoint = isAdmin 
+        ? `${API_URL}/analytics/activity-logs/clear-all` 
+        : `${API_URL}/analytics/my-logs/clear-all`;
+      
       const res = await fetch(endpoint, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       if (res.ok) {
         const data = await res.json();
         showToast(`✅ Cleared ${data.count} logs`);
         fetchLogs();
-      } else showToast('Failed to clear', 'error');
+      } else {
+        showToast('Failed to clear', 'error');
+      }
     } catch (error) {
       showToast('Connection error', 'error');
     } finally {
@@ -202,6 +274,7 @@ const ActivityLogs = () => {
         l.details?.violationType || ''
       ].join(','))
     ].join('\n');
+    
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -250,16 +323,31 @@ const ActivityLogs = () => {
       <div className="space-y-4 pb-6">
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Activity size={24} className="text-navy dark:text-blue-500 flex-shrink-0" />
-                <span className="truncate">Activity Logs</span>
-              </h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {isAdmin ? 'System' : 'Your'} activity ({filteredLogs.length})
-              </p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Activity size={24} className="text-navy dark:text-blue-500 flex-shrink-0" />
+                  <span className="truncate">Activity Logs</span>
+                </h2>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {isAdmin ? 'System' : 'Your'} activity ({filteredLogs.length})
+                </p>
+              </div>
+              
+              {/* 🆕 LIVE INDICATOR */}
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-900/30 border border-green-400 dark:border-green-600 rounded-full">
+                  <div className={`w-2 h-2 rounded-full ${isAutoRefreshing ? 'bg-green-500 animate-pulse' : 'bg-green-500'}`}></div>
+                  <span className="text-xs font-bold text-green-700 dark:text-green-400">Live</span>
+                </div>
+              )}
             </div>
-            <button onClick={fetchLogs} className="p-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex-shrink-0">
+            
+            <button 
+              onClick={fetchLogs} 
+              className="p-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex-shrink-0"
+              title="Manual Refresh"
+            >
               <RefreshCw size={18} />
             </button>
           </div>
@@ -420,23 +508,21 @@ const ActivityLogs = () => {
                 <div className="text-xs text-gray-600 dark:text-gray-400">Total</div>
               </div>
               <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                <div className="text-xl font-bold text-green-600 dark:text-green-400">{filteredLogs.filter(l => l.action?.includes('APPROVED')).length}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Success</div>
-              </div>
-              <div className="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
-                <div className="text-xl font-bold text-red-600 dark:text-red-400">{filteredLogs.filter(l => l.action?.includes('VIOLATION')).length}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Violations</div>
-              </div>
-              <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-                <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{new Set(filteredLogs.map(l => l.user?.email)).size}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Users</div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
-
-export default ActivityLogs;
+<div className="text-xl font-bold text-green-600 dark:text-green-400">{filteredLogs.filter(l => l.action?.includes('APPROVED')).length}</div>
+<div className="text-xs text-gray-600 dark:text-gray-400">Success</div>
+</div>
+<div className="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
+<div className="text-xl font-bold text-red-600 dark:text-red-400">{filteredLogs.filter(l => l.action?.includes('VIOLATION')).length}</div>
+<div className="text-xs text-gray-600 dark:text-gray-400">Violations</div>
+</div>
+<div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+<div className="text-xl font-bold text-purple-600 dark:text-purple-400">{new Set(filteredLogs.map(l => l.user?.email)).size}</div>
+<div className="text-xs text-gray-600 dark:text-gray-400">Users</div>
+</div>
+</div>
+</div>
+)}
+</div>
+</>
+);
+};export default ActivityLogs;
