@@ -84,7 +84,11 @@ export const rejectUser = async (req, res) => {
 
     const { email, studentId, role, _id } = user;
     
-    // ✅ SOFT DELETE: Mark as deleted instead of removing
+    // ✅ ANONYMIZE: Change email/ID so they become available for reuse
+    user.originalEmail = user.email;
+    user.originalStudentId = user.studentId;
+    user.email = `deleted_${user._id}@conserve.deleted`;
+    user.studentId = `DEL_${user.studentId}`;
     user.isDeleted = true;
     user.deletedAt = new Date();
     user.isActive = false;
@@ -108,16 +112,23 @@ export const rejectUser = async (req, res) => {
 
     await AuditLog.create({
       user: req.user._id,
-      action: 'USER_SOFT_DELETED',
+      action: 'USER_ANONYMIZED_DELETED',
       resource: 'User',
       resourceId: _id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      details: { email, studentId, role, idReverted }
+      details: { 
+        originalEmail: email, 
+        originalStudentId: studentId, 
+        role, 
+        idReverted,
+        anonymizedEmail: user.email 
+      }
     });
 
     res.json({
-      message: `User deleted (papers preserved)${idReverted ? ` • ID ${studentId} reverted` : ''}`,
+      message: `User deleted (papers preserved, email freed)${idReverted ? ` • ID ${studentId} available` : ''}`,
+      originalEmail: email,
       revertedId: idReverted ? studentId : null
     });
   } catch (error) {

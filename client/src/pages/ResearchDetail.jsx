@@ -185,10 +185,10 @@ const ResearchDetail = () => {
   }
 
   // Safe display of author names
-  const authorNames = paper?.authors?.join(', ') || 'Unknown';
- const submitterName = paper?.submittedBy 
+const authorNames = paper?.authors?.join(', ') || 'Unknown';
+const submitterName = paper?.submittedBy 
   ? (paper.submittedBy.isDeleted 
-      ? '[Deleted User]' 
+      ? `[Deleted User - ${paper.submittedBy.originalEmail || 'Unknown'}]`
       : `${paper.submittedBy.firstName || ''} ${paper.submittedBy.lastName || ''}`.trim() || 'Unknown')
   : 'Unknown';
 
@@ -223,15 +223,17 @@ const ResearchDetail = () => {
   <User size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
   <span className="break-words">{authorNames}</span>
   {paper?.submittedBy?.isDeleted && (
-    <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
-      [Deleted User]
+    <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded flex items-center gap-1">
+      📧 {paper.submittedBy.originalEmail}
     </span>
   )}
 </div>
             <div className="flex items-center gap-2">
-              <Calendar size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
-              <span>{new Date(paper.createdAt).toLocaleDateString()}</span>
-            </div>
+  <User size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />
+  <span className="break-words">
+    Submitted by: {submitterName}
+  </span>
+</div>
             {paper.status === 'approved' && (
               <div className="flex items-center gap-2">
                 <Eye size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-500" />

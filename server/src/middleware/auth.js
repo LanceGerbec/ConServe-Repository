@@ -32,7 +32,7 @@ export const auth = async (req, res, next) => {
       return res.status(403).json({ error: 'Account inactive' });
     }
 
-    if (user.isDeleted) {
+if (user.isDeleted) {
   console.error('❌ User deleted:', user.email);
   return res.status(403).json({ error: 'Account has been deleted' });
 }

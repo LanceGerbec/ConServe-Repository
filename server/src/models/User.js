@@ -15,6 +15,8 @@ const userSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   isDeleted: { type: Boolean, default: false },
 deletedAt: Date,
+originalEmail: String,      // Store original before anonymizing
+originalStudentId: String,  // Store original before anonymizing
 
   // 🆕 NEW FIELD
   canUploadOnBehalf: { type: Boolean, default: false }, // Special permission for students
