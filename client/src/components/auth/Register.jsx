@@ -384,7 +384,7 @@ const Register = () => {
 
           {/* Password with Tooltip */}
           <div>
-            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
+            <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               Password <span className="text-red-500">*</span>
               <div className="relative inline-block">
                 <Info 
