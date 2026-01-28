@@ -1,26 +1,23 @@
-// ============================================
-// FILE: server/src/models/User.js
-// ============================================
+// server/src/models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  studentId: { type: String, required: true, unique: true },
+  email: { type: String, required: true, lowercase: true, trim: true },
+  studentId: { type: String, required: true },
   password: { type: String, required: true, minlength: 12 },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
-  isDeleted: { type: Boolean, default: false },
-deletedAt: Date,
-originalEmail: String,      // Store original before anonymizing
-originalStudentId: String,  // Store original before anonymizing
-
-  // 🆕 NEW FIELD
-  canUploadOnBehalf: { type: Boolean, default: false }, // Special permission for students
   
+  // 🆕 SOFT DELETE FIELDS
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  
+  canUploadOnBehalf: { type: Boolean, default: false },
   twoFactorSecret: String,
   twoFactorEnabled: { type: Boolean, default: false },
   passwordResetToken: String,
@@ -36,25 +33,19 @@ originalStudentId: String,  // Store original before anonymizing
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
-  
-  // Add to password history
-  if (this.passwordHistory.length >= 5) {
-    this.passwordHistory.shift();
-  }
+  if (this.passwordHistory.length >= 5) this.passwordHistory.shift();
   this.passwordHistory.push(this.password);
-  
   next();
 });
 
-// Compare password method
+// Compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Check if account is locked
+// Check if locked
 userSchema.methods.isLocked = function() {
   return !!(this.lockoutUntil && this.lockoutUntil > Date.now());
 };
@@ -67,21 +58,39 @@ userSchema.methods.incLoginAttempts = function() {
       $unset: { lockoutUntil: 1 }
     });
   }
-  
   const updates = { $inc: { loginAttempts: 1 } };
   const maxAttempts = 5;
-  const lockTime = 30 * 60 * 1000; // 30 minutes
-  
+  const lockTime = 30 * 60 * 1000;
   if (this.loginAttempts + 1 >= maxAttempts && !this.isLocked()) {
     updates.$set = { lockoutUntil: Date.now() + lockTime };
   }
-  
   return this.updateOne(updates);
 };
 
-// Partial unique indexes - exclude deleted users from uniqueness check
-userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $ne: true } } });
-userSchema.index({ studentId: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $ne: true } } });
+// 🆕 SOFT DELETE METHOD
+userSchema.methods.softDelete = async function(deletedByUserId) {
+  this.isDeleted = true;
+  this.deletedAt = new Date();
+  this.deletedBy = deletedByUserId;
+  this.isActive = false;
+  return await this.save();
+};
+
+// 🆕 RESTORE METHOD
+userSchema.methods.restore = async function() {
+  this.isDeleted = false;
+  this.deletedAt = null;
+  this.deletedBy = null;
+  this.isActive = true;
+  return await this.save();
+};
+
+// 🆕 INDEX - Allow same email if deleted
+userSchema.index({ email: 1, isDeleted: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { isDeleted: false } 
+});
+
 userSchema.index({ role: 1, isApproved: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 

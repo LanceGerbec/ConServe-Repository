@@ -1,14 +1,17 @@
+// server/src/controllers/userController.js
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
 import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
+import Research from '../models/Research.js';
 import { sendApprovalEmail } from '../utils/emailService.js';
 import { notifyAccountApproved } from '../utils/notificationService.js';
 
 export const getAllUsers = async (req, res) => {
   try {
     const { status, role } = req.query;
-    let query = { isDeleted: { $ne: true } };
+    let query = { isDeleted: false }; // 🆕 EXCLUDE DELETED
+    
     if (status === 'pending') query.isApproved = false;
     if (status === 'approved') query.isApproved = true;
     if (role) query.role = role;
@@ -23,7 +26,11 @@ export const getAllUsers = async (req, res) => {
 
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password -passwordHistory');
+    const user = await User.findOne({ 
+      _id: req.params.id, 
+      isDeleted: false 
+    }).select('-password -passwordHistory');
+    
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ user });
   } catch (error) {
@@ -34,7 +41,7 @@ export const getUserById = async (req, res) => {
 
 export const approveUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false });
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.isApproved) return res.status(400).json({ error: 'User already approved' });
 
@@ -78,26 +85,19 @@ export const approveUser = async (req, res) => {
 
 export const rejectUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false });
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.role === 'admin') return res.status(403).json({ error: 'Cannot delete admin' });
 
     const { email, studentId, role, _id } = user;
-    
-    // Store originals before anonymizing
-    user.originalEmail = user.email;
-    user.originalStudentId = user.studentId;
-    
-    // Anonymize to free up email/ID for reuse
-    user.email = `deleted_${user._id}@conserve.deleted`;
-    user.studentId = `DEL_${user.studentId}`;
-    user.isDeleted = true;
-    user.deletedAt = new Date();
-    user.isActive = false;
-    user.isApproved = false;
-    await user.save();
 
-    // Revert Student/Faculty ID to unused
+    // 🆕 SOFT DELETE USER
+    await user.softDelete(req.user._id);
+
+    // 🆕 CHECK IF USER HAS RESEARCH PAPERS
+    const paperCount = await Research.countDocuments({ submittedBy: _id });
+
+    // Revert Student/Faculty ID
     let idReverted = false;
     try {
       const Model = role === 'faculty' ? ValidFacultyId : ValidStudentId;
@@ -114,26 +114,27 @@ export const rejectUser = async (req, res) => {
 
     await AuditLog.create({
       user: req.user._id,
-      action: 'USER_ANONYMIZED_DELETED',
+      action: 'USER_SOFT_DELETED',
       resource: 'User',
       resourceId: _id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       details: { 
-        originalEmail: email, 
-        originalStudentId: studentId, 
+        email, 
+        studentId, 
         role, 
         idReverted,
-        anonymizedEmail: user.email 
+        paperCount,
+        papersPreserved: paperCount > 0
       }
     });
 
     res.json({
-      message: `User deleted successfully. Email "${email}" and ID "${studentId}" are now available for new registrations.`,
-      originalEmail: email,
-      originalStudentId: studentId,
-      emailFreed: true,
-      idFreed: idReverted
+      message: idReverted 
+        ? `User soft-deleted. ${paperCount} paper(s) preserved. ${role === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} available for re-use.`
+        : `User soft-deleted. ${paperCount} paper(s) preserved.`,
+      revertedId: idReverted ? studentId : null,
+      papersPreserved: paperCount
     });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -144,7 +145,7 @@ export const rejectUser = async (req, res) => {
 export const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false });
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!['student', 'faculty', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
@@ -171,7 +172,7 @@ export const updateUserRole = async (req, res) => {
 
 export const toggleUserStatus = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false });
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.role === 'admin') return res.status(403).json({ error: 'Cannot deactivate admin' });
 
@@ -199,12 +200,12 @@ export const toggleUserStatus = async (req, res) => {
 export const getUserStats = async (req, res) => {
   try {
     const [totalUsers, pendingApproval, activeUsers, studentCount, facultyCount, adminCount] = await Promise.all([
-      User.countDocuments({ isDeleted: { $ne: true } }),
-      User.countDocuments({ isApproved: false, isDeleted: { $ne: true } }),
-      User.countDocuments({ isActive: true, isApproved: true, isDeleted: { $ne: true } }),
-      User.countDocuments({ role: 'student', isDeleted: { $ne: true } }),
-      User.countDocuments({ role: 'faculty', isDeleted: { $ne: true } }),
-      User.countDocuments({ role: 'admin', isDeleted: { $ne: true } })
+      User.countDocuments({ isDeleted: false }),
+      User.countDocuments({ isApproved: false, isDeleted: false }),
+      User.countDocuments({ isActive: true, isApproved: true, isDeleted: false }),
+      User.countDocuments({ role: 'student', isDeleted: false }),
+      User.countDocuments({ role: 'faculty', isDeleted: false }),
+      User.countDocuments({ role: 'admin', isDeleted: false })
     ]);
 
     res.json({

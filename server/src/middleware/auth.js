@@ -1,3 +1,4 @@
+// server/src/middleware/auth.js
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
@@ -5,44 +6,35 @@ export const auth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
-    console.log('🔐 Auth check:', {
-      hasToken: !!token,
-      tokenPreview: token?.substring(0, 20) + '...'
-    });
-
     if (!token) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    
+    // 🆕 EXCLUDE DELETED USERS
+    const user = await User.findOne({ 
+      _id: decoded.id,
+      isDeleted: false 
+    }).select('-password');
 
     if (!user) {
-      console.error('❌ User not found:', decoded.id);
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'User not found or deleted' });
     }
 
     if (!user.isApproved) {
-      console.error('❌ User not approved:', user.email);
       return res.status(403).json({ error: 'Account pending approval' });
     }
 
     if (!user.isActive) {
-      console.error('❌ User not active:', user.email);
       return res.status(403).json({ error: 'Account inactive' });
     }
 
-if (user.isDeleted) {
-  console.error('❌ User deleted:', user.email);
-  return res.status(403).json({ error: 'Account has been deleted' });
-}
-
-    console.log('✅ Auth success:', user.email);
     req.user = user;
     req.token = token;
     next();
   } catch (error) {
-    console.error('❌ Auth error:', error.message);
+    console.error('Auth error:', error.message);
     res.status(401).json({ error: 'Authentication failed' });
   }
 };
