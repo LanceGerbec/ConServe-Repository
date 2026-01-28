@@ -1,9 +1,11 @@
+// client/src/components/auth/Register.jsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus, Loader2, CheckCircle, X, Home, Info, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SuccessModal from '../common/SuccessModal';
 import ErrorModal from '../common/ErrorModal';
+import LegalModal from '../common/LegalModal';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -34,6 +36,7 @@ const Register = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessages, setErrorMessages] = useState([]);
+  const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'terms' });
   
   const [logo, setLogo] = useState(null);
   const { register } = useAuth();
@@ -215,15 +218,6 @@ const Register = () => {
     return `${baseClass} border-2 border-gray-300 dark:border-gray-700 focus:border-navy dark:focus:border-blue-500`;
   };
 
-  const subjectAreas = [
-    'Pediatric Nursing', 'Adult Health Nursing', 'Maternal and Child Nursing',
-    'Community Health Nursing', 'Mental Health Nursing', 'Nursing Informatics',
-    'Geriatric Nursing', 'Critical Care Nursing', 'Oncology Nursing',
-    'Surgical Nursing', 'Emergency Nursing', 'Public Health Nursing', 'Other'
-  ];
-
-  const years = Array.from({ length: new Date().getFullYear() - 1999 }, (_, i) => new Date().getFullYear() - i);
-
   return (
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
       <SuccessModal
@@ -238,6 +232,12 @@ const Register = () => {
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
         errors={errorMessages}
+      />
+
+      <LegalModal 
+        isOpen={legalModal.isOpen}
+        onClose={() => setLegalModal({ ...legalModal, isOpen: false })}
+        defaultTab={legalModal.tab}
       />
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 md:p-8 border border-gray-200 dark:border-gray-800 my-4 sm:my-8 animate-scale-in relative">
@@ -496,8 +496,21 @@ const Register = () => {
                 required
               />
               <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                I agree to the <Link to="/terms" target="_blank" className="text-navy dark:text-blue-400 hover:underline font-semibold">Terms</Link>
-                {' '}& <Link to="/privacy" target="_blank" className="text-navy dark:text-blue-400 hover:underline font-semibold">Privacy</Link>
+                I agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setLegalModal({ isOpen: true, tab: 'terms' })}
+                  className="text-navy dark:text-blue-400 hover:underline font-semibold"
+                >
+                  Terms
+                </button>
+                {' '}& <button
+                  type="button"
+                  onClick={() => setLegalModal({ isOpen: true, tab: 'privacy' })}
+                  className="text-navy dark:text-blue-400 hover:underline font-semibold"
+                >
+                  Privacy
+                </button>
                 <span className="text-red-500">*</span>
               </span>
             </label>
