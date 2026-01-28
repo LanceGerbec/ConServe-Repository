@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import mongoose from 'mongoose';
 import connectDB from './src/config/db.js';
 import { initGridFS } from './src/config/gridfs.js';
 import authRoutes from './src/routes/auth.routes.js';
@@ -39,6 +40,40 @@ app.set('trust proxy', 1);
 // ============================================
 connectDB();
 initGridFS();
+
+// ============================================
+// ONE-TIME INDEX MIGRATION (Remove after first run)
+// ============================================
+mongoose.connection.once('open', async () => {
+  try {
+    console.log('🔄 Checking database indexes...');
+    const collection = mongoose.connection.db.collection('users');
+    const indexes = await collection.indexes();
+    
+    // Check if old indexes exist
+    const hasOldEmailIndex = indexes.some(idx => idx.name === 'email_1' && !idx.partialFilterExpression);
+    const hasOldStudentIdIndex = indexes.some(idx => idx.name === 'studentId_1' && !idx.partialFilterExpression);
+    
+    if (hasOldEmailIndex) {
+      await collection.dropIndex('email_1');
+      console.log('✅ Dropped old email_1 index');
+    }
+    
+    if (hasOldStudentIdIndex) {
+      await collection.dropIndex('studentId_1');
+      console.log('✅ Dropped old studentId_1 index');
+    }
+    
+    if (hasOldEmailIndex || hasOldStudentIdIndex) {
+      console.log('✅ Old indexes removed - new partial indexes will recreate automatically');
+      console.log('⚠️  IMPORTANT: Remove this migration code block after first successful run!');
+    } else {
+      console.log('✅ Indexes already migrated or up to date');
+    }
+  } catch (err) {
+    console.log('⚠️  Index migration check failed (probably already migrated):', err.message);
+  }
+});
 
 // ============================================
 // EMAIL SERVICE CHECK
@@ -150,7 +185,6 @@ app.get('/health', (req, res) => {
 // ============================================
 console.log('📋 Registering routes...');
 
-// ✅ RESEARCH ROUTES MUST BE FIRST (for /log-violation and /:id/pdf)
 app.use('/api/research', researchRoutes);
 console.log('✅ Research routes registered');
 
@@ -196,7 +230,6 @@ console.log('✅ Awards routes registered');
 app.use('/api/reports', reportRoutes);
 console.log('✅ Report routes registered');
 
-// Rate limiting for all API routes
 app.use('/api', apiLimiter);
 console.log('✅ Rate limiter applied');
 
@@ -243,26 +276,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
   console.log(`🔒 GridFS: ${process.env.MONGO_URI ? 'Configured' : 'NOT CONFIGURED'}`);
   console.log(`📧 Email: ${process.env.EMAIL_USER ? 'Configured' : 'NOT CONFIGURED'}`);
-  console.log('\n📋 Registered Routes:');
-  console.log('   ✅ POST   /api/auth/register');
-  console.log('   ✅ POST   /api/auth/login');
-  console.log('   ✅ POST   /api/research/log-violation (PRIORITY)');
-  console.log('   ✅ GET    /api/research (list)');
-  console.log('   ✅ GET    /api/research/:id (details)');
-  console.log('   ✅ GET    /api/research/:id/pdf (stream PDF)');
-  console.log('   ✅ POST   /api/research (submit)');
-  console.log('   ✅ PATCH  /api/research/:id/status');
-  console.log('   ✅ GET    /api/bookmarks/my-bookmarks');
-  console.log('   ✅ POST   /api/bookmarks/toggle/:id');
-  console.log('   ✅ GET    /api/reviews/:researchId');
-  console.log('   ✅ POST   /api/reviews (submit)');
-  console.log('   ✅ GET    /api/analytics/dashboard');
-  console.log('   ✅ GET    /api/analytics/activity-logs');
-  console.log('   ✅ DELETE /api/analytics/activity-logs/clear-all');
-  console.log('   ✅ GET    /api/settings');
-  console.log('   ✅ GET    /api/notifications');
-  console.log('   ✅ GET    /api/users (admin)');
-  console.log('   ✅ POST   /api/search/advanced');
   console.log('='.repeat(60) + '\n');
   
   if (!process.env.MONGO_URI) {

@@ -20,8 +20,11 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, studentId, password, role } = req.body;
 
-    const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
-    if (existingUser) {
+    const existingUser = await User.findOne({ 
+  $or: [{ email }, { studentId }],
+  isDeleted: { $ne: true } // Exclude deleted users
+});
+if (existingUser) {
       return res.status(400).json({ error: 'User with this email or ID already exists' });
     }
 
@@ -148,11 +151,16 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+   const user = await User.findOne({ email });
+if (!user) {
+  return res.status(401).json({ error: 'Invalid credentials' });
+}
 
+if (user.isDeleted) {
+  return res.status(403).json({ 
+    error: 'This account has been deleted. Please contact administrator if this is a mistake.' 
+  });
+}
     if (user.isLocked()) {
       return res.status(423).json({ error: 'Account is locked. Try again later.' });
     }

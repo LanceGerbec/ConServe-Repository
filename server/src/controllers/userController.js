@@ -8,7 +8,7 @@ import { notifyAccountApproved } from '../utils/notificationService.js';
 export const getAllUsers = async (req, res) => {
   try {
     const { status, role } = req.query;
-    let query = { isDeleted: { $ne: true } }; // Hide deleted users by default
+    let query = { isDeleted: { $ne: true } };
     if (status === 'pending') query.isApproved = false;
     if (status === 'approved') query.isApproved = true;
     if (role) query.role = role;
@@ -84,9 +84,11 @@ export const rejectUser = async (req, res) => {
 
     const { email, studentId, role, _id } = user;
     
-    // ✅ ANONYMIZE: Change email/ID so they become available for reuse
+    // Store originals before anonymizing
     user.originalEmail = user.email;
     user.originalStudentId = user.studentId;
+    
+    // Anonymize to free up email/ID for reuse
     user.email = `deleted_${user._id}@conserve.deleted`;
     user.studentId = `DEL_${user.studentId}`;
     user.isDeleted = true;
@@ -95,7 +97,7 @@ export const rejectUser = async (req, res) => {
     user.isApproved = false;
     await user.save();
 
-    // Revert ID to unused
+    // Revert Student/Faculty ID to unused
     let idReverted = false;
     try {
       const Model = role === 'faculty' ? ValidFacultyId : ValidStudentId;
@@ -127,9 +129,11 @@ export const rejectUser = async (req, res) => {
     });
 
     res.json({
-      message: `User deleted (papers preserved, email freed)${idReverted ? ` • ID ${studentId} available` : ''}`,
+      message: `User deleted successfully. Email "${email}" and ID "${studentId}" are now available for new registrations.`,
       originalEmail: email,
-      revertedId: idReverted ? studentId : null
+      originalStudentId: studentId,
+      emailFreed: true,
+      idFreed: idReverted
     });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -195,12 +199,12 @@ export const toggleUserStatus = async (req, res) => {
 export const getUserStats = async (req, res) => {
   try {
     const [totalUsers, pendingApproval, activeUsers, studentCount, facultyCount, adminCount] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ isApproved: false }),
-      User.countDocuments({ isActive: true, isApproved: true }),
-      User.countDocuments({ role: 'student' }),
-      User.countDocuments({ role: 'faculty' }),
-      User.countDocuments({ role: 'admin' })
+      User.countDocuments({ isDeleted: { $ne: true } }),
+      User.countDocuments({ isApproved: false, isDeleted: { $ne: true } }),
+      User.countDocuments({ isActive: true, isApproved: true, isDeleted: { $ne: true } }),
+      User.countDocuments({ role: 'student', isDeleted: { $ne: true } }),
+      User.countDocuments({ role: 'faculty', isDeleted: { $ne: true } }),
+      User.countDocuments({ role: 'admin', isDeleted: { $ne: true } })
     ]);
 
     res.json({

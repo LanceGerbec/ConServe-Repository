@@ -79,7 +79,9 @@ userSchema.methods.incLoginAttempts = function() {
   return this.updateOne(updates);
 };
 
-userSchema.index({ email: 1 });
+// Partial unique indexes - exclude deleted users from uniqueness check
+userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $ne: true } } });
+userSchema.index({ studentId: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $ne: true } } });
 userSchema.index({ role: 1, isApproved: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 
