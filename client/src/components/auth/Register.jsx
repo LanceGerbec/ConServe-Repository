@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, UserPlus, Loader2, CheckCircle, X, Home, Info, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, Loader2, CheckCircle, X, Home, Info, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SuccessModal from '../common/SuccessModal';
 import ErrorModal from '../common/ErrorModal';
@@ -13,7 +13,6 @@ const Register = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showPasswordTooltip, setShowPasswordTooltip] = useState(false);
   
   // Field validation states
   const [fieldErrors, setFieldErrors] = useState({});
@@ -21,6 +20,15 @@ const Register = () => {
   const [studentIdValid, setStudentIdValid] = useState(null);
   const [studentInfo, setStudentInfo] = useState(null);
   const [checkingId, setCheckingId] = useState(false);
+  
+  // Password requirements state
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
   
   // Modals
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -38,6 +46,18 @@ const Register = () => {
   useEffect(() => {
     if (formData.studentId) checkStudentId(formData.studentId);
   }, [formData.studentId, formData.role]);
+
+  // Real-time password requirements check
+  useEffect(() => {
+    const pwd = formData.password;
+    setPasswordRequirements({
+      length: pwd.length >= 12,
+      uppercase: /[A-Z]/.test(pwd),
+      lowercase: /[a-z]/.test(pwd),
+      number: /[0-9]/.test(pwd),
+      special: /[^a-zA-Z0-9]/.test(pwd)
+    });
+  }, [formData.password]);
 
   const fetchLogo = async () => {
     try {
@@ -68,18 +88,9 @@ const Register = () => {
         break;
       
       case 'password':
-        const hasLength = value.length >= 12;
-        const hasUpper = /[A-Z]/.test(value);
-        const hasLower = /[a-z]/.test(value);
-        const hasNumber = /[0-9]/.test(value);
-        const hasSpecial = /[^a-zA-Z0-9]/.test(value);
-        valid = hasLength && hasUpper && hasLower && hasNumber && hasSpecial;
-        
-        if (!hasLength) error = 'Min 12 characters';
-        else if (!hasUpper) error = 'Need uppercase';
-        else if (!hasLower) error = 'Need lowercase';
-        else if (!hasNumber) error = 'Need number';
-        else if (!hasSpecial) error = 'Need special char';
+        const allRequirementsMet = Object.values(passwordRequirements).every(req => req);
+        valid = allRequirementsMet;
+        error = valid ? '' : 'Must meet all requirements';
         break;
       
       case 'confirmPassword':
@@ -136,15 +147,6 @@ const Register = () => {
     }
   };
 
-  const getPasswordStrength = (password) => {
-    let strength = 0;
-    if (password.length >= 12) strength++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^a-zA-Z0-9]/.test(password)) strength++;
-    return strength;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -162,9 +164,9 @@ const Register = () => {
       errors.push('Passwords do not match');
     }
     
-    const strength = getPasswordStrength(formData.password);
-    if (strength < 4) {
-      errors.push('Password too weak - Need 12+ chars, uppercase, lowercase, number, special char');
+    const allRequirementsMet = Object.values(passwordRequirements).every(req => req);
+    if (!allRequirementsMet) {
+      errors.push('Password must meet all requirements');
     }
     
     if (!fieldValid.email) {
@@ -201,10 +203,6 @@ const Register = () => {
     setLoading(false);
   };
 
-  const strength = getPasswordStrength(formData.password);
-  const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
-  const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
-
   const getFieldClassName = (fieldName) => {
     const baseClass = "w-full px-3 py-2.5 rounded-xl focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition text-sm";
     
@@ -216,6 +214,15 @@ const Register = () => {
     }
     return `${baseClass} border-2 border-gray-300 dark:border-gray-700 focus:border-navy dark:focus:border-blue-500`;
   };
+
+  const subjectAreas = [
+    'Pediatric Nursing', 'Adult Health Nursing', 'Maternal and Child Nursing',
+    'Community Health Nursing', 'Mental Health Nursing', 'Nursing Informatics',
+    'Geriatric Nursing', 'Critical Care Nursing', 'Oncology Nursing',
+    'Surgical Nursing', 'Emergency Nursing', 'Public Health Nursing', 'Other'
+  ];
+
+  const years = Array.from({ length: new Date().getFullYear() - 1999 }, (_, i) => new Date().getFullYear() - i);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
@@ -382,31 +389,10 @@ const Register = () => {
             )}
           </div>
 
-          {/* Password with Tooltip */}
+          {/* Password with Requirements */}
           <div>
-            <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="flex items-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               Password <span className="text-red-500">*</span>
-              <div className="relative inline-block">
-                <Info 
-                  size={16} 
-                  className="text-gray-400 dark:text-gray-500 cursor-help"
-                  onMouseEnter={() => setShowPasswordTooltip(true)}
-                  onMouseLeave={() => setShowPasswordTooltip(false)}
-                />
-                {showPasswordTooltip && (
-                  <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-2xl border border-gray-700 animate-fade-in">
-                    <p className="font-bold mb-2">Password Requirements:</p>
-                    <ul className="space-y-1 text-gray-300">
-                      <li>• Minimum 12 characters</li>
-                      <li>• At least 1 uppercase letter (A-Z)</li>
-                      <li>• At least 1 lowercase letter (a-z)</li>
-                      <li>• At least 1 number (0-9)</li>
-                      <li>• At least 1 special character (@$!%*?&)</li>
-                    </ul>
-                    <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 dark:border-b-gray-800"></div>
-                  </div>
-                )}
-              </div>
             </label>
             <div className="relative">
               <input
@@ -416,7 +402,6 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 onBlur={(e) => validateField('password', e.target.value)}
-                onFocus={() => setShowPasswordTooltip(true)}
                 className={`${getFieldClassName('password')} pr-10`}
                 placeholder="Min. 12 characters"
               />
@@ -428,15 +413,46 @@ const Register = () => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {fieldErrors.password && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.password}</p>}
+            
+            {/* Inline Password Requirements */}
             {formData.password && (
-              <div className="mt-2">
-                <div className="flex gap-1">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className={`h-1 flex-1 rounded ${i < strength ? strengthColors[strength - 1] : 'bg-gray-300 dark:bg-gray-700'}`} />
-                  ))}
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 space-y-1.5">
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Password Requirements:</p>
+                
+                <div className={`flex items-center gap-2 text-xs transition-colors ${passwordRequirements.length ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.length ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    {passwordRequirements.length && <Check size={12} className="text-white" />}
+                  </div>
+                  <span>Minimum 12 characters</span>
                 </div>
-                {strength > 0 && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Strength: {strengthLabels[strength - 1]}</p>}
+                
+                <div className={`flex items-center gap-2 text-xs transition-colors ${passwordRequirements.uppercase ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.uppercase ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    {passwordRequirements.uppercase && <Check size={12} className="text-white" />}
+                  </div>
+                  <span>At least 1 uppercase letter (A-Z)</span>
+                </div>
+                
+                <div className={`flex items-center gap-2 text-xs transition-colors ${passwordRequirements.lowercase ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.lowercase ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    {passwordRequirements.lowercase && <Check size={12} className="text-white" />}
+                  </div>
+                  <span>At least 1 lowercase letter (a-z)</span>
+                </div>
+                
+                <div className={`flex items-center gap-2 text-xs transition-colors ${passwordRequirements.number ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.number ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    {passwordRequirements.number && <Check size={12} className="text-white" />}
+                  </div>
+                  <span>At least 1 number (0-9)</span>
+                </div>
+                
+                <div className={`flex items-center gap-2 text-xs transition-colors ${passwordRequirements.special ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.special ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    {passwordRequirements.special && <Check size={12} className="text-white" />}
+                  </div>
+                  <span>At least 1 special character (@$!%*?&)</span>
+                </div>
               </div>
             )}
           </div>
