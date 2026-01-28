@@ -13,7 +13,9 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
-  
+  isDeleted: { type: Boolean, default: false },
+deletedAt: Date,
+
   // 🆕 NEW FIELD
   canUploadOnBehalf: { type: Boolean, default: false }, // Special permission for students
   

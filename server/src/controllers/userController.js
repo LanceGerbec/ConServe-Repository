@@ -8,7 +8,7 @@ import { notifyAccountApproved } from '../utils/notificationService.js';
 export const getAllUsers = async (req, res) => {
   try {
     const { status, role } = req.query;
-    let query = {};
+    let query = { isDeleted: { $ne: true } }; // Hide deleted users by default
     if (status === 'pending') query.isApproved = false;
     if (status === 'approved') query.isApproved = true;
     if (role) query.role = role;
@@ -83,8 +83,15 @@ export const rejectUser = async (req, res) => {
     if (user.role === 'admin') return res.status(403).json({ error: 'Cannot delete admin' });
 
     const { email, studentId, role, _id } = user;
-    await user.deleteOne();
+    
+    // ✅ SOFT DELETE: Mark as deleted instead of removing
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    user.isActive = false;
+    user.isApproved = false;
+    await user.save();
 
+    // Revert ID to unused
     let idReverted = false;
     try {
       const Model = role === 'faculty' ? ValidFacultyId : ValidStudentId;
@@ -101,7 +108,7 @@ export const rejectUser = async (req, res) => {
 
     await AuditLog.create({
       user: req.user._id,
-      action: 'USER_DELETED',
+      action: 'USER_SOFT_DELETED',
       resource: 'User',
       resourceId: _id,
       ipAddress: req.ip,
@@ -110,7 +117,7 @@ export const rejectUser = async (req, res) => {
     });
 
     res.json({
-      message: idReverted ? `User deleted and ${role === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} reverted to unused` : 'User deleted',
+      message: `User deleted (papers preserved)${idReverted ? ` • ID ${studentId} reverted` : ''}`,
       revertedId: idReverted ? studentId : null
     });
   } catch (error) {
