@@ -1,4 +1,4 @@
-// client/src/components/dashboard/AdminDashboard.jsx - FIXED VERSION
+// client/src/components/dashboard/AdminDashboard.jsx - COMPLETE VERSION WITH MODAL UPGRADE
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,6 +11,7 @@ import AwardsModal from '../admin/AwardsModal';
 import TeamManagement from '../admin/TeamManagement';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
+import DeleteUserModal from '../admin/DeleteUserModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -200,7 +201,7 @@ const AdminDashboard = () => {
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showAwardsModal, setShowAwardsModal] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', ids: [] });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', ids: [], user: null, onConfirm: null });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
@@ -364,7 +365,33 @@ const AdminDashboard = () => {
     setSelectedPapers(selectedPapers.length === allResearch.length ? [] : allResearch.map(p => p._id));
   }, [allResearch, selectedPapers]);
 
-  const handleDeleteUser = useCallback((userId) => { setConfirmModal({ isOpen: true, type: 'user', ids: [userId] }); }, []);
+  const handleDeleteUser = useCallback((userId) => {
+    const userToDelete = allUsers.find(u => u._id === userId);
+    if (!userToDelete) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      type: 'deleteUser',
+      user: userToDelete,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await fetch(`${API_URL}/users/${userId}/reject`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          showToast('✅ User deleted');
+          setSelectedUsers([]);
+          fetchData();
+        } catch (error) {
+          showToast('Delete failed', 'error');
+        } finally {
+          setConfirmModal({ isOpen: false, type: '', user: null });
+        }
+      }
+    });
+  }, [allUsers, showToast, fetchData]);
+
   const handleDeletePaper = useCallback((paperId) => { setConfirmModal({ isOpen: true, type: 'paper', ids: [paperId] }); }, []);
   const handleBulkDeleteUsers = useCallback(() => { setConfirmModal({ isOpen: true, type: 'user', ids: selectedUsers }); }, [selectedUsers]);
   const handleBulkDeletePapers = useCallback(() => { setConfirmModal({ isOpen: true, type: 'paper', ids: selectedPapers }); }, [selectedPapers]);
@@ -410,22 +437,33 @@ const AdminDashboard = () => {
     }
   }, [showToast, fetchData]);
 
-  const handleRejectUser = useCallback(async (userId) => {
-    if (!confirm('Delete this user?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/users/${userId}/reject`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        showToast('✅ User deleted');
-        fetchData();
+  const handleRejectUser = async (userId) => {
+    const userToDelete = pendingUsers.find(u => u._id === userId);
+    if (!userToDelete) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      type: 'deleteUser',
+      user: userToDelete,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch(`${API_URL}/users/${userId}/reject`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            showToast('✅ User deleted');
+            fetchData();
+          }
+        } catch (error) {
+          showToast('Connection error', 'error');
+        } finally {
+          setConfirmModal({ isOpen: false, type: '', user: null });
+        }
       }
-    } catch (error) {
-      showToast('Connection error', 'error');
-    }
-  }, [showToast, fetchData]);
+    });
+  };
 
   const handleReviewPaper = useCallback((paper) => {
     setSelectedPaper(paper);
@@ -477,290 +515,312 @@ const AdminDashboard = () => {
     { id: 'research', label: 'Papers' },
     { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
     { id: 'analytics', label: 'Analytics' },
-    { id: 'valid-ids', label: 'Valid IDs ' },
-{ id: 'team', label: 'Team' },
-{ id: 'settings', label: 'Settings' }
-];
-return (
-<>
-{toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} duration={3000} />}
-<ConfirmModal
-  isOpen={confirmModal.isOpen}
-  onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
-  onConfirm={confirmDelete}
-  title={`Delete ${confirmModal.ids.length} ${confirmModal.type}(s)?`}
-  message={`This will permanently delete ${confirmModal.ids.length} ${confirmModal.type}(s). This cannot be undone.`}
-  confirmText="Delete"
-  type="danger"
-/>
-{selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
-{selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
-<div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-<div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
-  <div className="absolute inset-0 opacity-10">
-    <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
-    <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
-  </div>
+    { id: 'valid-ids', label: 'Valid IDs' },
+    { id: 'team', label: 'Team' },
+    { id: 'settings', label: 'Settings' }
+  ];
 
-  <div className="relative flex items-center gap-3 sm:gap-6">
-    <div className="hidden xs:block flex-shrink-0">
-      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
-        <Shield size={24} className="sm:w-8 sm:h-8 text-white" />
-      </div>
-    </div>
+  return (
+    <>
+      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} duration={3000} />}
+      
+      {confirmModal.type === 'deleteUser' && confirmModal.user ? (
+        <DeleteUserModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ isOpen: false, type: '', user: null })}
+          onConfirm={confirmModal.onConfirm}
+          user={confirmModal.user}
+        />
+      ) : (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen && confirmModal.type !== 'deleteUser'}
+          onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
+          onConfirm={confirmDelete}
+          title={`Delete ${confirmModal.ids?.length} ${confirmModal.type}(s)?`}
+          message={`This will permanently delete ${confirmModal.ids?.length} ${confirmModal.type}(s). This cannot be undone.`}
+          confirmText="Delete"
+          type="danger"
+        />
+      )}
 
-    <div className="flex-1 min-w-0">
-      <div className="mb-1 sm:mb-2">
-        <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">Admin Dashboard</h1>
-        <p className="text-xs sm:text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
-      </div>
+      {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
+      {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
+      
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
+        <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+          </div>
 
-      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3"></div>
+          <div className="relative flex items-center gap-3 sm:gap-6">
+            <div className="hidden xs:block flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+                <Shield size={24} className="sm:w-8 sm:h-8 text-white" />
+              </div>
+            </div>
 
-      <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
-        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
-          <FileText size={14} className="text-blue-300 flex-shrink-0" />
-          <span className="font-semibold text-white">{stats?.research?.total || 0}</span>
-          <span className="text-blue-200">Papers</span>
+            <div className="flex-1 min-w-0">
+              <div className="mb-1 sm:mb-2">
+                <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">Admin Dashboard</h1>
+                <p className="text-xs sm:text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
+              </div>
+
+              <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3"></div>
+
+              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+                  <FileText size={14} className="text-blue-300 flex-shrink-0" />
+                  <span className="font-semibold text-white">{stats?.research?.total || 0}</span>
+                  <span className="text-blue-200">Papers</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+                  <Activity size={14} className="text-green-300 flex-shrink-0" />
+                  <span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span>
+                  <span className="text-blue-200">Active</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+                  <Clock size={14} className="text-yellow-300 flex-shrink-0" />
+                  <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
+                  <span className="text-blue-200">Pending</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
+              <Shield size={16} className="text-orange-300" />
+              <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
+            </div>
+          </div>
         </div>
-        <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
-        <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
-          <Activity size={14} className="text-green-300 flex-shrink-0" />
-          <span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span>
-          <span className="text-blue-200">Active</span>
-        </div>
-        <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
-<div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
-  <Clock size={14} className="text-yellow-300 flex-shrink-0" />
-  <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
-  <span className="text-blue-200">Pending</span>
-</div>
-      </div>
-    </div>
 
-    <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
-      <Shield size={16} className="text-orange-300" />
-      <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
-    </div>
-  </div>
-</div>
-<div className="px-4 mb-6">
-<div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-{tabs.map(tab => (
-<button
-  key={tab.id}
-  onClick={() => setActiveTab(tab.id)}
-  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
-    activeTab === tab.id
-      ? 'bg-navy text-white shadow-lg scale-105'
-      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
-  }`}
->
-{tab.label}
-{tab.badge > 0 && (
-  <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
-    {tab.badge}
-  </span>
-)}
-</button>
-))}
-</div>
-</div>
-<div className="px-4 space-y-6">
-{activeTab === 'overview' && (
-  <>
-    {/* ✅ KEEP: Admin stats are useful for quick navigation */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
-    </div>
-<div className="space-y-6">
-<div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-<h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-<Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})
-</h2>
-{pendingUsers.length === 0 ? (
-<div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
-) : (
-<div className="space-y-3 max-h-96 overflow-y-auto">
-{pendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
-</div>
-)}
-</div>
-<div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-<h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-<FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
-</h2>
-{pendingResearch.length === 0 ? (
-<div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
-) : (
-<div className="space-y-3 max-h-96 overflow-y-auto">
-{pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
-</div>
-)}
-</div>
-</div>
-</>
-)}
-{activeTab === 'users' && (
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-<div className="p-5 border-b border-gray-200 dark:border-gray-700">
-<div className="flex items-center justify-between mb-4">
-<h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-<Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
-</h2>
-<ViewToggle mode={userViewMode} onChange={setUserViewMode} />
-</div>
-<div className="flex items-center gap-3 mb-3">
-<div className="relative flex-1">
-<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-<input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-</div>
-</div>
-<div className="flex items-center gap-2">
-<input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-<span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-</div>
-</div>
-{userViewMode === 'grid' ? (
-<div className="p-4">
-{sortedUsers.length === 0 ? (
-<div className="text-center py-12 text-gray-500">No users found</div>
-) : (
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-{sortedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-</div>
-)}
-</div>
-) : (
-<div className="relative overflow-auto max-h-[600px]">
-<table className="w-full">
-<thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
-<tr>
-<th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
-<input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-</th>
-<SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
-<SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
-<SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
-<SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
-<th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
-</tr>
-</thead>
-<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-{sortedUsers.length === 0 ? (
-<tr><td colSpan="6" className="text-center py-12 text-gray-500">No users found</td></tr>
-) : (
-sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)
-)}
-</tbody>
-</table>
-</div>
-)}
-</div>
-)}
-{activeTab === 'research' && (
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-<div className="p-5 border-b border-gray-200 dark:border-gray-700">
-<div className="flex items-center justify-between mb-4">
-<h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-<FileText size={20} className="text-green-600" />All Papers ({sortedPapers.length})
-</h2>
-<ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
-</div>
-<div className="flex items-center gap-3 mb-3">
-<div className="relative flex-1">
-<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-<input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-</div>
-</div>
-<div className="flex items-center gap-2">
-<input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
-<span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-</div>
-</div>
-{paperViewMode === 'grid' ? (
-<div className="p-4">
-{sortedPapers.length === 0 ? (
-<div className="text-center py-12 text-gray-500">No papers found</div>
-) : (
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-{sortedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
-</div>
-)}
-</div>
-) : (
-<div className="relative overflow-auto max-h-[600px]">
-<table className="w-full">
-<thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
-<tr>
-<th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
-<input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
-</th>
-<SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
-<SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
-<SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
-<SortableHeader label="Status" sortKey="status" currentSort={paperSortConfig} onSort={handlePaperSort} />
-<th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
-</tr>
-</thead>
-<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-{sortedPapers.length === 0 ? (
-<tr><td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td></tr>
-) : (
-sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
-)}
-</tbody>
-</table>
-</div>
-)}
-</div>
-)}
-{activeTab === 'bookmarks' && (
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-<div className="p-5 border-b border-gray-200 dark:border-gray-700">
-<h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-<Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
-</h2>
-</div>
-<div className="p-4">
-{bookmarks.length === 0 ? (
-<div className="text-center py-12">
-<div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-<Bookmark size={32} className="text-gray-400" />
-</div>
-<p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
-</div>
-) : (
-<div className="space-y-3">
-{bookmarks.map(b => (
-<div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-<h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
-<p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
-<button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
-</div>
-))}
-</div>
-)}
-</div>
-</div>
-)}
-{activeTab === 'analytics' && <AnalyticsHub />}
-{activeTab === 'valid-ids' && <ValidIdsManagement />}
-{activeTab === 'team' && <TeamManagement />}
-{activeTab === 'settings' && <SettingsManagement />}
-</div>
-</div>
-{showReviewModal && selectedPaper && (
-<AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
-)}
-{showAwardsModal && selectedPaper && (
-<AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
-)}
-</>
-);
+        <div className="px-4 mb-6">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-navy text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
+                }`}
+              >
+                {tab.label}
+                {tab.badge > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-4 space-y-6">
+          {activeTab === 'overview' && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})
+                  </h2>
+                  {pendingUsers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {pendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
+                  </h2>
+                  {pendingResearch.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
+                  </h2>
+                  <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+                </div>
+              </div>
+              {userViewMode === 'grid' ? (
+                <div className="p-4">
+                  {sortedUsers.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">No users found</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sortedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative overflow-auto max-h-[600px]">
+                  <table className="w-full">
+                    <thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
+                      <tr>
+                        <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+                          <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
+                        </th>
+                        <SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
+                        <SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
+                        <SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
+                        <SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
+                        <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {sortedUsers.length === 0 ? (
+                        <tr><td colSpan="6" className="text-center py-12 text-gray-500">No users found</td></tr>
+                      ) : (
+                        sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'research' && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />All Papers ({sortedPapers.length})
+                  </h2>
+                  <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+                </div>
+              </div>
+              {paperViewMode === 'grid' ? (
+                <div className="p-4">
+                  {sortedPapers.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">No papers found</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sortedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative overflow-auto max-h-[600px]">
+                  <table className="w-full">
+                    <thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
+                      <tr>
+                        <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+                          <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+                        </th>
+                        <SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
+                        <SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
+                        <SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
+                        <SortableHeader label="Status" sortKey="status" currentSort={paperSortConfig} onSort={handlePaperSort} />
+                        <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {sortedPapers.length === 0 ? (
+                        <tr><td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td></tr>
+                      ) : (
+                        sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'bookmarks' && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
+                </h2>
+              </div>
+              <div className="p-4">
+                {bookmarks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Bookmark size={32} className="text-gray-400" />
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {bookmarks.map(b => (
+                      <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
+                        <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'analytics' && <AnalyticsHub />}
+          {activeTab === 'valid-ids' && <ValidIdsManagement />}
+          {activeTab === 'team' && <TeamManagement />}
+          {activeTab === 'settings' && <SettingsManagement />}
+        </div>
+      </div>
+
+      {showReviewModal && selectedPaper && (
+        <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
+      )}
+      {showAwardsModal && selectedPaper && (
+        <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
+      )}
+    </>
+  );
 };
+
 StatCard.displayName = 'StatCard';
 ViewToggle.displayName = 'ViewToggle';
 SortableHeader.displayName = 'SortableHeader';

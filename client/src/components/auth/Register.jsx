@@ -13,6 +13,7 @@ const Register = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPasswordTooltip, setShowPasswordTooltip] = useState(false);
   
   // Field validation states
   const [fieldErrors, setFieldErrors] = useState({});
@@ -233,7 +234,7 @@ const Register = () => {
       />
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 md:p-8 border border-gray-200 dark:border-gray-800 my-4 sm:my-8 animate-scale-in relative">
-        {/* Header with Close Buttons */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div className="w-12 h-12 sm:w-14 sm:h-14 bg-navy dark:bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
             {logo ? <img src={logo} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-white font-bold text-xl sm:text-2xl">C</span>}
@@ -381,10 +382,31 @@ const Register = () => {
             )}
           </div>
 
-          {/* Password */}
+          {/* Password with Tooltip */}
           <div>
-            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
               Password <span className="text-red-500">*</span>
+              <div className="relative inline-block">
+                <Info 
+                  size={16} 
+                  className="text-gray-400 dark:text-gray-500 cursor-help"
+                  onMouseEnter={() => setShowPasswordTooltip(true)}
+                  onMouseLeave={() => setShowPasswordTooltip(false)}
+                />
+                {showPasswordTooltip && (
+                  <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-2xl border border-gray-700 animate-fade-in">
+                    <p className="font-bold mb-2">Password Requirements:</p>
+                    <ul className="space-y-1 text-gray-300">
+                      <li>• Minimum 12 characters</li>
+                      <li>• At least 1 uppercase letter (A-Z)</li>
+                      <li>• At least 1 lowercase letter (a-z)</li>
+                      <li>• At least 1 number (0-9)</li>
+                      <li>• At least 1 special character (@$!%*?&)</li>
+                    </ul>
+                    <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 dark:border-b-gray-800"></div>
+                  </div>
+                )}
+              </div>
             </label>
             <div className="relative">
               <input
@@ -394,6 +416,7 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 onBlur={(e) => validateField('password', e.target.value)}
+                onFocus={() => setShowPasswordTooltip(true)}
                 className={`${getFieldClassName('password')} pr-10`}
                 placeholder="Min. 12 characters"
               />
