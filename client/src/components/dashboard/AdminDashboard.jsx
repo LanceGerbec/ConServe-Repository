@@ -517,7 +517,7 @@ const tabs = [
   { id: 'analytics', label: 'Analytics' },
   { id: 'valid-ids', label: 'Valid IDs' },
   { id: 'team', label: 'Team' },
-  ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : []),
+  ...(user?.isSuperAdmin === true ? [{ id: 'admins', label: 'Manage Admins' }] : []),
   { id: 'settings', label: 'Settings' }
 ];
 
@@ -809,7 +809,7 @@ const tabs = [
           {activeTab === 'valid-ids' && <ValidIdsManagement />}
           {activeTab === 'team' && <TeamManagement />}
           {activeTab === 'settings' && <SettingsManagement />}
-          {activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />}
+          {activeTab === 'admins' && user?.isSuperAdmin === true && <AdminManagement />}
         </div>
       </div>
 
