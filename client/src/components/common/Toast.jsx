@@ -1,4 +1,3 @@
-// client/src/components/common/Toast.jsx
 import { CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -8,17 +7,7 @@ const Toast = ({ message, type = 'success', onClose, duration = 4000 }) => {
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
-  const cleanMessage = message
-    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-    .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
-    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
-    .replace(/[\u{2600}-\u{26FF}]/gu, '')
-    .replace(/[\u{2700}-\u{27BF}]/gu, '')
-    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')
-    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '')
-    .replace(/[✓✔✗✘❌⚠️ℹ️📧📋🔒🎉⏰💻🛠️🔍⚙️📊🔑📬📄👤🆕]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const cleanMessage = message.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[✓✔✗✘❌⚠️ℹ️📧📋🔒🎉⏰💻🛠️🔍⚙️📊🔑📬📄👤🆕]/g, '').replace(/\s+/g, ' ').trim();
 
   const config = {
     success: { Icon: CheckCircle, bg: 'bg-green-600', border: 'border-green-500' },
