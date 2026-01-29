@@ -251,8 +251,13 @@ export const logout = async (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password -passwordHistory');
-    res.json({ user });
+    const user = await User.findById(req.user._id).select('-password -passwordHistory').lean();
+    res.json({ 
+      user: {
+        ...user,
+        isSuperAdmin: user.isSuperAdmin || false // Ensure it's always included
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
