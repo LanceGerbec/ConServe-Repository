@@ -517,8 +517,8 @@ const tabs = [
   { id: 'analytics', label: 'Analytics' },
   { id: 'valid-ids', label: 'Valid IDs' },
   { id: 'team', label: 'Team' },
-  ...(user?.isSuperAdmin === true ? [{ id: 'admins', label: 'Manage Admins' }] : []),
-  { id: 'settings', label: 'Settings' }
+  { id: 'settings', label: 'Settings' },
+  ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : [])
 ];
 
   return (
@@ -806,10 +806,10 @@ const tabs = [
           )}
 
           {activeTab === 'analytics' && <AnalyticsHub />}
-          {activeTab === 'valid-ids' && <ValidIdsManagement />}
-          {activeTab === 'team' && <TeamManagement />}
-          {activeTab === 'settings' && <SettingsManagement />}
-          {activeTab === 'admins' && user?.isSuperAdmin === true && <AdminManagement />}
+{activeTab === 'valid-ids' && <ValidIdsManagement />}
+{activeTab === 'team' && <TeamManagement />}
+{activeTab === 'settings' && <SettingsManagement />}
+{activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />} 
         </div>
       </div>
 
