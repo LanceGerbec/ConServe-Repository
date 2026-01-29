@@ -6,6 +6,26 @@ import AuditLog from '../models/AuditLog.js';
 
 const router = express.Router();
 
+// 🆕 CHECK ORPHANED COUNT (Real-time)
+router.get('/check-orphaned', auth, authorize('admin'), async (req, res) => {
+  try {
+    const allUsed = await ValidStudentId.find({ isUsed: true });
+    let orphanedCount = 0;
+
+    for (const validId of allUsed) {
+      if (validId.registeredUser) {
+        const userExists = await User.findById(validId.registeredUser);
+        if (!userExists) orphanedCount++;
+      }
+    }
+
+    res.json({ orphanedCount });
+  } catch (error) {
+    console.error('Check orphaned error:', error);
+    res.status(500).json({ error: 'Failed to check orphaned IDs' });
+  }
+});
+
 // ✅ EDIT STUDENT ID
 router.patch('/:id', auth, authorize('admin'), async (req, res) => {
   try {

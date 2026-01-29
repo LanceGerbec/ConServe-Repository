@@ -1,4 +1,4 @@
-// client/src/components/admin/ValidIdsManagement.jsx - COMPLETE VERSION WITH MODAL UPGRADE
+// client/src/components/admin/ValidIdsManagement.jsx
 import { useState, useEffect } from 'react';
 import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User, RefreshCw, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
@@ -49,16 +49,23 @@ const ValidIdsManagement = () => {
     }
   };
 
+  // 🆕 REAL-TIME ORPHANED CHECK
   const handleCleanOrphaned = async () => {
     try {
       const token = localStorage.getItem('token');
-      const endpoint = activeTab === 'student' ? 'valid-student-ids' : 'valid-faculty-ids';
+      const endpoint = activeTab === 'student' 
+        ? 'valid-student-ids/check-orphaned' 
+        : 'valid-faculty-ids/check-orphaned';
       
-      const currentData = activeTab === 'student' ? studentIds : facultyIds;
-      const potentialOrphaned = currentData.filter(item => item.isUsed && item.registeredUser === null);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      setOrphanedCount(potentialOrphaned.length);
-      setShowCleanModal(true);
+      if (res.ok) {
+        const data = await res.json();
+        setOrphanedCount(data.orphanedCount);
+        setShowCleanModal(true);
+      }
     } catch (error) {
       showToast('Error checking IDs', 'error');
     }
@@ -428,6 +435,7 @@ const ValidIdsManagement = () => {
         )}
       </div>
 
+      {/* ADD MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-4">
@@ -449,6 +457,7 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
+      {/* EDIT MODAL */}
       {showEditModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-4">
@@ -470,6 +479,7 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
+      {/* DELETE MODAL */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full border-2 border-red-500">
@@ -505,6 +515,7 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
+      {/* BULK DELETE MODAL */}
       {showBulkDeleteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full border-2 border-red-500">
@@ -560,6 +571,7 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
+      {/* CLEAN ORPHANED MODAL */}
       {showCleanModal && (
         <CleanOrphanedModal
           isOpen={showCleanModal}
@@ -571,6 +583,7 @@ const ValidIdsManagement = () => {
         />
       )}
 
+      {/* BULK UPLOAD MODAL */}
       {showBulkModal && <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Uploaded!'); }} />}
     </>
   );

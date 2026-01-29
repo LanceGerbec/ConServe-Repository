@@ -10,11 +10,17 @@ import { notifyAccountApproved } from '../utils/notificationService.js';
 export const getAllUsers = async (req, res) => {
   try {
     const { status, role } = req.query;
-    let query = { isDeleted: false }; // 🆕 EXCLUDE DELETED
+    let query = { isDeleted: false };
+    
+    // 🆕 ROLE-BASED FILTERING: Regular admins can't see other admins
+    if (req.user.role === 'admin' && !req.user.isSuperAdmin) {
+      query.role = { $in: ['student', 'faculty'] };
+    }
+    // Super admin sees everyone (no additional filter)
     
     if (status === 'pending') query.isApproved = false;
     if (status === 'approved') query.isApproved = true;
-    if (role) query.role = role;
+    if (role && req.user.isSuperAdmin) query.role = role; // Only super admin can filter by admin role
 
     const users = await User.find(query).select('-password -passwordHistory').sort({ createdAt: -1 });
     res.json({ users, count: users.length });
@@ -91,13 +97,10 @@ export const rejectUser = async (req, res) => {
 
     const { email, studentId, role, _id } = user;
 
-    // 🆕 SOFT DELETE USER
     await user.softDelete(req.user._id);
 
-    // 🆕 CHECK IF USER HAS RESEARCH PAPERS
     const paperCount = await Research.countDocuments({ submittedBy: _id });
 
-    // Revert Student/Faculty ID
     let idReverted = false;
     try {
       const Model = role === 'faculty' ? ValidFacultyId : ValidStudentId;
@@ -199,13 +202,21 @@ export const toggleUserStatus = async (req, res) => {
 
 export const getUserStats = async (req, res) => {
   try {
+    const baseQuery = { isDeleted: false };
+    
+    // 🆕 Regular admins don't count other admins in stats
+    const userQuery = req.user.isSuperAdmin 
+      ? baseQuery 
+      : { ...baseQuery, role: { $in: ['student', 'faculty'] } };
+
     const [totalUsers, pendingApproval, activeUsers, studentCount, facultyCount, adminCount] = await Promise.all([
-      User.countDocuments({ isDeleted: false }),
-      User.countDocuments({ isApproved: false, isDeleted: false }),
-      User.countDocuments({ isActive: true, isApproved: true, isDeleted: false }),
-      User.countDocuments({ role: 'student', isDeleted: false }),
-      User.countDocuments({ role: 'faculty', isDeleted: false }),
-      User.countDocuments({ role: 'admin', isDeleted: false })
+      User.countDocuments(userQuery),
+      User.countDocuments({ ...userQuery, isApproved: false }),
+      User.countDocuments({ ...userQuery, isActive: true, isApproved: true }),
+      User.countDocuments({ ...baseQuery, role: 'student' }),
+      User.countDocuments({ ...baseQuery, role: 'faculty' }),
+      // Only super admin gets admin count
+      req.user.isSuperAdmin ? User.countDocuments({ ...baseQuery, role: 'admin' }) : 0
     ]);
 
     res.json({
