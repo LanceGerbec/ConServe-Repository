@@ -1,6 +1,5 @@
-// client/src/components/dashboard/AdminDashboard.jsx - COMPLETE VERSION WITH MODAL UPGRADE
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload, Settings } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AnalyticsHub from '../analytics/AnalyticsHub';
@@ -510,16 +509,16 @@ const AdminDashboard = () => {
     { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
   ];
 
-  const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'users', label: 'Users' },
-    { id: 'research', label: 'Papers' },
-    { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
-    { id: 'analytics', label: 'Analytics' },
-    { id: 'valid-ids', label: 'Valid IDs' },
-    { id: 'team', label: 'Team' },
-  (user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins', icon: Shield }] : []),
-  { id: 'settings', label: 'Settings', icon: Settings }
+const tabs = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'Users' },
+  { id: 'research', label: 'Papers' },
+  { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'valid-ids', label: 'Valid IDs' },
+  { id: 'team', label: 'Team' },
+  ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : []),
+  { id: 'settings', label: 'Settings' }
 ];
 
   return (
