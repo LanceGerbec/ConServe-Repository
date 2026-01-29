@@ -13,6 +13,7 @@ import ConfirmModal from '../common/ConfirmModal';
 import DeleteUserModal from '../admin/DeleteUserModal';
 import AdminManagement from '../admin/AdminManagement';
 
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 
@@ -534,6 +535,9 @@ const tabs = [
   ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : [])
 ];
 
+// ADD THIS DEBUG LINE
+console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.role, tabs: tabs.map(t => t.label) });
+
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} duration={3000} />}
@@ -856,7 +860,7 @@ const tabs = [
 {activeTab === 'valid-ids' && <ValidIdsManagement />}
 {activeTab === 'team' && <TeamManagement />}
 {activeTab === 'settings' && <SettingsManagement />}
-{activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />} 
+{activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />}
         </div>
       </div>
 
