@@ -12,7 +12,10 @@ const userSchema = new mongoose.Schema({
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   
-  // 🆕 SOFT DELETE FIELDS
+  // 🆕 SUPER ADMIN FIELD
+  isSuperAdmin: { type: Boolean, default: false },
+  
+  // SOFT DELETE FIELDS
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -67,7 +70,7 @@ userSchema.methods.incLoginAttempts = function() {
   return this.updateOne(updates);
 };
 
-// 🆕 SOFT DELETE METHOD
+// SOFT DELETE METHOD
 userSchema.methods.softDelete = async function(deletedByUserId) {
   this.isDeleted = true;
   this.deletedAt = new Date();
@@ -76,7 +79,7 @@ userSchema.methods.softDelete = async function(deletedByUserId) {
   return await this.save();
 };
 
-// 🆕 RESTORE METHOD
+// RESTORE METHOD
 userSchema.methods.restore = async function() {
   this.isDeleted = false;
   this.deletedAt = null;
@@ -85,7 +88,7 @@ userSchema.methods.restore = async function() {
   return await this.save();
 };
 
-// 🆕 INDEX - Allow same email if deleted
+// INDEX - Allow same email if deleted
 userSchema.index({ email: 1, isDeleted: 1 }, { 
   unique: true, 
   partialFilterExpression: { isDeleted: false } 

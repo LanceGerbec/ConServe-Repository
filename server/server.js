@@ -24,6 +24,7 @@ import awardsRoutes from './src/routes/awards.routes.js';
 import reportRoutes from './src/routes/report.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
+import adminManagementRoutes from './src/routes/adminManagement.routes.js';
 
 dotenv.config();
 
@@ -229,6 +230,9 @@ console.log('✅ Awards routes registered');
 
 app.use('/api/reports', reportRoutes);
 console.log('✅ Report routes registered');
+
+app.use('/api/admin-management', adminManagementRoutes);
+console.log('✅ Admin Management routes registered');
 
 app.use('/api', apiLimiter);
 console.log('✅ Rate limiter applied');

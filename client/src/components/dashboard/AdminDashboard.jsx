@@ -12,6 +12,7 @@ import TeamManagement from '../admin/TeamManagement';
 import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
 import DeleteUserModal from '../admin/DeleteUserModal';
+import AdminManagement from '../admin/AdminManagement';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -517,8 +518,9 @@ const AdminDashboard = () => {
     { id: 'analytics', label: 'Analytics' },
     { id: 'valid-ids', label: 'Valid IDs' },
     { id: 'team', label: 'Team' },
-    { id: 'settings', label: 'Settings' }
-  ];
+  (user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins', icon: Shield }] : []),
+  { id: 'settings', label: 'Settings', icon: Settings }
+];
 
   return (
     <>
@@ -808,6 +810,7 @@ const AdminDashboard = () => {
           {activeTab === 'valid-ids' && <ValidIdsManagement />}
           {activeTab === 'team' && <TeamManagement />}
           {activeTab === 'settings' && <SettingsManagement />}
+          {activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />}
         </div>
       </div>
 

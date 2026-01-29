@@ -95,7 +95,7 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
         <h3 className="font-bold text-base mb-2 text-gray-900 dark:text-white">4. Data Sharing</h3>
         <p><strong>We do NOT sell your personal information.</strong> Data may be shared only with:</p>
         <ul className="list-disc list-inside space-y-1 ml-2">
-          <li>NEUST administrators for account verification</li>
+          <li>NEUST-CON administrators for account verification</li>
           <li>Faculty reviewers (limited to academic context)</li>
           <li>Law enforcement if legally required</li>
         </ul>
