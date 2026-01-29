@@ -10,17 +10,17 @@ import { notifyAccountApproved } from '../utils/notificationService.js';
 export const getAllUsers = async (req, res) => {
   try {
     const { status, role } = req.query;
-    let query = { isDeleted: false };
     
-    // 🆕 ROLE-BASED FILTERING: Regular admins can't see other admins
-    if (req.user.role === 'admin' && !req.user.isSuperAdmin) {
-      query.role = { $in: ['student', 'faculty'] };
-    }
-    // Super admin sees everyone (no additional filter)
+    // Base query excludes deleted users and ALWAYS excludes admins
+    let query = { 
+      isDeleted: false,
+      role: { $in: ['student', 'faculty'] }
+    };
     
+    // Apply filters
     if (status === 'pending') query.isApproved = false;
     if (status === 'approved') query.isApproved = true;
-    if (role && req.user.isSuperAdmin) query.role = role; // Only super admin can filter by admin role
+    if (role && ['student', 'faculty'].includes(role)) query.role = role;
 
     const users = await User.find(query).select('-password -passwordHistory').sort({ createdAt: -1 });
     res.json({ users, count: users.length });
@@ -96,9 +96,7 @@ export const rejectUser = async (req, res) => {
     if (user.role === 'admin') return res.status(403).json({ error: 'Cannot delete admin' });
 
     const { email, studentId, role, _id } = user;
-
     await user.softDelete(req.user._id);
-
     const paperCount = await Research.countDocuments({ submittedBy: _id });
 
     let idReverted = false;
@@ -122,20 +120,13 @@ export const rejectUser = async (req, res) => {
       resourceId: _id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      details: { 
-        email, 
-        studentId, 
-        role, 
-        idReverted,
-        paperCount,
-        papersPreserved: paperCount > 0
-      }
+      details: { email, studentId, role, idReverted, paperCount, papersPreserved: paperCount > 0 }
     });
 
     res.json({
       message: idReverted 
-        ? `User soft-deleted. ${paperCount} paper(s) preserved. ${role === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} available for re-use.`
-        : `User soft-deleted. ${paperCount} paper(s) preserved.`,
+        ? `User deleted. ${paperCount} paper(s) preserved. ${role === 'faculty' ? 'Faculty' : 'Student'} ID ${studentId} available for re-use.`
+        : `User deleted. ${paperCount} paper(s) preserved.`,
       revertedId: idReverted ? studentId : null,
       papersPreserved: paperCount
     });
@@ -202,28 +193,25 @@ export const toggleUserStatus = async (req, res) => {
 
 export const getUserStats = async (req, res) => {
   try {
-    const baseQuery = { isDeleted: false };
-    
-    // 🆕 Regular admins don't count other admins in stats
-    const userQuery = req.user.isSuperAdmin 
-      ? baseQuery 
-      : { ...baseQuery, role: { $in: ['student', 'faculty'] } };
+    // Base query excludes deleted users and admins for stats
+    const userQuery = { 
+      isDeleted: false, 
+      role: { $in: ['student', 'faculty'] } 
+    };
 
-    const [totalUsers, pendingApproval, activeUsers, studentCount, facultyCount, adminCount] = await Promise.all([
+    const [totalUsers, pendingApproval, activeUsers, studentCount, facultyCount] = await Promise.all([
       User.countDocuments(userQuery),
       User.countDocuments({ ...userQuery, isApproved: false }),
       User.countDocuments({ ...userQuery, isActive: true, isApproved: true }),
-      User.countDocuments({ ...baseQuery, role: 'student' }),
-      User.countDocuments({ ...baseQuery, role: 'faculty' }),
-      // Only super admin gets admin count
-      req.user.isSuperAdmin ? User.countDocuments({ ...baseQuery, role: 'admin' }) : 0
+      User.countDocuments({ isDeleted: false, role: 'student' }),
+      User.countDocuments({ isDeleted: false, role: 'faculty' })
     ]);
 
     res.json({
       totalUsers,
       pendingApproval,
       activeUsers,
-      byRole: { student: studentCount, faculty: facultyCount, admin: adminCount }
+      byRole: { student: studentCount, faculty: facultyCount }
     });
   } catch (error) {
     console.error('User stats error:', error);

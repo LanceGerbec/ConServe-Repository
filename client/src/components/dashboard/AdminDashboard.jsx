@@ -15,6 +15,8 @@ import AdminManagement from '../admin/AdminManagement';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+
+
 const StatCard = memo(({ icon: Icon, label, value, color, onClick }) => (
   <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 transition-all ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''}`}>
     <div className="flex items-center gap-3">
@@ -205,6 +207,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   const showToast = useCallback((msg, type = 'success') => setToast({ show: true, message: msg, type }), []);
 
@@ -489,7 +492,17 @@ const AdminDashboard = () => {
     }
   }, [showToast]);
 
-  const filteredUsers = allUsers.filter(u => search ? (u.firstName?.toLowerCase().includes(search.toLowerCase()) || u.lastName?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())) : true);
+  const filteredUsers = allUsers.filter(u => {
+  const matchesSearch = search ? (
+    u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
+    u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
+    u.email?.toLowerCase().includes(search.toLowerCase())
+  ) : true;
+  
+  const matchesRole = roleFilter === 'all' ? true : u.role === roleFilter;
+  
+  return matchesSearch && matchesRole;
+});
   const filteredResearch = allResearch.filter(p => search ? p.title?.toLowerCase().includes(search.toLowerCase()) : true);
   const sortedUsers = getSortedUsers(filteredUsers);
   const sortedPapers = getSortedPapers(filteredResearch);
@@ -658,63 +671,97 @@ const tabs = [
           )}
 
           {activeTab === 'users' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
-                  </h2>
-                  <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
-                </div>
-              </div>
-              {userViewMode === 'grid' ? (
-                <div className="p-4">
-                  {sortedUsers.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">No users found</div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {sortedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="relative overflow-auto max-h-[600px]">
-                  <table className="w-full">
-                    <thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
-                      <tr>
-                        <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
-                          <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} className="w-4 h-4 rounded accent-navy" />
-                        </th>
-                        <SortableHeader label="Name" sortKey="name" currentSort={userSortConfig} onSort={handleUserSort} />
-                        <SortableHeader label="ID" sortKey="id" currentSort={userSortConfig} onSort={handleUserSort} />
-                        <SortableHeader label="Date" sortKey="date" currentSort={userSortConfig} onSort={handleUserSort} />
-                        <SortableHeader label="Status" sortKey="status" currentSort={userSortConfig} onSort={handleUserSort} />
-                        <th className="px-4 py-3 text-right text-xs font-bold bg-gray-50 dark:bg-gray-900">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {sortedUsers.length === 0 ? (
-                        <tr><td colSpan="6" className="text-center py-12 text-gray-500">No users found</td></tr>
-                      ) : (
-                        sortedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+    {/* HEADER */}
+    <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
+        </h2>
+        <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+      </div>
+
+      <div className="flex items-center gap-3 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search users..."
+            className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <X size={18} />
+            </button>
           )}
+        </div>
+
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl"
+        >
+          <option value="all">All Roles</option>
+          <option value="student">Students</option>
+          <option value="faculty">Faculty</option>
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0}
+          onChange={handleSelectAllUsers}
+        />
+        <span>Select All</span>
+      </div>
+    </div>
+
+    {/* BODY */}
+    {userViewMode === 'grid' ? (
+      <div className="p-4">
+        {sortedUsers.length === 0 ? (
+          <div className="text-center py-12">No users found</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sortedUsers.map(u => (
+              <UserGridCard
+                key={u._id}
+                user={u}
+                selected={selectedUsers.includes(u._id)}
+                onSelect={handleSelectUser}
+                onDelete={handleDeleteUser}
+                currentUserId={user._id}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    ) : (
+      <div className="relative overflow-auto max-h-[600px]">
+        <table className="w-full">
+          <tbody>
+            {sortedUsers.map(u => (
+              <UserListRow
+                key={u._id}
+                user={u}
+                selected={selectedUsers.includes(u._id)}
+                onSelect={handleSelectUser}
+                onDelete={handleDeleteUser}
+                currentUserId={user._id}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+  </div>
+)}
+
 
           {activeTab === 'research' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">

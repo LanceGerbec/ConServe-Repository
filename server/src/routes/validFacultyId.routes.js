@@ -6,7 +6,7 @@ import AuditLog from '../models/AuditLog.js';
 
 const router = express.Router();
 
-// 🆕 CHECK ORPHANED COUNT (Real-time)
+// CHECK ORPHANED COUNT - Fixed to exclude soft-deleted users
 router.get('/check-orphaned', auth, authorize('admin'), async (req, res) => {
   try {
     const allUsed = await ValidFacultyId.find({ isUsed: true });
@@ -14,7 +14,10 @@ router.get('/check-orphaned', auth, authorize('admin'), async (req, res) => {
 
     for (const validId of allUsed) {
       if (validId.registeredUser) {
-        const userExists = await User.findById(validId.registeredUser);
+        const userExists = await User.findOne({ 
+          _id: validId.registeredUser, 
+          isDeleted: false 
+        });
         if (!userExists) orphanedCount++;
       }
     }
@@ -26,7 +29,6 @@ router.get('/check-orphaned', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// ✅ EDIT FACULTY ID
 router.patch('/:id', auth, authorize('admin'), async (req, res) => {
   try {
     const { facultyId, fullName } = req.body;
@@ -61,7 +63,6 @@ router.patch('/:id', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// ✅ BULK DELETE UNUSED IDs
 router.post('/bulk-delete-unused', auth, authorize('admin'), async (req, res) => {
   try {
     const result = await ValidFacultyId.deleteMany({ isUsed: false });
@@ -85,7 +86,7 @@ router.post('/bulk-delete-unused', auth, authorize('admin'), async (req, res) =>
   }
 });
 
-// Clean orphaned Faculty IDs
+// Clean orphaned - Fixed to exclude soft-deleted users
 router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
   try {
     const allUsedIds = await ValidFacultyId.find({ isUsed: true });
@@ -93,7 +94,10 @@ router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
 
     for (const validId of allUsedIds) {
       if (validId.registeredUser) {
-        const userExists = await User.findById(validId.registeredUser);
+        const userExists = await User.findOne({ 
+          _id: validId.registeredUser, 
+          isDeleted: false 
+        });
         if (!userExists) {
           validId.isUsed = false;
           validId.registeredUser = null;
@@ -118,7 +122,6 @@ router.post('/clean-orphaned', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// Check faculty ID
 router.get('/check/:facultyId', async (req, res) => {
   try {
     const validId = await ValidFacultyId.findOne({ facultyId: req.params.facultyId.toUpperCase(), status: 'active' });
@@ -130,7 +133,6 @@ router.get('/check/:facultyId', async (req, res) => {
   }
 });
 
-// Get all
 router.get('/', auth, authorize('admin'), async (req, res) => {
   try {
     const { status, search } = req.query;
@@ -144,7 +146,6 @@ router.get('/', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// Add new
 router.post('/', auth, authorize('admin'), async (req, res) => {
   try {
     const { facultyId, fullName, department, position, email } = req.body;
@@ -167,7 +168,6 @@ router.post('/', auth, authorize('admin'), async (req, res) => {
   }
 });
 
-// Delete
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
     const validId = await ValidFacultyId.findById(req.params.id);
