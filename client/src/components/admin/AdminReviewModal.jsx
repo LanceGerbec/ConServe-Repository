@@ -21,7 +21,7 @@ const AdminReviewModal = memo(({ paper, onClose, onSuccess }) => {
 
   const handleSubmit = useCallback(async () => {
     if (!notes.trim()) {
-      showToast('⚠️ Please provide review notes', 'warning');
+      showToast('Please provide review notes', 'warning');
       return;
     }
 
@@ -40,21 +40,21 @@ const AdminReviewModal = memo(({ paper, onClose, onSuccess }) => {
 
       if (res.ok) {
         const messages = {
-          approved: '✅ Research approved successfully',
-          rejected: '❌ Research rejected',
-          revision: '📝 Revisions requested'
+          approved: 'Research approved successfully',
+          rejected: 'Research rejected',
+          revision: 'Revisions requested'
         };
-        showToast(messages[decision] || '✅ Status updated', 'success');
+        showToast(messages[decision] || 'Status updated successfully', 'success');
         
         setTimeout(() => {
           onSuccess();
         }, 1500);
       } else {
         const data = await res.json();
-        showToast(data.error || '❌ Failed to update status', 'error');
+        showToast(data.error || 'Failed to update status', 'error');
       }
     } catch (err) {
-      showToast(`❌ Error: ${err.message}`, 'error');
+      showToast(`Error: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
