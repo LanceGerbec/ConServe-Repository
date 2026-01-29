@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload, Settings } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Crown } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AnalyticsHub from '../analytics/AnalyticsHub';
@@ -185,6 +185,15 @@ const AdminDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // ✅ DEBUG CODE - Remove after testing
+  useEffect(() => {
+    console.log('🔍 User object:', user);
+    console.log('🔍 isSuperAdmin:', user?.isSuperAdmin);
+    console.log('🔍 Type:', typeof user?.isSuperAdmin);
+    console.log('🔍 Boolean check:', Boolean(user?.isSuperAdmin));
+  }, [user]);
+
   const [activeTab, setActiveTab] = useState('overview');
   const [userViewMode, setUserViewMode] = useState('grid');
   const [paperViewMode, setPaperViewMode] = useState('grid');
@@ -221,28 +230,12 @@ const AdminDashboard = () => {
     return [...users].sort((a, b) => {
       let aVal, bVal;
       switch (userSortConfig.key) {
-        case 'name':
-          aVal = `${a.firstName} ${a.lastName}`.toLowerCase();
-          bVal = `${b.firstName} ${b.lastName}`.toLowerCase();
-          break;
-        case 'email':
-          aVal = a.email.toLowerCase();
-          bVal = b.email.toLowerCase();
-          break;
-        case 'id':
-          aVal = a.studentId?.toLowerCase() || '';
-          bVal = b.studentId?.toLowerCase() || '';
-          break;
-        case 'date':
-          aVal = new Date(a.createdAt);
-          bVal = new Date(b.createdAt);
-          break;
-        case 'status':
-          aVal = a.isApproved ? 1 : 0;
-          bVal = b.isApproved ? 1 : 0;
-          break;
-        default:
-          return 0;
+        case 'name': aVal = `${a.firstName} ${a.lastName}`.toLowerCase(); bVal = `${b.firstName} ${b.lastName}`.toLowerCase(); break;
+        case 'email': aVal = a.email.toLowerCase(); bVal = b.email.toLowerCase(); break;
+        case 'id': aVal = a.studentId?.toLowerCase() || ''; bVal = b.studentId?.toLowerCase() || ''; break;
+        case 'date': aVal = new Date(a.createdAt); bVal = new Date(b.createdAt); break;
+        case 'status': aVal = a.isApproved ? 1 : 0; bVal = b.isApproved ? 1 : 0; break;
+        default: return 0;
       }
       if (aVal < bVal) return userSortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return userSortConfig.direction === 'asc' ? 1 : -1;
@@ -255,29 +248,12 @@ const AdminDashboard = () => {
     return [...papers].sort((a, b) => {
       let aVal, bVal;
       switch (paperSortConfig.key) {
-        case 'title':
-          aVal = a.title.toLowerCase();
-          bVal = b.title.toLowerCase();
-          break;
-        case 'author':
-          aVal = `${a.submittedBy?.firstName || ''} ${a.submittedBy?.lastName || ''}`.toLowerCase();
-          bVal = `${b.submittedBy?.firstName || ''} ${b.submittedBy?.lastName || ''}`.toLowerCase();
-          break;
-        case 'date':
-          aVal = new Date(a.createdAt);
-          bVal = new Date(b.createdAt);
-          break;
-        case 'views':
-          aVal = a.views || 0;
-          bVal = b.views || 0;
-          break;
-        case 'status':
-          const statusOrder = { pending: 0, approved: 1, rejected: 2 };
-          aVal = statusOrder[a.status] || 0;
-          bVal = statusOrder[b.status] || 0;
-          break;
-        default:
-          return 0;
+        case 'title': aVal = a.title.toLowerCase(); bVal = b.title.toLowerCase(); break;
+        case 'author': aVal = `${a.submittedBy?.firstName || ''} ${a.submittedBy?.lastName || ''}`.toLowerCase(); bVal = `${b.submittedBy?.firstName || ''} ${b.submittedBy?.lastName || ''}`.toLowerCase(); break;
+        case 'date': aVal = new Date(a.createdAt); bVal = new Date(b.createdAt); break;
+        case 'views': aVal = a.views || 0; bVal = b.views || 0; break;
+        case 'status': const statusOrder = { pending: 0, approved: 1, rejected: 2 }; aVal = statusOrder[a.status] || 0; bVal = statusOrder[b.status] || 0; break;
+        default: return 0;
       }
       if (aVal < bVal) return paperSortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return paperSortConfig.direction === 'asc' ? 1 : -1;
@@ -368,18 +344,12 @@ const AdminDashboard = () => {
   const handleDeleteUser = useCallback((userId) => {
     const userToDelete = allUsers.find(u => u._id === userId);
     if (!userToDelete) return;
-    
     setConfirmModal({
-      isOpen: true,
-      type: 'deleteUser',
-      user: userToDelete,
+      isOpen: true, type: 'deleteUser', user: userToDelete,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          await fetch(`${API_URL}/users/${userId}/reject`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          await fetch(`${API_URL}/users/${userId}/reject`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }});
           showToast('✅ User deleted');
           setSelectedUsers([]);
           fetchData();
@@ -402,10 +372,7 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       const endpoint = type === 'user' ? 'users' : 'research';
       for (const id of ids) {
-        await fetch(`${API_URL}/${endpoint}/${id}${type === 'user' ? '/reject' : ''}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await fetch(`${API_URL}/${endpoint}/${id}${type === 'user' ? '/reject' : ''}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }});
       }
       showToast(`✅ Deleted ${ids.length} ${type}(s)`);
       setSelectedUsers([]);
@@ -421,10 +388,7 @@ const AdminDashboard = () => {
   const handleApproveUser = useCallback(async (userId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/users/${userId}/approve`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API_URL}/users/${userId}/approve`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` }});
       if (res.ok) {
         showToast('✅ User approved');
         fetchData();
@@ -440,18 +404,12 @@ const AdminDashboard = () => {
   const handleRejectUser = async (userId) => {
     const userToDelete = pendingUsers.find(u => u._id === userId);
     if (!userToDelete) return;
-    
     setConfirmModal({
-      isOpen: true,
-      type: 'deleteUser',
-      user: userToDelete,
+      isOpen: true, type: 'deleteUser', user: userToDelete,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`${API_URL}/users/${userId}/reject`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const res = await fetch(`${API_URL}/users/${userId}/reject`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }});
           if (res.ok) {
             showToast('✅ User deleted');
             fetchData();
@@ -478,10 +436,7 @@ const AdminDashboard = () => {
   const handleRemoveBookmark = useCallback(async (bookmarkId, researchId) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/bookmarks/toggle/${researchId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await fetch(`${API_URL}/bookmarks/toggle/${researchId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }});
       setBookmarks(prev => prev.filter(b => b._id !== bookmarkId));
       showToast('✅ Bookmark removed');
     } catch (error) {
@@ -509,39 +464,29 @@ const AdminDashboard = () => {
     { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
   ];
 
-const tabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'users', label: 'Users' },
-  { id: 'research', label: 'Papers' },
-  { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'valid-ids', label: 'Valid IDs' },
-  { id: 'team', label: 'Team' },
-  { id: 'settings', label: 'Settings' },
-  ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : [])
-];
+  // ✅ FIXED TABS ARRAY
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'users', label: 'Users' },
+    { id: 'research', label: 'Papers' },
+    { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'valid-ids', label: 'Valid IDs' },
+    { id: 'team', label: 'Team' },
+    { id: 'settings', label: 'Settings' },
+    ...(user?.isSuperAdmin === true ? [{ id: 'admins', label: 'Manage Admins' }] : [])
+  ];
+
+  console.log('🔍 Tabs array:', tabs); // ✅ Debug output
 
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} duration={3000} />}
       
       {confirmModal.type === 'deleteUser' && confirmModal.user ? (
-        <DeleteUserModal
-          isOpen={confirmModal.isOpen}
-          onClose={() => setConfirmModal({ isOpen: false, type: '', user: null })}
-          onConfirm={confirmModal.onConfirm}
-          user={confirmModal.user}
-        />
+        <DeleteUserModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, type: '', user: null })} onConfirm={confirmModal.onConfirm} user={confirmModal.user} />
       ) : (
-        <ConfirmModal
-          isOpen={confirmModal.isOpen && confirmModal.type !== 'deleteUser'}
-          onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
-          onConfirm={confirmDelete}
-          title={`Delete ${confirmModal.ids?.length} ${confirmModal.type}(s)?`}
-          message={`This will permanently delete ${confirmModal.ids?.length} ${confirmModal.type}(s). This cannot be undone.`}
-          confirmText="Delete"
-          type="danger"
-        />
+        <ConfirmModal isOpen={confirmModal.isOpen && confirmModal.type !== 'deleteUser'} onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })} onConfirm={confirmDelete} title={`Delete ${confirmModal.ids?.length} ${confirmModal.type}(s)?`} message={`This will permanently delete ${confirmModal.ids?.length} ${confirmModal.type}(s). This cannot be undone.`} confirmText="Delete" type="danger" />
       )}
 
       {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
@@ -592,7 +537,9 @@ const tabs = [
 
             <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
               <Shield size={16} className="text-orange-300" />
-              <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
+              <span className="text-xs sm:text-sm font-semibold text-white">
+                {user?.isSuperAdmin ? 'Super Admin' : 'Admin'}
+              </span>
             </div>
           </div>
         </div>
@@ -600,21 +547,9 @@ const tabs = [
         <div className="px-4 mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-navy text-white shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
-                }`}
-              >
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
                 {tab.label}
-                {tab.badge > 0 && (
-                  <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
-                    {tab.badge}
-                  </span>
-                )}
+                {tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">{tab.badge}</span>}
               </button>
             ))}
           </div>
@@ -680,9 +615,7 @@ const tabs = [
               </div>
               {userViewMode === 'grid' ? (
                 <div className="p-4">
-                  {sortedUsers.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">No users found</div>
-                  ) : (
+                  {sortedUsers.length === 0 ? <div className="text-center py-12 text-gray-500">No users found</div> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {sortedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}
                     </div>
@@ -739,9 +672,7 @@ const tabs = [
               </div>
               {paperViewMode === 'grid' ? (
                 <div className="p-4">
-                  {sortedPapers.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">No papers found</div>
-                  ) : (
+                  {sortedPapers.length === 0 ? <div className="text-center py-12 text-gray-500">No papers found</div> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {sortedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
                     </div>
@@ -806,10 +737,10 @@ const tabs = [
           )}
 
           {activeTab === 'analytics' && <AnalyticsHub />}
-{activeTab === 'valid-ids' && <ValidIdsManagement />}
-{activeTab === 'team' && <TeamManagement />}
-{activeTab === 'settings' && <SettingsManagement />}
-{activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />} 
+          {activeTab === 'valid-ids' && <ValidIdsManagement />}
+          {activeTab === 'team' && <TeamManagement />}
+          {activeTab === 'settings' && <SettingsManagement />}
+          {activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />}
         </div>
       </div>
 

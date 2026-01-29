@@ -180,29 +180,32 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ Login function
   const login = async (email, password) => {
-    try {
-      const res = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-        resetInactivityTimer();
-        return { success: true };
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: 'Connection error' };
+    if (res.ok && data.token) {
+      localStorage.setItem('token', data.token);
+      // ✅ Ensure isSuperAdmin is stored
+      const userData = {
+        ...data.user,
+        isSuperAdmin: Boolean(data.user.isSuperAdmin) // Explicitly convert
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return { success: true };
     }
-  };
+
+    return { success: false, error: data.error };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
 
   // ✅ Register function
   const register = async (formData) => {
