@@ -281,6 +281,7 @@ export const getCurrentUser = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 };
+
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
