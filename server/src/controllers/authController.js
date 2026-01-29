@@ -251,18 +251,36 @@ export const logout = async (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password -passwordHistory').lean();
+    const user = await User.findById(req.user._id)
+      .select('-password -passwordHistory')
+      .lean();
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     res.json({ 
       user: {
-        ...user,
-        isSuperAdmin: user.isSuperAdmin || false // Ensure it's always included
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        studentId: user.studentId,
+        isApproved: user.isApproved,
+        isActive: user.isActive,
+        isSuperAdmin: Boolean(user.isSuperAdmin), // Explicitly convert to boolean
+        canUploadOnBehalf: user.canUploadOnBehalf,
+        twoFactorEnabled: user.twoFactorEnabled,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
+    console.error('Get current user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 };
-
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
