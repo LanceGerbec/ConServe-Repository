@@ -378,25 +378,24 @@ const submitterName = paper?.submittedBy
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
   <div className="flex items-center gap-2 mb-4">
-    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Full Document</h2>
-    <Tooltip content={
-      <div className="text-left space-y-1.5 max-w-xs">
-        <p className="font-bold text-xs text-white mb-2">🔒 PROTECTED DOCUMENT</p>
-        <div className="text-xs space-y-1 text-gray-200">
-          <p>✓ Watermarked with your identity</p>
-          <p>✓ Screenshot protection active</p>
-          <p>✓ Copy/paste disabled</p>
-          <p>✓ 30-minute viewing session</p>
-          <p>✓ All activity logged & monitored</p>
-        </div>
-        <div className="text-xs text-yellow-200 pt-2 mt-2 border-t border-gray-600">
-          ⚠️ Unauthorized redistribution prohibited
-        </div>
+  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Full Document</h2>
+  <Tooltip content={
+    <div className="text-left space-y-1 max-w-xs">
+      <p className="font-bold text-xs text-white mb-1.5">PROTECTED DOCUMENT</p>
+      <div className="text-xs space-y-0.5 text-gray-200">
+        <p>• Watermarked with your identity</p>
+        <p>• PrintScreen protection active</p>
+        <p>• Copy/paste disabled</p>
+        <p>• All activity logged & monitored</p>
       </div>
-    } position="right">
-      <Info size={18} className="text-blue-600 dark:text-blue-400 cursor-help" />
-    </Tooltip>
-  </div>
+      <div className="text-xs text-yellow-200 pt-1.5 mt-1.5 border-t border-gray-600">
+        Unauthorized redistribution prohibited
+      </div>
+    </div>
+  } position="right">
+    <Info size={18} className="text-blue-600 dark:text-blue-400 cursor-help" />
+  </Tooltip>
+</div>
 
   <div className="border-2 border-dashed border-red-200 dark:border-red-800 rounded-xl p-8 text-center bg-red-50 dark:bg-red-900/10">
     <FileText className="mx-auto text-red-600 dark:text-red-400 mb-3" size={48} />
