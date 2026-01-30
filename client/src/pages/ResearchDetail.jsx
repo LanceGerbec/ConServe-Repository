@@ -8,6 +8,8 @@ import ReviewForm from '../components/review/ReviewForm';
 import ReviewsModal from '../components/review/ReviewsModal';
 import SimilarPapers from '../components/research/SimilarPapers';
 import AwardsModal from '../components/admin/AwardsModal';
+import { Info } from 'lucide-react';
+import Tooltip from '../components/common/Tooltip';
 
 const ResearchDetail = () => {
   const { id } = useParams();
@@ -374,28 +376,46 @@ const submitterName = paper?.submittedBy
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mx-4 mb-4 overflow-hidden">
-        <div className="p-4">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Full Document</h2>
-          <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-6 text-center border-2 border-dashed border-red-300 dark:border-red-700">
-            <FileText className="mx-auto text-red-600 dark:text-red-500 mb-3" size={48} />
-            <p className="text-gray-900 dark:text-white mb-1 font-bold text-sm flex items-center justify-center gap-2">
-              <Lock size={16} />
-              View-Only Protected Document
-            </p>
-            <p className="text-gray-700 dark:text-gray-300 mb-4 text-xs">
-              {paper.status === 'approved' ? 'PDF is strictly for viewing only.' : 'Preview Mode'}
-            </p>
-            <button 
-              onClick={handleViewPDF} 
-              className="inline-flex items-center justify-center gap-2 bg-navy dark:bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-navy-800 dark:hover:bg-blue-700 shadow-lg text-sm font-semibold w-full md:w-auto"
-            >
-              <FileText size={18} />
-              Open Viewer
-            </button>
-          </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+  <div className="flex items-center gap-2 mb-4">
+    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Full Document</h2>
+    <Tooltip content={
+      <div className="text-left space-y-1.5 max-w-xs">
+        <p className="font-bold text-xs text-white mb-2">🔒 PROTECTED DOCUMENT</p>
+        <div className="text-xs space-y-1 text-gray-200">
+          <p>✓ Watermarked with your identity</p>
+          <p>✓ Screenshot protection active</p>
+          <p>✓ Copy/paste disabled</p>
+          <p>✓ 30-minute viewing session</p>
+          <p>✓ All activity logged & monitored</p>
+        </div>
+        <div className="text-xs text-yellow-200 pt-2 mt-2 border-t border-gray-600">
+          ⚠️ Unauthorized redistribution prohibited
         </div>
       </div>
+    } position="right">
+      <Info size={18} className="text-blue-600 dark:text-blue-400 cursor-help" />
+    </Tooltip>
+  </div>
+
+  <div className="border-2 border-dashed border-red-200 dark:border-red-800 rounded-xl p-8 text-center bg-red-50 dark:bg-red-900/10">
+    <FileText className="mx-auto text-red-600 dark:text-red-400 mb-3" size={48} />
+    <div className="flex items-center justify-center gap-2 mb-2">
+      <Lock size={16} className="text-gray-700 dark:text-gray-300" />
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">View-Only Protected Document</h3>
+    </div>
+    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+      PDF is strictly for viewing only.
+    </p>
+    <button
+      onClick={() => setShowPdfViewer(true)}
+      className="inline-flex items-center gap-2 px-6 py-3 bg-navy dark:bg-blue-600 hover:bg-navy-700 dark:hover:bg-blue-700 text-white rounded-xl font-semibold transition shadow-lg"
+    >
+      <FileText size={20} />
+      Open Viewer
+    </button>
+  </div>
+</div>
 
       {paper.status === 'approved' && (
         <div className="mx-4">
