@@ -45,10 +45,10 @@ const About = () => {
           What is CONserve?
         </h2>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-          CONserve is the official research repository of Nueva Ecija University of Science and Technology (NEUST) College of Nursing. Our platform serves as a comprehensive digital archive for nursing research papers, theses, and academic publications.
+          CONserve is the official digital research repository of the Nueva Ecija University of Science and Technology (NEUST) College of Nursing. It serves as a centralized and secure archive for nursing research papers, theses, and scholarly publications produced by students and faculty.
         </p>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-          We are committed to preserving, protecting, and promoting academic research excellence by providing a secure, accessible platform that connects researchers, students, and faculty members within the nursing community.
+         Designed to support academic integrity and knowledge sharing, CONserve provides a trusted platform where nursing research is preserved, organized, and made accessible to the academic community. By connecting students, faculty, and researchers, the system strengthens collaboration and promotes evidence-based nursing practice.
         </p>
       </div>
 
@@ -59,7 +59,7 @@ const About = () => {
             <h2 className="text-xl font-bold">Our Mission</h2>
           </div>
           <p className="leading-relaxed text-sm">
-            To preserve, protect, and promote academic research excellence by providing a secure, accessible platform for nursing research papers, fostering collaboration and advancing nursing science.
+            To preserve and protect nursing research by providing a secure and accessible digital platform that supports collaboration, academic integrity, and the advancement of nursing science.
           </p>
         </div>
 
@@ -69,7 +69,7 @@ const About = () => {
             <h2 className="text-xl font-bold">Our Vision</h2>
           </div>
           <p className="leading-relaxed text-sm">
-            To provide a centralized and reliable digital repository for nursing research that supports learning, collaboration, and evidence-based healthcare.
+            To become a leading digital repository for nursing research that empowers learning, collaboration, and evidence-based healthcare within and beyond NEUST.
           </p>
         </div>
       </div>
