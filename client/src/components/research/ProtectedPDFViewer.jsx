@@ -1,4 +1,4 @@
-// client/src/components/research/ProtectedPDFViewer.jsx - FIXED (No Countdown)
+// client/src/components/research/ProtectedPDFViewer.jsx - FIXED (iOS Pinch-Zoom Safe)
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle, MapPin, User, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -49,6 +49,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const BASE_SCALE = isMobile ? 1.5 : 1.3;
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
@@ -115,60 +116,37 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     });
   };
 
-const logViolation = async (type) => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Extract research ID from URL
-    let researchId = null;
-    if (pdfUrl) {
-      const parts = pdfUrl.split('/');
-      researchId = parts[parts.length - 2]; // Get ID from /research/:id/pdf
+  const logViolation = async (type) => {
+    try {
+      const token = localStorage.getItem('token');
+      let researchId = null;
+      if (pdfUrl) {
+        const parts = pdfUrl.split('/');
+        researchId = parts[parts.length - 2];
+      }
+      
+      if (!researchId) return;
+      
+      await fetch(`${API_BASE}/research/log-violation`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          researchId: researchId,
+          violationType: type,
+          researchTitle: paperTitle || 'Unknown Paper',
+          severity: 'critical',
+          attemptCount: screenshotAttempts.current + 1
+        })
+      });
+    } catch (error) {
+      console.error('Violation log error:', error);
     }
-    
-    console.log('🔵 LOGGING VIOLATION');
-    console.log('ResearchID:', researchId);
-    console.log('Type:', type);
-    console.log('API URL:', `${API_BASE}/research/log-violation`);
-    
-    if (!researchId) {
-      console.error('❌ NO RESEARCH ID FOUND');
-      console.error('PDF URL:', pdfUrl);
-      return;
-    }
-    
-    const response = await fetch(`${API_BASE}/research/log-violation`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        researchId: researchId,
-        violationType: type,
-        researchTitle: paperTitle || 'Unknown Paper',
-        severity: 'critical',
-        attemptCount: screenshotAttempts.current + 1
-      })
-    });
-    
-    console.log('🔵 Response Status:', response.status);
-    
-    const result = await response.json();
-    console.log('🔵 Response Body:', result);
-    
-    if (response.ok) {
-      console.log('✅ VIOLATION LOGGED:', result.logId);
-    } else {
-      console.error('❌ FAILED:', result);
-    }
-    
-  } catch (error) {
-    console.error('❌ ERROR:', error);
-  }
-};
+  };
 
-  // MacOS Protection
+  // ✅ MacOS Protection (WORKS PERFECTLY - NO CHANGES)
   useEffect(() => {
     if (!isMac) return;
 
@@ -211,30 +189,17 @@ const logViolation = async (type) => {
     };
   }, [violations, user, isMac]);
 
-  // iOS Protection
+  // ✅ iOS Protection (FIXED - REMOVED AGGRESSIVE DETECTION)
   useEffect(() => {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (!isIOS) return;
 
-    let lastVisibilityTime = 0;
-
-    const detectHardwareScreenshot = () => {
-      const now = Date.now();
-      const timeSinceLastVisibility = now - lastVisibilityTime;
-
-      if (document.hidden && timeSinceLastVisibility > 100 && timeSinceLastVisibility < 500) {
-        instantBlur();
-        const flash = document.createElement('div');
-        flash.style.cssText = 'position:fixed;inset:0;background:black;z-index:9999;';
-        document.body.appendChild(flash);
-        blockContent('Content Protection Activated');
-        setTimeout(() => flash.remove(), 500);
-      }
-
-      lastVisibilityTime = now;
-    };
+    // ❌ REMOVED: Aggressive visibilitychange timing check (caused false positives on pinch-zoom)
+    // ✅ KEPT: pagehide detection (catches full app switches/navigation away)
+    // ⚠️ NOTE: iOS screenshot detection is inherently limited due to platform restrictions
+    //    The watermarking (email, IP, timestamp) serves as the primary deterrent
 
     const detectPageHide = (e) => {
+      // Only trigger on permanent navigation away (not background/zoom gestures)
       if (e.persisted === false) {
         instantBlur();
         blockContent('Content Protection Activated');
@@ -245,18 +210,16 @@ const logViolation = async (type) => {
       navigator.clipboard.writeText(`🔒 CONFIDENTIAL - ${user?.email} - ${new Date().toLocaleString()}`).catch(() => {});
     };
 
-    document.addEventListener('visibilitychange', detectHardwareScreenshot);
     window.addEventListener('pagehide', detectPageHide);
     const clipboardInterval = setInterval(poisonClipboard, 2000);
 
     return () => {
-      document.removeEventListener('visibilitychange', detectHardwareScreenshot);
       window.removeEventListener('pagehide', detectPageHide);
       clearInterval(clipboardInterval);
     };
-  }, [violations, user, isMobile]);
+  }, [violations, user, isIOS]);
 
-  // PrintScreen & DevTools
+  // ✅ PrintScreen & DevTools Protection (NO CHANGES)
   useEffect(() => {
     const blockPrintScreen = (e) => {
       if (['PrintScreen', 44].includes(e.key || e.keyCode)) {
@@ -295,7 +258,7 @@ const logViolation = async (type) => {
     };
   }, [violations]);
 
-  // Double-tap zoom (mobile)
+  // ✅ Double-tap zoom (NO CHANGES)
   useEffect(() => {
     if (!isMobile || !wrapperRef.current) return;
 
@@ -366,7 +329,7 @@ const logViolation = async (type) => {
     return () => clearTimeout(sessionTimerRef.current);
   }, []);
 
-  // Load PDF
+  // ✅ Load PDF (NO CHANGES)
   useEffect(() => {
     const loadPDF = async () => {
       try {
@@ -416,7 +379,7 @@ const logViolation = async (type) => {
     if (pdfUrl) loadPDF();
   }, [pdfUrl, API_BASE, isMobile]);
 
-  // Render page with watermarks
+  // ✅ Render page with watermarks (NO CHANGES)
   useEffect(() => {
     if (!pdf || !canvasRef.current || renderLockRef.current) return;
 
@@ -566,7 +529,7 @@ const logViolation = async (type) => {
     renderPage();
   }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
 
-  // Prevent context menu, copy, etc
+  // ✅ Prevent context menu, copy, etc (NO CHANGES)
   useEffect(() => {
     const prevent = (e) => {
       e.preventDefault();
@@ -597,7 +560,7 @@ const logViolation = async (type) => {
     };
   }, []);
 
-  // Keyboard shortcuts (desktop only)
+  // ✅ Keyboard shortcuts (NO CHANGES)
   useEffect(() => {
     if (isMobile) return;
     const handleKey = (e) => {
@@ -805,7 +768,6 @@ const logViolation = async (type) => {
               </button>
             </div>
 
-            {/* ✅ REMOVED: Countdown timer and related elements */}
             {violations > 0 && (
               <div className="text-white text-xs font-bold bg-red-500/30 px-2 py-1 rounded border border-red-400/50 animate-pulse flex items-center gap-1">
                 <AlertCircle size={14} />

@@ -69,7 +69,7 @@ const About = () => {
             <h2 className="text-xl font-bold">Our Vision</h2>
           </div>
           <p className="leading-relaxed text-sm">
-            To be the leading research repository in the Philippines, recognized for excellence in preserving and promoting nursing research that contributes to evidence-based practice and improved healthcare outcomes.
+            To provide a centralized and reliable digital repository for nursing research that supports learning, collaboration, and evidence-based healthcare.
           </p>
         </div>
       </div>
