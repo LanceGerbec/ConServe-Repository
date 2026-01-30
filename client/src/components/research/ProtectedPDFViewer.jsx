@@ -1,4 +1,4 @@
-// client/src/components/research/ProtectedPDFViewer.jsx - FIXED (iOS Pinch-Zoom Safe)
+// client/src/components/research/ProtectedPDFViewer.jsx - FIXED (False Positive Prevention)
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Shield, AlertCircle, MapPin, User, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -42,11 +42,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const screenshotAttempts = useRef(0);
   const lastTap = useRef(0);
   const renderLockRef = useRef(false);
+  const lastViolationTime = useRef(0); // ✅ NEW: Debounce violations
   
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const SESSION_DURATION = 30 * 60 * 1000;
   const MAX_VIOLATIONS = 3;
   const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+  const VIOLATION_COOLDOWN = 500; // ✅ NEW: 500ms between violations
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -68,6 +70,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   };
 
   const blockContent = (reason) => {
+    // ✅ FIX: Debounce rapid-fire blocks
+    const now = Date.now();
+    if (now - lastViolationTime.current < VIOLATION_COOLDOWN) {
+      return; // Ignore duplicate triggers
+    }
+    lastViolationTime.current = now;
+
     instantBlur();
     logViolation(reason);
     showToast(`Screenshot Attempt Blocked`, 'error');
@@ -146,7 +155,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     }
   };
 
-  // ✅ MacOS Protection (WORKS PERFECTLY - NO CHANGES)
+  // ✅ MacOS Protection (NO CHANGES - WORKS PERFECTLY)
   useEffect(() => {
     if (!isMac) return;
 
@@ -189,29 +198,26 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
   }, [violations, user, isMac]);
 
-  // ✅ iOS Protection (FIXED - REMOVED AGGRESSIVE DETECTION)
+  // ✅ FIXED: iOS Protection (REMOVED AGGRESSIVE DETECTION)
   useEffect(() => {
     if (!isIOS) return;
 
-    // ❌ REMOVED: Aggressive visibilitychange timing check (caused false positives on pinch-zoom)
-    // ✅ KEPT: pagehide detection (catches full app switches/navigation away)
-    // ⚠️ NOTE: iOS screenshot detection is inherently limited due to platform restrictions
-    //    The watermarking (email, IP, timestamp) serves as the primary deterrent
-
+    // ✅ ONLY DETECT PERMANENT NAVIGATION (not zoom/scroll/control center)
     const detectPageHide = (e) => {
-      // Only trigger on permanent navigation away (not background/zoom gestures)
+      // Only trigger on permanent page unload (navigation away from page)
       if (e.persisted === false) {
         instantBlur();
         blockContent('Content Protection Activated');
       }
     };
 
+    // ✅ Clipboard poisoning (passive deterrent)
     const poisonClipboard = () => {
       navigator.clipboard.writeText(`🔒 CONFIDENTIAL - ${user?.email} - ${new Date().toLocaleString()}`).catch(() => {});
     };
 
     window.addEventListener('pagehide', detectPageHide);
-    const clipboardInterval = setInterval(poisonClipboard, 2000);
+    const clipboardInterval = setInterval(poisonClipboard, 3000); // Reduced frequency
 
     return () => {
       window.removeEventListener('pagehide', detectPageHide);
@@ -219,7 +225,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
   }, [violations, user, isIOS]);
 
-  // ✅ PrintScreen & DevTools Protection (NO CHANGES)
+  // ✅ FIXED: PrintScreen & DevTools Protection
   useEffect(() => {
     const blockPrintScreen = (e) => {
       if (['PrintScreen', 44].includes(e.key || e.keyCode)) {
@@ -239,8 +245,13 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       }
     };
 
+    // ✅ FIXED: Less aggressive DevTools detection
     const detectDevTools = () => {
-      if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      
+      // ✅ Increased tolerance for mobile keyboard/orientation
+      if (widthDiff > 200 || heightDiff > 200) {
         instantBlur();
         blockContent('DevTools Detected');
         setTimeout(onClose, 2000);
@@ -249,7 +260,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
 
     document.addEventListener('keyup', blockPrintScreen, { capture: true });
     document.addEventListener('keydown', preventKeys, { capture: true, passive: false });
-    const devInterval = setInterval(detectDevTools, 2000);
+    const devInterval = setInterval(detectDevTools, 5000); // ✅ Increased from 2s to 5s
 
     return () => {
       document.removeEventListener('keyup', blockPrintScreen, { capture: true });

@@ -193,7 +193,8 @@ const EditResearch = ({ research, onClose, onSuccess }) => {
 
             {/* Authors */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <label className="flex text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 items-center gap-2">
+git
                 <User size={16} />
                 Authors *
               </label>
