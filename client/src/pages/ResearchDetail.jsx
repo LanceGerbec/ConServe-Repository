@@ -376,26 +376,26 @@ const submitterName = paper?.submittedBy
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+<div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mx-4">
   <div className="flex items-center gap-2 mb-4">
-  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Full Document</h2>
-  <Tooltip content={
-    <div className="text-left space-y-1 max-w-xs">
-      <p className="font-bold text-xs text-white mb-1.5">PROTECTED DOCUMENT</p>
-      <div className="text-xs space-y-0.5 text-gray-200">
-        <p>• Watermarked with your identity</p>
-        <p>• PrintScreen protection active</p>
-        <p>• Copy/paste disabled</p>
-        <p>• All activity logged & monitored</p>
+    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Full Document</h2>
+    <Tooltip content={
+      <div className="text-left space-y-1 max-w-xs">
+        <p className="font-bold text-xs text-white mb-1.5">PROTECTED DOCUMENT</p>
+        <div className="text-xs space-y-0.5 text-gray-200">
+          <p>• Watermarked with your identity</p>
+          <p>• PrintScreen protection active</p>
+          <p>• Copy/paste disabled</p>
+          <p>• All activity logged & monitored</p>
+        </div>
+        <div className="text-xs text-yellow-200 pt-1.5 mt-1.5 border-t border-gray-600">
+          Unauthorized redistribution prohibited
+        </div>
       </div>
-      <div className="text-xs text-yellow-200 pt-1.5 mt-1.5 border-t border-gray-600">
-        Unauthorized redistribution prohibited
-      </div>
-    </div>
-  } position="right">
-    <Info size={18} className="text-blue-600 dark:text-blue-400 cursor-help" />
-  </Tooltip>
-</div>
+    } position="right">
+      <Info size={18} className="text-blue-600 dark:text-blue-400 cursor-help" />
+    </Tooltip>
+  </div>
 
   <div className="border-2 border-dashed border-red-200 dark:border-red-800 rounded-xl p-8 text-center bg-red-50 dark:bg-red-900/10">
     <FileText className="mx-auto text-red-600 dark:text-red-400 mb-3" size={48} />
@@ -407,7 +407,7 @@ const submitterName = paper?.submittedBy
       PDF is strictly for viewing only.
     </p>
     <button
-      onClick={() => setShowPdfViewer(true)}
+      onClick={handleViewPDF}
       className="inline-flex items-center gap-2 px-6 py-3 bg-navy dark:bg-blue-600 hover:bg-navy-700 dark:hover:bg-blue-700 text-white rounded-xl font-semibold transition shadow-lg"
     >
       <FileText size={20} />
