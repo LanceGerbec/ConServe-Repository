@@ -226,6 +226,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   }, [violations, user, isIOS]);
 
   // ✅ FIXED: PrintScreen & DevTools Protection
+// ✅ FIXED: PrintScreen & DevTools Protection (DESKTOP ONLY)
   useEffect(() => {
     const blockPrintScreen = (e) => {
       if (['PrintScreen', 44].includes(e.key || e.keyCode)) {
@@ -245,33 +246,36 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
       }
     };
 
-    // ✅ FIXED: Less aggressive DevTools detection
-    const detectDevTools = () => {
-      const widthDiff = window.outerWidth - window.innerWidth;
-      const heightDiff = window.outerHeight - window.innerHeight;
+    // ✅ FIXED: DevTools detection ONLY on desktop (not mobile)
+    let devInterval;
+    if (!isMobile) {
+      const detectDevTools = () => {
+        const widthDiff = window.outerWidth - window.innerWidth;
+        const heightDiff = window.outerHeight - window.innerHeight;
+        
+        if (widthDiff > 200 || heightDiff > 200) {
+          instantBlur();
+          blockContent('DevTools Detected');
+          setTimeout(onClose, 2000);
+        }
+      };
       
-      // ✅ Increased tolerance for mobile keyboard/orientation
-      if (widthDiff > 200 || heightDiff > 200) {
-        instantBlur();
-        blockContent('DevTools Detected');
-        setTimeout(onClose, 2000);
-      }
-    };
+      devInterval = setInterval(detectDevTools, 5000);
+    }
 
     document.addEventListener('keyup', blockPrintScreen, { capture: true });
     document.addEventListener('keydown', preventKeys, { capture: true, passive: false });
-    const devInterval = setInterval(detectDevTools, 5000); // ✅ Increased from 2s to 5s
 
     return () => {
       document.removeEventListener('keyup', blockPrintScreen, { capture: true });
       document.removeEventListener('keydown', preventKeys, { capture: true });
-      clearInterval(devInterval);
+      if (devInterval) clearInterval(devInterval);
     };
-  }, [violations]);
+  }, [violations, isMobile]);
 
   // ✅ Double-tap zoom (NO CHANGES)
   useEffect(() => {
-    if (!isMobile || !wrapperRef.current) return;
+    if (!isMobile || !wrapperRef.current) return;   
 
     const handleDoubleTap = (e) => {
       const now = Date.now();
