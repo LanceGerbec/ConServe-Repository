@@ -48,8 +48,8 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const MAX_VIOLATIONS = 3;
   const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isMacDesktop = /Macintosh|MacIntel|MacPPC|Mac68K/.test(navigator.userAgent);
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const BASE_SCALE = isMobile ? 1.5 : 1.3;
 
   const showToast = (msg, type = 'warning') => setToast({ show: true, message: msg, type });
