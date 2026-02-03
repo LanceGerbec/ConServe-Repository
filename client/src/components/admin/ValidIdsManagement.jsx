@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User, RefreshCw, Edit2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User, RefreshCw, Edit2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
 import CleanOrphanedModal from './CleanOrphanedModal';
 import Toast from '../common/Toast';
@@ -25,7 +25,7 @@ const ValidIdsManagement = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
 
@@ -81,7 +81,7 @@ const ValidIdsManagement = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        showToast(`✅ Cleaned ${data.cleaned} IDs`);
+        showToast(`Cleaned ${data.cleaned} IDs`);
         setShowCleanModal(false);
         fetchData();
       }
@@ -103,7 +103,7 @@ const ValidIdsManagement = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        showToast(`✅ Deleted ${data.deleted} unused IDs`);
+        showToast(`Deleted ${data.deleted} unused IDs`);
         setShowBulkDeleteModal(false);
         fetchData();
       } else {
@@ -135,7 +135,7 @@ const ValidIdsManagement = () => {
         body: JSON.stringify(body)
       });
       if (res.ok) {
-        showToast('✅ Added');
+        showToast('Added');
         setShowAddModal(false);
         setFormData({ id: '', fullName: '' });
         fetchData();
@@ -168,7 +168,7 @@ const ValidIdsManagement = () => {
       });
       
       if (res.ok) {
-        showToast('✅ Updated');
+        showToast('Updated');
         setShowEditModal(false);
         setEditTarget(null);
         setFormData({ id: '', fullName: '' });
@@ -192,7 +192,7 @@ const ValidIdsManagement = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast('✅ Deleted');
+        showToast('Deleted');
         setShowDeleteModal(false);
         setDeleteTarget(null);
         fetchData();
@@ -289,24 +289,23 @@ const ValidIdsManagement = () => {
             </h2>
           </div>
 
-          {/* ✅ FIX: Changed grid to flex to prevent button disappearance */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            <button onClick={handleCleanOrphaned} disabled={cleaning} className="flex items-center gap-1 bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 text-xs font-bold disabled:opacity-50 flex-1 sm:flex-none justify-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            <button onClick={handleCleanOrphaned} disabled={cleaning} className="flex items-center gap-1 bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 text-xs font-bold disabled:opacity-50 justify-center">
               {cleaning ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               <span>Clean</span>
             </button>
-            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1 bg-navy text-white px-3 py-2 rounded-lg hover:bg-navy-800 text-xs font-bold flex-1 sm:flex-none justify-center">
+            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1 bg-navy text-white px-3 py-2 rounded-lg hover:bg-navy-800 text-xs font-bold justify-center">
               <Plus size={14} />
               <span>Add</span>
             </button>
-            <button onClick={() => setShowBulkModal(true)} className="flex items-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs font-bold flex-1 sm:flex-none justify-center">
+            <button onClick={() => setShowBulkModal(true)} className="flex items-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs font-bold justify-center">
               <Upload size={14} />
               <span>Bulk</span>
             </button>
             <button 
               onClick={() => setShowBulkDeleteModal(true)} 
               disabled={unusedCount === 0}
-              className="flex items-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none justify-center"
+              className="flex items-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed justify-center"
               title={unusedCount === 0 ? 'No unused IDs' : `Delete ${unusedCount} unused IDs`}
             >
               <Trash2 size={14} />
@@ -316,7 +315,7 @@ const ValidIdsManagement = () => {
 
           <div className="grid grid-cols-2 gap-2 mb-3">
             {['student', 'faculty'].map(type => (
-              <button key={type} onClick={() => { setActiveTab(type); setCurrentPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold transition ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+              <button key={type} onClick={() => { setActiveTab(type); setCurrentPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold transition ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 dark:text-gray-300'}`}>
                 {type === 'student' ? <UserCheck size={14} className="inline mr-1" /> : <Users size={14} className="inline mr-1" />}
                 {type.charAt(0).toUpperCase() + type.slice(1)} ({type === 'student' ? studentIds.length : facultyIds.length})
               </button>
@@ -325,19 +324,19 @@ const ValidIdsManagement = () => {
 
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${activeTab}...`} className="w-full pl-9 pr-4 py-2 border rounded-lg focus:border-navy focus:outline-none text-xs" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${activeTab}...`} className="w-full pl-9 pr-4 py-2 border dark:border-gray-600 rounded-lg focus:border-navy dark:focus:border-blue-500 focus:outline-none text-xs bg-white dark:bg-gray-700 dark:text-white" />
           </div>
         </div>
 
         {sortedData.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border">
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700">
             <Icon size={40} className="mx-auto text-gray-400 mb-3 opacity-30" />
             <p className="text-sm mb-3 text-gray-600 dark:text-gray-400">No {activeTab} IDs</p>
-            <button onClick={() => setShowBulkModal(true)} className="text-navy hover:underline font-bold text-xs">Upload IDs</button>
+            <button onClick={() => setShowBulkModal(true)} className="text-navy dark:text-blue-400 hover:underline font-bold text-xs">Upload IDs</button>
           </div>
         ) : (
           <>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
               {/* Mobile View */}
               <div className="block md:hidden divide-y dark:divide-gray-700">
                 {paginatedData.map((item) => (
@@ -451,31 +450,30 @@ const ValidIdsManagement = () => {
               </div>
             </div>
 
-            {/* Pagination - Improved positioning */}
+            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-3">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3 text-xs">
                   <span className="text-gray-600 dark:text-gray-400">
                     Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length}
                   </span>
                   
-                  {/* ✅ FIX: Proper dropdown positioning with z-index */}
-                  <div className="relative">
+                  <div className="relative z-10">
                     <select 
                       value={itemsPerPage} 
                       onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                      className="px-3 py-1.5 border rounded-lg text-xs font-semibold focus:border-navy focus:outline-none bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white appearance-none pr-8 cursor-pointer"
+                      className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-xs font-semibold focus:border-navy dark:focus:border-blue-500 focus:outline-none bg-white dark:bg-gray-700 dark:text-white appearance-none pr-8 cursor-pointer"
                     >
                       <option value={5}>5/page</option>
                       <option value={10}>10/page</option>
                       <option value={20}>20/page</option>
                       <option value={50}>50/page</option>
                     </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" size={14} />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 dark:text-gray-500" size={14} />
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-center gap-1">
+                <div className="flex items-center justify-center gap-1 flex-wrap">
                   <button 
                     onClick={() => handlePageChange(currentPage - 1)} 
                     disabled={currentPage === 1}
@@ -595,7 +593,7 @@ const ValidIdsManagement = () => {
             </div>
             <div className="p-4 space-y-3">
               <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 rounded">
-                <p className="text-xs font-bold text-red-800 dark:text-red-400 mb-1">⚠️ Deleting:</p>
+                <p className="text-xs font-bold text-red-800 dark:text-red-400 mb-1">Deleting:</p>
                 <div className="space-y-1 text-xs text-red-700 dark:text-red-300">
                   <div className="font-mono font-bold">{deleteTarget[idField]}</div>
                   <div className="flex items-center gap-1"><User size={12} /> {deleteTarget.fullName}</div>
@@ -603,7 +601,7 @@ const ValidIdsManagement = () => {
               </div>
               {deleteTarget.isUsed && (
                 <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-3 rounded">
-                  <p className="text-xs font-bold text-orange-800 dark:text-orange-400">🔗 Currently Used</p>
+                  <p className="text-xs font-bold text-orange-800 dark:text-orange-400">Currently Used</p>
                 </div>
               )}
               <div className="flex gap-2">
@@ -631,7 +629,7 @@ const ValidIdsManagement = () => {
             </div>
             <div className="p-4 space-y-3">
               <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 rounded">
-                <p className="text-xs font-bold text-red-800 dark:text-red-400 mb-2">⚠️ WARNING: This will permanently delete:</p>
+                <p className="text-xs font-bold text-red-800 dark:text-red-400 mb-2">WARNING: This will permanently delete:</p>
                 <div className="space-y-1 text-xs text-red-700 dark:text-red-300">
                   <div className="flex items-center gap-2">
                     <Trash2 size={14} />
@@ -645,7 +643,7 @@ const ValidIdsManagement = () => {
               </div>
               
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-3 rounded">
-                <p className="text-xs font-bold text-yellow-800 dark:text-yellow-400">⚡ This action CANNOT be undone!</p>
+                <p className="text-xs font-bold text-yellow-800 dark:text-yellow-400">This action CANNOT be undone!</p>
               </div>
 
               <div className="flex gap-2">
@@ -684,7 +682,7 @@ const ValidIdsManagement = () => {
         />
       )}
 
-      {showBulkModal && <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Uploaded!'); }} />}
+      {showBulkModal && <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('Uploaded!'); }} />}
     </>
   );
 };
