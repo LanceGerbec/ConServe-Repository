@@ -29,8 +29,7 @@ const RoleSelect = () => {
       gradient: 'from-green-500 to-green-600',
       hoverGradient: 'hover:from-green-600 hover:to-green-700',
       bgGradient: 'from-green-50 to-green-100',
-      darkBg: 'dark:from-green-900/10 dark:to-green-800/10',
-      iconBg: 'bg-green-500'
+      darkBg: 'dark:from-green-900/10 dark:to-green-800/10'
     },
     { 
       path: '/login/faculty', 
@@ -40,8 +39,7 @@ const RoleSelect = () => {
       gradient: 'from-blue-500 to-blue-600',
       hoverGradient: 'hover:from-blue-600 hover:to-blue-700',
       bgGradient: 'from-blue-50 to-blue-100',
-      darkBg: 'dark:from-blue-900/10 dark:to-blue-800/10',
-      iconBg: 'bg-blue-500'
+      darkBg: 'dark:from-blue-900/10 dark:to-blue-800/10'
     }
   ];
 
@@ -49,61 +47,61 @@ const RoleSelect = () => {
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
 
-      <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 flex items-center justify-center p-4 sm:p-6">
-        <Link to="/" className="fixed top-4 left-4 z-50 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all shadow-lg">
-          <Home size={20} className="text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+        <Link to="/" className="fixed top-3 left-3 z-50 p-2 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl transition-all shadow-lg">
+          <Home size={18} className="sm:w-5 sm:h-5 text-white" />
         </Link>
 
-        <div className="w-full max-w-5xl">
-          {/* Header Section - Improved Spacing */}
-          <div className="text-center mb-10 sm:mb-14 animate-fade-in px-4">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-5 sm:mb-7 shadow-2xl overflow-hidden">
+        <div className="w-full max-w-6xl">
+          {/* Compact Header */}
+          <div className="text-center mb-4 sm:mb-6 animate-fade-in px-2">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-2xl overflow-hidden">
               {logo ? (
                 <img src={logo} alt="ConServe" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-navy font-bold text-3xl sm:text-4xl">C</span>
+                <span className="text-navy font-bold text-xl sm:text-2xl">C</span>
               )}
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-3 sm:mb-4 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-1 sm:mb-2 leading-tight">
               Welcome to <span className="text-blue-400">CONserve</span>
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-gray-200 px-2 max-w-2xl mx-auto">
+            <p className="text-xs sm:text-sm md:text-base text-gray-200 px-2">
               Select your role to access the research repository
             </p>
           </div>
 
-          {/* Role Cards - Better Balanced Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-10 sm:mb-12 px-4 max-w-4xl mx-auto">
+          {/* Role Cards - Horizontal on Mobile, 2 Columns on Desktop */}
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 px-2 max-w-5xl mx-auto">
             {roles.map((role, index) => (
               <Link 
                 key={role.path} 
                 to={role.path} 
                 className="block group transform hover:scale-105 transition-all duration-300"
-                style={{ animationDelay: `${index * 150}ms` }}
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className={`bg-gradient-to-br ${role.bgGradient} ${role.darkBg} rounded-2xl sm:rounded-3xl p-8 sm:p-10 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white/20 hover:border-white/40 backdrop-blur-sm h-full flex flex-col`}>
+                <div className={`bg-gradient-to-br ${role.bgGradient} ${role.darkBg} rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white/20 hover:border-white/40 backdrop-blur-sm h-full flex flex-col`}>
                   {/* Icon */}
-                  <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${role.gradient} ${role.hoverGradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-all duration-300 shadow-lg`}>
-                    <role.icon className="text-white" size={32} />
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gradient-to-br ${role.gradient} ${role.hoverGradient} rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-all duration-300 shadow-lg`}>
+                    <role.icon className="text-white" size={20} />
                   </div>
                   
                   {/* Content */}
                   <div className="flex-1">
-                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
                       {role.title}
                     </h2>
-                    <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-2">
                       {role.desc}
                     </p>
                   </div>
                   
                   {/* Continue Button */}
-                  <div className="flex items-center justify-between mt-6 pt-6 border-t-2 border-gray-900/10 dark:border-white/10">
-                    <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                  <div className="flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-900/10 dark:border-white/10">
+                    <span className="text-xs sm:text-sm md:text-base font-bold text-gray-900 dark:text-white">
                       Continue
                     </span>
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${role.gradient} rounded-xl flex items-center justify-center group-hover:translate-x-1 transition-transform shadow-md`}>
-                      <ArrowRight size={20} className="text-white" />
+                    <div className={`w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-to-br ${role.gradient} rounded-lg sm:rounded-xl flex items-center justify-center group-hover:translate-x-1 transition-transform shadow-md`}>
+                      <ArrowRight size={16} className="sm:w-5 sm:h-5 text-white" />
                     </div>
                   </div>
                 </div>
@@ -111,24 +109,24 @@ const RoleSelect = () => {
             ))}
           </div>
 
-          {/* Register Section - Better Spacing */}
-          <div className="text-center animate-fade-in px-4 mb-8">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl sm:rounded-3xl p-6 sm:p-8 border-2 border-white/20 shadow-xl max-w-2xl mx-auto">
-              <p className="text-white text-lg sm:text-xl mb-5 font-semibold">
+          {/* Compact Register Section */}
+          <div className="text-center animate-fade-in px-2">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border-2 border-white/20 shadow-xl max-w-3xl mx-auto">
+              <p className="text-white text-sm sm:text-base md:text-lg mb-2 sm:mb-3 font-semibold">
                 Don't have an account?
               </p>
               <Link 
                 to="/register" 
-                className="inline-flex items-center justify-center gap-3 bg-white text-navy px-8 sm:px-12 py-4 sm:py-5 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:bg-gray-100 shadow-lg hover:shadow-2xl hover:scale-105 transition-all group w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 bg-white text-navy px-5 sm:px-8 py-2.5 sm:py-3 md:py-4 rounded-lg sm:rounded-xl font-bold text-sm sm:text-base hover:bg-gray-100 shadow-lg hover:shadow-2xl hover:scale-105 transition-all group w-full sm:w-auto"
               >
                 <span>Register Now</span>
-                <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
 
-          {/* Footer */}
-          <p className="text-center text-xs sm:text-sm text-gray-300 px-4">
+          {/* Compact Footer */}
+          <p className="text-center mt-3 sm:mt-4 text-[10px] sm:text-xs text-gray-300 px-2">
             © 2026 NEUST College of Nursing • Secure Research Repository
           </p>
         </div>
