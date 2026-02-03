@@ -454,23 +454,68 @@ const ValidIdsManagement = () => {
               </div>
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3">
-                <div className="flex items-center justify-between mb-3 text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length}
-                  </span>
-                  <select 
-                    value={itemsPerPage} 
-                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                    className="px-2 py-1 border rounded-lg text-xs font-semibold focus:border-navy focus:outline-none"
-                  >
-                    <option value={5}>5/page</option>
-                    <option value={10}>10/page</option>
-                    <option value={20}>20/page</option>
-                    <option value={50}>50/page</option>
-                  </select>
+          {/* Pagination Controls - Always show if there are items */}
+{currentData.length > 0 && (
+  <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+      {/* Left: Item count */}
+      <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
+        Showing {startIndex + 1}-{Math.min(endIndex, currentData.length)} of {currentData.length}
+      </div>
+
+      {/* Center: Page buttons (only show if multiple pages) */}
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {getPageNumbers().map((page, idx) =>
+            page === '...' ? (
+              <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`min-w-[32px] px-3 py-1.5 rounded-lg font-bold text-xs transition ${
+                  currentPage === page
+                    ? 'bg-navy dark:bg-blue-600 text-white'
+                    : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                {page}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Right: Items per page dropdown - Always visible */}
+      <select
+        value={itemsPerPage}
+        onChange={(e) => {
+          setItemsPerPage(Number(e.target.value));
+          setCurrentPage(1);
+        }}
+        className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-xs font-semibold focus:outline-none focus:border-navy"
+      >
+        <option value={5}>5/page</option>
+        <option value={10}>10/page</option>
+        <option value={20}>20/page</option>
+        <option value={50}>50/page</option>
+      </select>
                 </div>
                 <div className="flex items-center justify-center gap-1">
                   <button 
