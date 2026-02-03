@@ -47,13 +47,13 @@ const RoleSelect = () => {
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
 
-      <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 flex items-center justify-center p-3 sm:p-4">
         <Link to="/" className="fixed top-3 left-3 z-50 p-2 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl transition-all shadow-lg">
           <Home size={18} className="sm:w-5 sm:h-5 text-white" />
         </Link>
 
         <div className="w-full max-w-6xl">
-          {/* Compact Header */}
+          {/* Header */}
           <div className="text-center mb-4 sm:mb-6 animate-fade-in px-2">
             <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-2xl overflow-hidden">
               {logo ? (
@@ -70,8 +70,8 @@ const RoleSelect = () => {
             </p>
           </div>
 
-          {/* Role Cards - Horizontal on Mobile, 2 Columns on Desktop */}
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 px-2 max-w-5xl mx-auto">
+          {/* Role Cards */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 px-2 max-w-5xl mx-auto">
             {roles.map((role, index) => (
               <Link 
                 key={role.path} 
@@ -79,24 +79,24 @@ const RoleSelect = () => {
                 className="block group transform hover:scale-105 transition-all duration-300"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className={`bg-gradient-to-br ${role.bgGradient} ${role.darkBg} rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white/20 hover:border-white/40 backdrop-blur-sm h-full flex flex-col`}>
+                <div className={`bg-gradient-to-br ${role.bgGradient} ${role.darkBg} rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white/20 hover:border-white/40 backdrop-blur-sm h-full flex flex-col min-h-[180px] sm:min-h-[200px]`}>
                   {/* Icon */}
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gradient-to-br ${role.gradient} ${role.hoverGradient} rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-all duration-300 shadow-lg`}>
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gradient-to-br ${role.gradient} ${role.hoverGradient} rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-all duration-300 shadow-lg flex-shrink-0`}>
                     <role.icon className="text-white" size={20} />
                   </div>
                   
                   {/* Content */}
-                  <div className="flex-1">
-                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
+                  <div className="flex-1 flex flex-col">
+                    <h2 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2 flex-shrink-0">
                       {role.title}
                     </h2>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] sm:text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-3 mb-auto">
                       {role.desc}
                     </p>
                   </div>
                   
                   {/* Continue Button */}
-                  <div className="flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-900/10 dark:border-white/10">
+                  <div className="flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-900/10 dark:border-white/10 flex-shrink-0">
                     <span className="text-xs sm:text-sm md:text-base font-bold text-gray-900 dark:text-white">
                       Continue
                     </span>
@@ -109,7 +109,7 @@ const RoleSelect = () => {
             ))}
           </div>
 
-          {/* Compact Register Section */}
+          {/* Register Section */}
           <div className="text-center animate-fade-in px-2">
             <div className="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border-2 border-white/20 shadow-xl max-w-3xl mx-auto">
               <p className="text-white text-sm sm:text-base md:text-lg mb-2 sm:mb-3 font-semibold">
@@ -125,7 +125,7 @@ const RoleSelect = () => {
             </div>
           </div>
 
-          {/* Compact Footer */}
+          {/* Footer */}
           <p className="text-center mt-3 sm:mt-4 text-[10px] sm:text-xs text-gray-300 px-2">
             © 2026 NEUST College of Nursing • Secure Research Repository
           </p>
