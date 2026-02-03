@@ -1,6 +1,5 @@
-// client/src/pages/Explore.jsx - FIXED DARK MODE CONTRAST VERSION
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, X, Eye, Calendar, BookOpen, SlidersHorizontal, Sparkles, Info, TrendingUp, Lightbulb, Grid, List, Award, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const useDebounce = (value, delay) => {
@@ -184,6 +183,89 @@ const TipsModal = memo(({ onClose }) => (
 ));
 TipsModal.displayName = 'TipsModal';
 
+const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems }) => {
+  const pages = useMemo(() => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      }
+    }
+
+    let prev = 0;
+    for (const i of range) {
+      if (prev + 1 !== i) rangeWithDots.push('...');
+      rangeWithDots.push(i);
+      prev = i;
+    }
+
+    return rangeWithDots;
+  }, [currentPage, totalPages]);
+
+  const start = (currentPage - 1) * itemsPerPage + 1;
+  const end = Math.min(currentPage * itemsPerPage, totalItems);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
+        <span className="font-semibold">Showing {start}-{end} of {totalItems}</span>
+        <select 
+          value={itemsPerPage} 
+          onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+          className="px-2 py-1 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold"
+        >
+          <option value={10}>10/page</option>
+          <option value={20}>20/page</option>
+          <option value={50}>50/page</option>
+          <option value={100}>100/page</option>
+        </select>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
+            <ChevronLeft size={16} className="text-gray-700 dark:text-gray-200" />
+          </button>
+
+          {pages.map((page, idx) => 
+            page === '...' ? (
+              <span key={`dots-${idx}`} className="px-2 text-gray-500 dark:text-gray-400">...</span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`min-w-[36px] px-3 py-2 rounded-lg font-semibold text-sm transition ${
+                  currentPage === page
+                    ? 'bg-navy dark:bg-accent text-white shadow-md'
+                    : 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                {page}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
+            <ChevronRight size={16} className="text-gray-700 dark:text-gray-200" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+Pagination.displayName = 'Pagination';
+
 const Explore = () => {
   const navigate = useNavigate();
   const [papers, setPapers] = useState([]);
@@ -193,6 +275,8 @@ const Explore = () => {
   const [searchMode, setSearchMode] = useState('simple');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('exploreViewMode') || 'grid');
   const [sortBy, setSortBy] = useState(() => localStorage.getItem('exploreSortBy') || 'relevance');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(() => Number(localStorage.getItem('exploreItemsPerPage')) || 20);
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
   const [filters, setFilters] = useState({ category: '', yearCompleted: '', subjectArea: '', author: '' });
@@ -221,6 +305,15 @@ const Explore = () => {
   }, [sortBy]);
 
   useEffect(() => {
+    localStorage.setItem('exploreItemsPerPage', itemsPerPage);
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  useEffect(() => {
     if (debouncedQuery && debouncedQuery.length >= 2 && searchMode === 'simple') {
       generateSuggestions(debouncedQuery);
     } else {
@@ -234,7 +327,7 @@ const Explore = () => {
     try {
       const token = localStorage.getItem('token');
       const [res, recRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/research?status=approved&limit=100`, { headers: { Authorization: `Bearer ${token}` }}),
+        fetch(`${import.meta.env.VITE_API_URL}/research?status=approved&limit=1000`, { headers: { Authorization: `Bearer ${token}` }}),
         fetch(`${import.meta.env.VITE_API_URL}/search/recommendations?limit=6`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ ok: false }))
       ]);
       if (res.ok) {
@@ -295,15 +388,25 @@ const Explore = () => {
     }
   }, [papers, sortBy]);
 
+  const paginatedPapers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return sortedPapers.slice(start, end);
+  }, [sortedPapers, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(sortedPapers.length / itemsPerPage);
+
   const performSearch = async () => {
     setLoading(true);
     setActiveQuery(query);
     setActiveFilters(filters);
     setShowSuggestions(false);
+    setCurrentPage(1);
     try {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams({
         status: 'approved',
+        limit: 1000,
         ...(query && { [searchMode === 'advanced' ? 'query' : 'search']: query }),
         ...(filters.category && { category: filters.category }),
         ...(filters.yearCompleted && { yearCompleted: filters.yearCompleted }),
@@ -341,6 +444,7 @@ const Explore = () => {
     setSuggestions([]);
     setShowSuggestions(false);
     setSortBy('relevance');
+    setCurrentPage(1);
     setPapers(allPapers);
   }, [allPapers]);
 
@@ -480,10 +584,16 @@ const Explore = () => {
       </div>
 
       <div className="flex items-center justify-between px-4 mb-3 gap-2">
-        <p className="text-sm text-gray-600 dark:text-gray-300 flex-shrink-0"><strong className="text-navy dark:text-accent text-base">{sortedPapers.length}</strong> papers</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 flex-shrink-0">
+          <strong className="text-navy dark:text-accent text-base">{sortedPapers.length}</strong> papers
+        </p>
         
         <div className="flex items-center gap-2">
-          {activeCount > 0 && <button onClick={clearAll} className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold flex items-center gap-1 flex-shrink-0"><X size={12} />Clear</button>}
+          {activeCount > 0 && (
+            <button onClick={clearAll} className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold flex items-center gap-1 flex-shrink-0">
+              <X size={12} />Clear
+            </button>
+          )}
           
           <select 
             value={sortBy} 
@@ -548,9 +658,30 @@ const Explore = () => {
           {activeCount > 0 && <button onClick={clearAll} className="px-5 py-2 bg-navy hover:bg-navy-800 text-white rounded-lg transition font-semibold text-sm">Show all</button>}
         </div>
       ) : (
-        <div className={`px-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}`}>
-          {sortedPapers.map((paper) => <PaperCard key={paper._id} paper={paper} onClick={(id) => navigate(`/research/${id}`)} highlight={activeQuery} viewMode={viewMode} />)}
-        </div>
+        <>
+          <div className={`px-4 mb-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}`}>
+            {paginatedPapers.map((paper) => (
+              <PaperCard 
+                key={paper._id} 
+                paper={paper} 
+                onClick={(id) => navigate(`/research/${id}`)} 
+                highlight={activeQuery} 
+                viewMode={viewMode} 
+              />
+            ))}
+          </div>
+
+          <div className="px-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              onItemsPerPageChange={setItemsPerPage}
+              totalItems={sortedPapers.length}
+            />
+          </div>
+        </>
       )}
     </div>
   );
