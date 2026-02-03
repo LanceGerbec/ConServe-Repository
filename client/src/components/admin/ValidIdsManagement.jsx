@@ -1,6 +1,6 @@
 // client/src/components/admin/ValidIdsManagement.jsx
-import { useState, useEffect } from 'react';
-import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User, RefreshCw, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { UserCheck, Users, Plus, Search, Trash2, Upload, CheckCircle, X, AlertTriangle, User, RefreshCw, Edit2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import BulkUploadModal from './BulkUploadModal';
 import CleanOrphanedModal from './CleanOrphanedModal';
 import Toast from '../common/Toast';
@@ -25,10 +25,17 @@ const ValidIdsManagement = () => {
   const [formData, setFormData] = useState({ id: '', fullName: '' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   const showToast = (msg, type = 'success') => setToast({ show: true, message: msg, type });
 
-  useEffect(() => { fetchData(); }, [activeTab, search]);
+  useEffect(() => { 
+    fetchData(); 
+    setCurrentPage(1); // Reset to page 1 when tab or search changes
+  }, [activeTab, search]);
 
   const fetchData = async () => {
     try {
@@ -49,18 +56,13 @@ const ValidIdsManagement = () => {
     }
   };
 
-  // 🆕 REAL-TIME ORPHANED CHECK
   const handleCleanOrphaned = async () => {
     try {
       const token = localStorage.getItem('token');
-      const endpoint = activeTab === 'student' 
-        ? 'valid-student-ids/check-orphaned' 
-        : 'valid-faculty-ids/check-orphaned';
-      
+      const endpoint = activeTab === 'student' ? 'valid-student-ids/check-orphaned' : 'valid-faculty-ids/check-orphaned';
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       if (res.ok) {
         const data = await res.json();
         setOrphanedCount(data.orphanedCount);
@@ -207,11 +209,11 @@ const ValidIdsManagement = () => {
   };
 
   const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+    setSortConfig(prev => ({ 
+      key, 
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' 
+    }));
+    setCurrentPage(1); // Reset to page 1 when sorting
   };
 
   const getSortedData = () => {
@@ -251,13 +253,29 @@ const ValidIdsManagement = () => {
     return data.filter(item => !item.isUsed).length;
   };
 
+  // Pagination logic
+  const sortedData = getSortedData();
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedData.slice(start, start + itemsPerPage);
+  }, [sortedData, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
     </div>
   );
 
-  const currentData = getSortedData();
   const Icon = activeTab === 'student' ? UserCheck : Users;
   const idField = activeTab === 'student' ? 'studentId' : 'facultyId';
   const unusedCount = getUnusedCount();
@@ -271,7 +289,7 @@ const ValidIdsManagement = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Icon size={20} />
-              <span>Valid IDs ({currentData.length})</span>
+              <span>Valid IDs ({sortedData.length})</span>
             </h2>
           </div>
 
@@ -301,7 +319,7 @@ const ValidIdsManagement = () => {
 
           <div className="grid grid-cols-2 gap-2 mb-3">
             {['student', 'faculty'].map(type => (
-              <button key={type} onClick={() => setActiveTab(type)} className={`px-3 py-2 rounded-lg text-xs font-bold ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <button key={type} onClick={() => { setActiveTab(type); setCurrentPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold ${activeTab === type ? 'bg-navy text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
                 {type === 'student' ? <UserCheck size={14} className="inline mr-1" /> : <Users size={14} className="inline mr-1" />}
                 {type.charAt(0).toUpperCase() + type.slice(1)} ({type === 'student' ? studentIds.length : facultyIds.length})
               </button>
@@ -314,128 +332,209 @@ const ValidIdsManagement = () => {
           </div>
         </div>
 
-        {currentData.length === 0 ? (
+        {sortedData.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border">
             <Icon size={40} className="mx-auto text-gray-400 mb-3 opacity-30" />
             <p className="text-sm mb-3">No {activeTab} IDs</p>
             <button onClick={() => setShowBulkModal(true)} className="text-navy hover:underline font-bold text-xs">Upload IDs</button>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
-            <div className="block md:hidden divide-y">
-              {currentData.map((item) => (
-                <div key={item._id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-900">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="font-mono font-bold text-sm mb-1">{item[idField]}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{item.fullName}</div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
-                        {item.isUsed && <CheckCircle size={14} className="text-green-600" />}
+          <>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
+              {/* Mobile View */}
+              <div className="block md:hidden divide-y">
+                {paginatedData.map((item) => (
+                  <div key={item._id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-900">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="font-mono font-bold text-sm mb-1">{item[idField]}</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{item.fullName}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
+                          {item.isUsed && <CheckCircle size={14} className="text-green-600" />}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => { 
-                          if (item.isUsed) {
-                            showToast('Cannot edit used ID', 'warning');
-                            return;
-                          }
-                          setEditTarget(item); 
-                          setFormData({ id: item[idField], fullName: item.fullName }); 
-                          setShowEditModal(true); 
-                        }} 
-                        disabled={item.isUsed}
-                        className="text-blue-600 hover:text-blue-700 p-1.5 disabled:opacity-30"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1.5">
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => { 
+                            if (item.isUsed) {
+                              showToast('Cannot edit used ID', 'warning');
+                              return;
+                            }
+                            setEditTarget(item); 
+                            setFormData({ id: item[idField], fullName: item.fullName }); 
+                            setShowEditModal(true); 
+                          }} 
+                          disabled={item.isUsed}
+                          className="text-blue-600 hover:text-blue-700 p-1.5 disabled:opacity-30"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1.5">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-900 border-b">
+                    <tr>
+                      <th onClick={() => handleSort('id')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
+                        <div className="flex items-center gap-1">
+                          {activeTab === 'student' ? 'Student ID' : 'Faculty ID'}
+                          <SortIcon columnKey="id" />
+                        </div>
+                      </th>
+                      <th onClick={() => handleSort('name')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
+                        <div className="flex items-center gap-1">
+                          Full Name
+                          <SortIcon columnKey="name" />
+                        </div>
+                      </th>
+                      <th onClick={() => handleSort('status')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
+                        <div className="flex items-center gap-1">
+                          Status
+                          <SortIcon columnKey="status" />
+                        </div>
+                      </th>
+                      <th onClick={() => handleSort('date')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
+                        <div className="flex items-center gap-1">
+                          Date Added
+                          <SortIcon columnKey="date" />
+                        </div>
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold">Used</th>
+                      <th className="px-4 py-2 text-right text-xs font-bold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {paginatedData.map((item) => (
+                      <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
+                        <td className="px-4 py-3 font-mono font-bold text-xs">{item[idField]}</td>
+                        <td className="px-4 py-3 text-xs">{item.fullName}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-3">
+                          {item.isUsed ? <CheckCircle size={14} className="text-green-600" /> : <span className="text-gray-400 text-xs">No</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button 
+                              onClick={() => {
+                                if (item.isUsed) {
+                                  showToast('Cannot edit used ID', 'warning');
+                                  return;
+                                }
+                                setEditTarget(item);
+                                setFormData({ id: item[idField], fullName: item.fullName });
+                                setShowEditModal(true);
+                              }}
+                              disabled={item.isUsed}
+                              className="text-blue-600 hover:text-blue-700 p-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title={item.isUsed ? 'Cannot edit: Already used' : 'Edit'}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-900 border-b">
-                  <tr>
-                    <th onClick={() => handleSort('id')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
-                      <div className="flex items-center gap-1">
-                        {activeTab === 'student' ? 'Student ID' : 'Faculty ID'}
-                        <SortIcon columnKey="id" />
-                      </div>
-                    </th>
-                    <th onClick={() => handleSort('name')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
-                      <div className="flex items-center gap-1">
-                        Full Name
-                        <SortIcon columnKey="name" />
-                      </div>
-                    </th>
-                    <th onClick={() => handleSort('status')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
-                      <div className="flex items-center gap-1">
-                        Status
-                        <SortIcon columnKey="status" />
-                      </div>
-                    </th>
-                    <th onClick={() => handleSort('date')} className="px-4 py-2 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
-                      <div className="flex items-center gap-1">
-                        Date Added
-                        <SortIcon columnKey="date" />
-                      </div>
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-bold">Used</th>
-                    <th className="px-4 py-2 text-right text-xs font-bold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {currentData.map((item) => (
-                    <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                      <td className="px-4 py-3 font-mono font-bold text-xs">{item[idField]}</td>
-                      <td className="px-4 py-3 text-xs">{item.fullName}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{item.status}</span>
-                      </td>
-                      <td className="px-4 py-3 text-xs">{new Date(item.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3">
-                        {item.isUsed ? <CheckCircle size={14} className="text-green-600" /> : <span className="text-gray-400 text-xs">No</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button 
-                            onClick={() => {
-                              if (item.isUsed) {
-                                showToast('Cannot edit used ID', 'warning');
-                                return;
-                              }
-                              setEditTarget(item);
-                              setFormData({ id: item[idField], fullName: item.fullName });
-                              setShowEditModal(true);
-                            }}
-                            disabled={item.isUsed}
-                            className="text-blue-600 hover:text-blue-700 p-1 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title={item.isUsed ? 'Cannot edit: Already used' : 'Edit'}
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3">
+                <div className="flex items-center justify-between mb-3 text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length}
+                  </span>
+                  <select 
+                    value={itemsPerPage} 
+                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    className="px-2 py-1 border rounded-lg text-xs font-semibold focus:border-navy focus:outline-none"
+                  >
+                    <option value={5}>5/page</option>
+                    <option value={10}>10/page</option>
+                    <option value={20}>20/page</option>
+                    <option value={50}>50/page</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  <button 
+                    onClick={() => handlePageChange(currentPage - 1)} 
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      if (totalPages <= 7) return true;
+                      if (page === 1 || page === totalPages) return true;
+                      if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                      return false;
+                    })
+                    .map((page, idx, arr) => {
+                      if (idx > 0 && page - arr[idx - 1] > 1) {
+                        return [
+                          <span key={`dots-${page}`} className="px-2 text-gray-400">...</span>,
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`min-w-[32px] px-2 py-1 rounded-lg text-xs font-bold ${
+                              currentPage === page 
+                                ? 'bg-navy text-white' 
+                                : 'border hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
                           >
-                            <Edit2 size={14} />
+                            {page}
                           </button>
-                          <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-700 p-1">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                        ];
+                      }
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`min-w-[32px] px-2 py-1 rounded-lg text-xs font-bold ${
+                            currentPage === page 
+                              ? 'bg-navy text-white' 
+                              : 'border hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  
+                  <button 
+                    onClick={() => handlePageChange(currentPage + 1)} 
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* ADD MODAL */}
+      {/* Modals remain the same - Add, Edit, Delete, Bulk Delete, Clean Orphaned, Bulk Upload */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-4">
@@ -457,7 +556,6 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
-      {/* EDIT MODAL */}
       {showEditModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-4">
@@ -479,7 +577,6 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
-      {/* DELETE MODAL */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full border-2 border-red-500">
@@ -515,7 +612,6 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
-      {/* BULK DELETE MODAL */}
       {showBulkDeleteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full border-2 border-red-500">
@@ -571,7 +667,6 @@ const ValidIdsManagement = () => {
         </div>
       )}
 
-      {/* CLEAN ORPHANED MODAL */}
       {showCleanModal && (
         <CleanOrphanedModal
           isOpen={showCleanModal}
@@ -583,7 +678,6 @@ const ValidIdsManagement = () => {
         />
       )}
 
-      {/* BULK UPLOAD MODAL */}
       {showBulkModal && <BulkUploadModal type={activeTab} onClose={() => setShowBulkModal(false)} onSuccess={() => { fetchData(); setShowBulkModal(false); showToast('✅ Uploaded!'); }} />}
     </>
   );
