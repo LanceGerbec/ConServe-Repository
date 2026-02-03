@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, memo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload, Settings } from 'lucide-react';
+// client/src/components/dashboard/AdminDashboard.jsx
+import { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload, Settings, ChevronLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AnalyticsHub from '../analytics/AnalyticsHub';
@@ -13,10 +14,64 @@ import ConfirmModal from '../common/ConfirmModal';
 import DeleteUserModal from '../admin/DeleteUserModal';
 import AdminManagement from '../admin/AdminManagement';
 
-
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems }) => {
+  const pages = useMemo(() => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      }
+    }
+    let prev = 0;
+    for (const i of range) {
+      if (prev + 1 !== i) rangeWithDots.push('...');
+      rangeWithDots.push(i);
+      prev = i;
+    }
+    return rangeWithDots;
+  }, [currentPage, totalPages]);
 
+  const start = (currentPage - 1) * itemsPerPage + 1;
+  const end = Math.min(currentPage * itemsPerPage, totalItems);
+
+  if (totalItems === 0) return null;
+
+  return (
+    <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
+        <span className="font-semibold">Showing {start}-{end} of {totalItems}</span>
+        <select value={itemsPerPage} onChange={(e) => onItemsPerPageChange(Number(e.target.value))} className="px-2 py-1 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold text-xs">
+          <option value={5}>5/page</option>
+          <option value={10}>10/page</option>
+          <option value={20}>20/page</option>
+          <option value={50}>50/page</option>
+        </select>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <ChevronLeft size={14} className="text-gray-700 dark:text-gray-200" />
+          </button>
+          {pages.map((page, idx) => page === '...' ? (
+            <span key={`dots-${idx}`} className="px-2 text-gray-500 dark:text-gray-400">...</span>
+          ) : (
+            <button key={page} onClick={() => onPageChange(page)} className={`min-w-[32px] px-2 py-1.5 rounded-lg font-semibold text-xs transition ${currentPage === page ? 'bg-navy dark:bg-accent text-white shadow-md' : 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+              {page}
+            </button>
+          ))}
+          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <ChevronRight size={14} className="text-gray-700 dark:text-gray-200" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+Pagination.displayName = 'Pagination';
 
 const StatCard = memo(({ icon: Icon, label, value, color, onClick }) => (
   <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 transition-all ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''}`}>
@@ -32,6 +87,7 @@ const StatCard = memo(({ icon: Icon, label, value, color, onClick }) => (
     </div>
   </div>
 ));
+StatCard.displayName = 'StatCard';
 
 const ViewToggle = memo(({ mode, onChange }) => (
   <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
@@ -43,6 +99,7 @@ const ViewToggle = memo(({ mode, onChange }) => (
     </button>
   </div>
 ));
+ViewToggle.displayName = 'ViewToggle';
 
 const SortableHeader = memo(({ label, sortKey, currentSort, onSort }) => {
   const isActive = currentSort.key === sortKey;
@@ -55,6 +112,7 @@ const SortableHeader = memo(({ label, sortKey, currentSort, onSort }) => {
     </th>
   );
 });
+SortableHeader.displayName = 'SortableHeader';
 
 const BulkActionsBar = memo(({ count, onDelete, onCancel }) => (
   <div className="fixed top-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-navy dark:bg-gray-800 text-white p-4 rounded-xl shadow-2xl z-50 animate-slide-up border-2 border-white/20">
@@ -69,6 +127,7 @@ const BulkActionsBar = memo(({ count, onDelete, onCancel }) => (
     </div>
   </div>
 ));
+BulkActionsBar.displayName = 'BulkActionsBar';
 
 const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }) => {
   const isSelf = user._id === currentUserId;
@@ -89,6 +148,7 @@ const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }
     </div>
   );
 });
+UserGridCard.displayName = 'UserGridCard';
 
 const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId }) => {
   const isSelf = user._id === currentUserId;
@@ -114,6 +174,7 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
     </tr>
   );
 });
+UserListRow.displayName = 'UserListRow';
 
 const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview, onManageAwards }) => (
   <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
@@ -131,6 +192,7 @@ const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview, onM
     </div>
   </div>
 ));
+PaperGridCard.displayName = 'PaperGridCard';
 
 const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview, onManageAwards }) => (
   <tr className={`transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
@@ -156,6 +218,7 @@ const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview, onMa
     </td>
   </tr>
 ));
+PaperListRow.displayName = 'PaperListRow';
 
 const PendingUserCard = memo(({ user, onApprove, onReject }) => (
   <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
@@ -172,6 +235,7 @@ const PendingUserCard = memo(({ user, onApprove, onReject }) => (
     </div>
   </div>
 ));
+PendingUserCard.displayName = 'PendingUserCard';
 
 const PendingResearchCard = memo(({ paper, onReview }) => (
   <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
@@ -183,6 +247,7 @@ const PendingResearchCard = memo(({ paper, onReview }) => (
     </button>
   </div>
 ));
+PendingResearchCard.displayName = 'PendingResearchCard';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -195,6 +260,17 @@ const AdminDashboard = () => {
   const [selectedPapers, setSelectedPapers] = useState([]);
   const [userSortConfig, setUserSortConfig] = useState({ key: null, direction: 'asc' });
   const [paperSortConfig, setPaperSortConfig] = useState({ key: null, direction: 'asc' });
+  
+  // Pagination states
+  const [pendingUsersPage, setPendingUsersPage] = useState(1);
+  const [pendingUsersPerPage, setPendingUsersPerPage] = useState(5);
+  const [pendingResearchPage, setPendingResearchPage] = useState(1);
+  const [pendingResearchPerPage, setPendingResearchPerPage] = useState(5);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPerPage, setUsersPerPage] = useState(10);
+  const [papersPage, setPapersPage] = useState(1);
+  const [papersPerPage, setPapersPerPage] = useState(10);
+  
   const [stats, setStats] = useState({ users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: { total: 0, pending: 0, approved: 0, rejected: 0 } });
   const [allUsers, setAllUsers] = useState([]);
   const [allResearch, setAllResearch] = useState([]);
@@ -494,19 +570,39 @@ const AdminDashboard = () => {
   }, [showToast]);
 
   const filteredUsers = allUsers.filter(u => {
-  const matchesSearch = search ? (
-    u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
-    u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  ) : true;
-  
-  const matchesRole = roleFilter === 'all' ? true : u.role === roleFilter;
-  
-  return matchesSearch && matchesRole;
-});
+    const matchesSearch = search ? (
+      u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
+      u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
+      u.email?.toLowerCase().includes(search.toLowerCase())
+    ) : true;
+    const matchesRole = roleFilter === 'all' ? true : u.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
   const filteredResearch = allResearch.filter(p => search ? p.title?.toLowerCase().includes(search.toLowerCase()) : true);
   const sortedUsers = getSortedUsers(filteredUsers);
   const sortedPapers = getSortedPapers(filteredResearch);
+
+  // Paginated data
+  const paginatedPendingUsers = useMemo(() => {
+    const start = (pendingUsersPage - 1) * pendingUsersPerPage;
+    return pendingUsers.slice(start, start + pendingUsersPerPage);
+  }, [pendingUsers, pendingUsersPage, pendingUsersPerPage]);
+
+  const paginatedPendingResearch = useMemo(() => {
+    const start = (pendingResearchPage - 1) * pendingResearchPerPage;
+    return pendingResearch.slice(start, start + pendingResearchPerPage);
+  }, [pendingResearch, pendingResearchPage, pendingResearchPerPage]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (usersPage - 1) * usersPerPage;
+    return sortedUsers.slice(start, start + usersPerPage);
+  }, [sortedUsers, usersPage, usersPerPage]);
+
+  const paginatedPapers = useMemo(() => {
+    const start = (papersPage - 1) * papersPerPage;
+    return sortedPapers.slice(start, start + papersPerPage);
+  }, [sortedPapers, papersPage, papersPerPage]);
 
   if (loading) {
     return (
@@ -523,20 +619,17 @@ const AdminDashboard = () => {
     { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
   ];
 
-const tabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'users', label: 'Users' },
-  { id: 'research', label: 'Papers' },
-  { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'valid-ids', label: 'Valid IDs' },
-  { id: 'team', label: 'Team' },
-  { id: 'settings', label: 'Settings' },
-  ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : [])
-];
-
-// ADD THIS DEBUG LINE
-console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.role, tabs: tabs.map(t => t.label) });
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'users', label: 'Users' },
+    { id: 'research', label: 'Papers' },
+    { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'valid-ids', label: 'Valid IDs' },
+    { id: 'team', label: 'Team' },
+    { id: 'settings', label: 'Settings' },
+    ...(user?.isSuperAdmin ? [{ id: 'admins', label: 'Manage Admins' }] : [])
+  ];
 
   return (
     <>
@@ -652,9 +745,19 @@ console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.r
                   {pendingUsers.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
                   ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {pendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
-                    </div>
+                    <>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {paginatedPendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
+                      </div>
+                      <Pagination
+                        currentPage={pendingUsersPage}
+                        totalPages={Math.ceil(pendingUsers.length / pendingUsersPerPage)}
+                        onPageChange={setPendingUsersPage}
+                        itemsPerPage={pendingUsersPerPage}
+                        onItemsPerPageChange={(val) => { setPendingUsersPerPage(val); setPendingUsersPage(1); }}
+                        totalItems={pendingUsers.length}
+                      />
+                    </>
                   )}
                 </div>
 
@@ -665,9 +768,19 @@ console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.r
                   {pendingResearch.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
                   ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {pendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
-                    </div>
+                    <>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {paginatedPendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
+                      </div>
+                      <Pagination
+                        currentPage={pendingResearchPage}
+                        totalPages={Math.ceil(pendingResearch.length / pendingResearchPerPage)}
+                        onPageChange={setPendingResearchPage}
+                        itemsPerPage={pendingResearchPerPage}
+                        onItemsPerPageChange={(val) => { setPendingResearchPerPage(val); setPendingResearchPage(1); }}
+                        totalItems={pendingResearch.length}
+                      />
+                    </>
                   )}
                 </div>
               </div>
@@ -675,97 +788,68 @@ console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.r
           )}
 
           {activeTab === 'users' && (
-  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
+                  </h2>
+                  <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X size={18} /></button>}
+                  </div>
+                  <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl">
+                    <option value="all">All Roles</option>
+                    <option value="student">Students</option>
+                    <option value="faculty">Faculty</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} />
+                  <span>Select All</span>
+                </div>
+              </div>
 
-    {/* HEADER */}
-    <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
-        </h2>
-        <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
-      </div>
+              {userViewMode === 'grid' ? (
+                <div className="p-4">
+                  {paginatedUsers.length === 0 ? (
+                    <div className="text-center py-12">No users found</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {paginatedUsers.map(u => (
+                        <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative overflow-auto max-h-[600px]">
+                  <table className="w-full">
+                    <tbody>
+                      {paginatedUsers.map(u => (
+                        <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-      <div className="flex items-center gap-3 mb-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search users..."
-            className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-              <X size={18} />
-            </button>
+              <div className="p-4">
+                <Pagination
+                  currentPage={usersPage}
+                  totalPages={Math.ceil(sortedUsers.length / usersPerPage)}
+                  onPageChange={setUsersPage}
+                  itemsPerPage={usersPerPage}
+                  onItemsPerPageChange={(val) => { setUsersPerPage(val); setUsersPage(1); }}
+                  totalItems={sortedUsers.length}
+                />
+              </div>
+            </div>
           )}
-        </div>
-
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl"
-        >
-          <option value="all">All Roles</option>
-          <option value="student">Students</option>
-          <option value="faculty">Faculty</option>
-        </select>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0}
-          onChange={handleSelectAllUsers}
-        />
-        <span>Select All</span>
-      </div>
-    </div>
-
-    {/* BODY */}
-    {userViewMode === 'grid' ? (
-      <div className="p-4">
-        {sortedUsers.length === 0 ? (
-          <div className="text-center py-12">No users found</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sortedUsers.map(u => (
-              <UserGridCard
-                key={u._id}
-                user={u}
-                selected={selectedUsers.includes(u._id)}
-                onSelect={handleSelectUser}
-                onDelete={handleDeleteUser}
-                currentUserId={user._id}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="relative overflow-auto max-h-[600px]">
-        <table className="w-full">
-          <tbody>
-            {sortedUsers.map(u => (
-              <UserListRow
-                key={u._id}
-                user={u}
-                selected={selectedUsers.includes(u._id)}
-                onSelect={handleSelectUser}
-                onDelete={handleDeleteUser}
-                currentUserId={user._id}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-
-  </div>
-)}
-
 
           {activeTab === 'research' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -790,11 +874,11 @@ console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.r
               </div>
               {paperViewMode === 'grid' ? (
                 <div className="p-4">
-                  {sortedPapers.length === 0 ? (
+                  {paginatedPapers.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">No papers found</div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {sortedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+                      {paginatedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
                     </div>
                   )}
                 </div>
@@ -814,15 +898,25 @@ console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.r
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {sortedPapers.length === 0 ? (
+                      {paginatedPapers.length === 0 ? (
                         <tr><td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td></tr>
                       ) : (
-                        sortedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
+                        paginatedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
                       )}
                     </tbody>
                   </table>
                 </div>
               )}
+              <div className="p-4">
+                <Pagination
+                  currentPage={papersPage}
+                  totalPages={Math.ceil(sortedPapers.length / papersPerPage)}
+                  onPageChange={setPapersPage}
+                  itemsPerPage={papersPerPage}
+                  onItemsPerPageChange={(val) => { setPapersPerPage(val); setPapersPage(1); }}
+                  totalItems={sortedPapers.length}
+                />
+              </div>
             </div>
           )}
 
@@ -857,10 +951,10 @@ console.log('🔍 USER DATA:', { isSuperAdmin: user?.isSuperAdmin, role: user?.r
           )}
 
           {activeTab === 'analytics' && <AnalyticsHub />}
-{activeTab === 'valid-ids' && <ValidIdsManagement />}
-{activeTab === 'team' && <TeamManagement />}
-{activeTab === 'settings' && <SettingsManagement />}
-{activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />}
+          {activeTab === 'valid-ids' && <ValidIdsManagement />}
+          {activeTab === 'team' && <TeamManagement />}
+          {activeTab === 'settings' && <SettingsManagement />}
+          {activeTab === 'admins' && user?.isSuperAdmin && <AdminManagement />}
         </div>
       </div>
 
