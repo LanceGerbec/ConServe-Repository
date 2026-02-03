@@ -5,11 +5,10 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 
-// Lazy load route components
 const RoleSelect = lazy(() => import('./pages/RoleSelect'));
 const StudentLogin = lazy(() => import('./components/auth/StudentLogin'));
 const FacultyLogin = lazy(() => import('./components/auth/FacultyLogin'));
-const AdminLogin = lazy(() => import('./components/auth/AdminLogin'));
+const AdminPortal = lazy(() => import('./pages/AdminPortal'));
 const Register = lazy(() => import('./components/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -23,7 +22,6 @@ const Explore = lazy(() => import('./pages/Explore'));
 const ResearchDetail = lazy(() => import('./pages/ResearchDetail'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 
-// Loading component
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
@@ -46,7 +44,7 @@ function App() {
               <Route path="/login" element={<RoleSelect />} />
               <Route path="/login/student" element={<StudentLogin />} />
               <Route path="/login/faculty" element={<FacultyLogin />} />
-              <Route path="/login/admin" element={<AdminLogin />} />
+              <Route path="/portal/admin" element={<AdminPortal />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -58,6 +56,7 @@ function App() {
 
               <Route path="/browse" element={<Navigate to="/explore" replace />} />
               <Route path="/search" element={<Navigate to="/explore" replace />} />
+              <Route path="/login/admin" element={<Navigate to="/portal/admin" replace />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
