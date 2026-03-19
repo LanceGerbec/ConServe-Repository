@@ -48,7 +48,7 @@ const About = () => {
           CONserve is the official digital research repository of the Nueva Ecija University of Science and Technology (NEUST) College of Nursing. It serves as a centralized and secure archive for nursing research papers, theses, and scholarly publications produced by students and faculty.
         </p>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-         Designed to support academic integrity and knowledge sharing, CONserve provides a trusted platform where nursing research is preserved, organized, and made accessible to the academic community. By connecting students, faculty, and researchers, the system strengthens collaboration and promotes evidence-based nursing practice.
+          Designed to support academic integrity and knowledge sharing, CONserve provides a trusted platform where nursing research is preserved, organized, and made accessible to the academic community. By connecting students, faculty, and researchers, the system strengthens collaboration and promotes evidence-based nursing practice.
         </p>
       </div>
 
@@ -102,7 +102,7 @@ const About = () => {
             </button>
           )}
         </div>
-        
+
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy dark:border-blue-500 mx-auto"></div>
@@ -122,7 +122,6 @@ const About = () => {
                     </div>
                   )}
                 </div>
-                
                 <div className="text-center flex flex-col items-center min-h-[70px] sm:min-h-[65px]">
                   <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight mb-0.5 line-clamp-2">
                     {member.name}
@@ -130,8 +129,9 @@ const About = () => {
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1">
                     {member.role}
                   </p>
+                  {/* ✅ Now dynamic — set per card in TeamManagement */}
                   <p className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 mt-0.5 line-clamp-1">
-                    NEUST College of Nursing
+                    {member.affiliation || 'NEUST College of Nursing'}
                   </p>
                 </div>
               </div>

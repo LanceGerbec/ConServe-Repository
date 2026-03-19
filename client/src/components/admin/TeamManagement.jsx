@@ -9,7 +9,7 @@ const TeamManagement = () => {
   const [currentMember, setCurrentMember] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [formData, setFormData] = useState({ name: '', role: '', order: 0 });
+  const [formData, setFormData] = useState({ name: '', role: '', affiliation: '', order: 0 });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -30,43 +30,30 @@ const TeamManagement = () => {
   };
 
   const handleImageChange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  if (!file.type.startsWith('image/')) {
-    setError('Please select an image file');
-    return;
-  }
-
-  if (file.size > 10 * 1024 * 1024) { 
-    setError('Image must be less than 10MB');
-    return;
-  }
-
-  setImageFile(file);
-  setImagePreview(URL.createObjectURL(file));
-  setError('');
-};
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('Image must be less than 10MB'); return; }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!formData.name.trim() || !formData.role.trim()) {
-      setError('Name and role are required');
-      return;
-    }
+    setError(''); setSuccess('');
+    if (!formData.name.trim() || !formData.role.trim()) { setError('Name and role are required'); return; }
 
     try {
       const token = localStorage.getItem('token');
       const data = new FormData();
       data.append('name', formData.name);
       data.append('role', formData.role);
+      data.append('affiliation', formData.affiliation);
       data.append('order', formData.order);
       if (imageFile) data.append('image', imageFile);
 
-      const url = editMode 
+      const url = editMode
         ? `${import.meta.env.VITE_API_URL}/team/${currentMember._id}`
         : `${import.meta.env.VITE_API_URL}/team`;
 
@@ -77,12 +64,9 @@ const TeamManagement = () => {
       });
 
       const result = await res.json();
-
       if (res.ok) {
         setSuccess(`✓ Team member ${editMode ? 'updated' : 'added'} successfully!`);
-        setShowModal(false);
-        resetForm();
-        fetchMembers();
+        setShowModal(false); resetForm(); fetchMembers();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         setError(result.error || 'Operation failed');
@@ -94,7 +78,7 @@ const TeamManagement = () => {
 
   const handleEdit = (member) => {
     setCurrentMember(member);
-    setFormData({ name: member.name, role: member.role, order: member.order });
+    setFormData({ name: member.name, role: member.role, affiliation: member.affiliation || '', order: member.order });
     setImagePreview(member.imageUrl);
     setEditMode(true);
     setShowModal(true);
@@ -102,14 +86,12 @@ const TeamManagement = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this team member?')) return;
-
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${import.meta.env.VITE_API_URL}/team/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
       if (res.ok) {
         setSuccess('✓ Team member deleted');
         fetchMembers();
@@ -124,17 +106,16 @@ const TeamManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', role: '', order: 0 });
-    setImageFile(null);
-    setImagePreview(null);
-    setEditMode(false);
-    setCurrentMember(null);
-    setError('');
+    setFormData({ name: '', role: '', affiliation: '', order: 0 });
+    setImageFile(null); setImagePreview(null);
+    setEditMode(false); setCurrentMember(null); setError('');
   };
 
-  if (loading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div></div>;
-  }
+  if (loading) return (
+    <div className="flex justify-center py-8">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -144,7 +125,6 @@ const TeamManagement = () => {
           <p className="text-green-700 dark:text-green-400">{success}</p>
         </div>
       )}
-
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded flex items-center gap-2">
           <AlertCircle className="text-red-500" size={20} />
@@ -154,12 +134,10 @@ const TeamManagement = () => {
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Users size={28} />
-          Team Members ({members.length})
+          <Users size={28} /> Team Members ({members.length})
         </h2>
         <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-xl hover:bg-navy-800">
-          <Plus size={18} />
-          Add Member
+          <Plus size={18} /> Add Member
         </button>
       </div>
 
@@ -182,15 +160,17 @@ const TeamManagement = () => {
                 )}
               </div>
               <h3 className="text-center font-bold text-gray-900 dark:text-white mb-1">{member.name}</h3>
-              <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-4">{member.role}</p>
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-1">{member.role}</p>
+              {/* ✅ Shows affiliation preview in management card */}
+              <p className="text-center text-xs text-blue-600 dark:text-blue-400 mb-4">
+                {member.affiliation || 'NEUST College of Nursing'}
+              </p>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(member)} className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm flex items-center justify-center gap-1">
-                  <Edit2 size={14} />
-                  Edit
+                  <Edit2 size={14} /> Edit
                 </button>
                 <button onClick={() => handleDelete(member._id)} className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm flex items-center justify-center gap-1">
-                  <Trash2 size={14} />
-                  Delete
+                  <Trash2 size={14} /> Delete
                 </button>
               </div>
             </div>
@@ -233,31 +213,22 @@ const TeamManagement = () => {
                 <input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               </div>
 
-              <input
-                type="text"
-                placeholder="Full Name*"
-                required
-                value={formData.name}
+              <input type="text" placeholder="Full Name*" required value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
-              />
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700" />
 
-              <input
-                type="text"
-                placeholder="Role/Position*"
-                required
-                value={formData.role}
+              <input type="text" placeholder="Role/Position*" required value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
-              />
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700" />
 
-              <input
-                type="number"
-                placeholder="Display Order"
-                value={formData.order}
+              {/* ✅ NEW affiliation field */}
+              <input type="text" placeholder="Affiliation (e.g. NEUST College of Nursing)" value={formData.affiliation}
+                onChange={(e) => setFormData({ ...formData, affiliation: e.target.value })}
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700" />
+
+              <input type="number" placeholder="Display Order" value={formData.order}
                 onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700"
-              />
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy focus:outline-none bg-white dark:bg-gray-700" />
 
               <button type="submit" className="w-full bg-navy text-white px-6 py-3 rounded-xl hover:bg-navy-800 font-semibold">
                 {editMode ? 'Update Member' : 'Add Member'}
