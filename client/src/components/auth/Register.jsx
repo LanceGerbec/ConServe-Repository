@@ -186,13 +186,13 @@ const Register = () => {
 
         <div className="text-center mb-4 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Create Account</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Join ConServe Research Hub</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Join ConServe Research Website</p>
         </div>
 
         <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-navy dark:border-blue-500 p-3 rounded-lg mb-4 flex items-start space-x-2">
           <Info size={16} className="text-navy dark:text-blue-400 flex-shrink-0 mt-0.5" />
           <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-            <strong>Note:</strong> Account requires admin approval (24–48 hrs). Your ID number will be verified by the admin.
+            <strong>Note:</strong> Account requires admin approval. Your ID number will be verified by the admin.
           </p>
         </div>
 
