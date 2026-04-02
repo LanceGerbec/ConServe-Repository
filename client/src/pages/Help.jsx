@@ -1,16 +1,17 @@
-import { HelpCircle, Mail, Upload, Search, Shield, ChevronDown, BookOpen, FileText, MessageSquare, Lock, Bell, Users } from 'lucide-react';
+import { HelpCircle, Mail, Upload, Search, Shield, ChevronDown, BookOpen, FileText, MessageSquare, Lock, Bell, Users, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
 const Help = () => {
   const [openFaq, setOpenFaq] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [imradOpen, setImradOpen] = useState(false);
 
   const quickLinks = [
     { icon: Upload, title: 'Submit Research', desc: 'Upload your paper', link: '/dashboard' },
     { icon: Search, title: 'Search Papers', desc: 'Find research quickly', link: '/explore' },
     { icon: Shield, title: 'Security', desc: 'Account protection', link: '#security' },
-    { icon: FileText, title: 'Guidelines', desc: 'Submission rules', link: '#guidelines' }
+    { icon: FileText, title: 'IMRaD Guidelines', desc: 'Submission format rules', link: '#imrad' }
   ];
 
   const guides = [
@@ -50,7 +51,7 @@ const Help = () => {
     { q: 'Why was my account not approved?', a: 'Common reasons: Invalid Student/Faculty ID, incomplete registration, or duplicate account. Contact conserve2025@gmail.com with your ID proof for assistance.', category: 'getting-started' },
     { q: 'Can I change my account information?', a: 'Email conserve2025@gmail.com to request changes to your name, ID, or role. For password changes, use "Forgot Password" on the login page.', category: 'getting-started' },
     { q: 'What are valid Student/Faculty IDs?', a: 'Only pre-registered IDs work. If yours doesn\'t work, contact conserve2025@gmail.com with proof of enrollment/employment for manual verification.', category: 'getting-started' },
-    { q: 'What is IMRaD format?', a: 'IMRaD stands for Introduction, Methods, Results, and Discussion. Your PDF must follow this academic structure for nursing research papers.', category: 'submission' },
+    { q: 'What is IMRaD format?', a: 'IMRaD stands for Introduction, Methods, Results, and Discussion. Your PDF must follow this academic structure for nursing research papers. See the IMRaD Guide section above for detailed requirements.', category: 'submission' },
     { q: 'Can I edit after submission?', a: 'Yes, before admin approval via your dashboard. After approval, email conserve2025@gmail.com to request changes with justification.', category: 'submission' },
     { q: 'What file format is required?', a: 'PDF only, max 10MB, in IMRaD format. No password protection. Must include title, abstract, authors, and keywords.', category: 'submission' },
     { q: 'What metadata is required for submission?', a: 'Required: Title, Authors, Abstract (100+ chars), Category, Subject Area, Year Completed. Optional: Co-authors, Keywords (3-8 recommended).', category: 'submission' },
@@ -98,6 +99,7 @@ const Help = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
+      {/* Header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
           <HelpCircle size={32} className="text-white" />
@@ -106,6 +108,7 @@ const Help = () => {
         <p className="text-gray-600 dark:text-gray-400">Find answers and learn how to use CONserve</p>
       </div>
 
+      {/* Quick Links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {quickLinks.map((link, i) => (
           <a key={i} href={link.link} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition group text-center">
@@ -118,6 +121,99 @@ const Help = () => {
         ))}
       </div>
 
+      {/* ─── IMRaD Guide ─── */}
+      <div id="imrad" className="mb-8 scroll-mt-24">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-amber-300 dark:border-amber-700 overflow-hidden">
+          <button
+            onClick={() => setImradOpen(!imradOpen)}
+            className="w-full flex items-center gap-4 p-5 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition text-left"
+          >
+            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+              <FileText size={22} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">IMRaD Format Requirements</h2>
+              <p className="text-sm text-amber-600 dark:text-amber-400">Required format for all paper submissions — click to expand</p>
+            </div>
+            <ChevronDown
+              className={`text-amber-500 transition-transform flex-shrink-0 ${imradOpen ? 'rotate-180' : ''}`}
+              size={22}
+            />
+          </button>
+
+          {imradOpen && (
+            <div className="border-t border-amber-200 dark:border-amber-800 px-5 pb-5 pt-4 space-y-4 animate-slide-up">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-3 rounded-lg flex items-start gap-2">
+                <AlertTriangle size={15} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  Papers not following IMRaD format may be <strong>rejected</strong> during review. Please ensure your paper complies before submitting.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Format */}
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-700">
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <span className="w-6 h-6 bg-amber-500 rounded text-white text-xs flex items-center justify-center font-black">F</span>
+                    Format Technicalities
+                  </h3>
+                  <ul className="space-y-2">
+                    {[
+                      ['Font', 'Times New Roman, Size 12'],
+                      ['Spacing', 'Single Spacing, Justified'],
+                      ['Margins', '1" all sides'],
+                      ['Main Headings', 'Capitalized, bold, left-justified, double-spaced above/below — no colon'],
+                      ['Subheadings', 'Capitalized, bold italics OR underlined'],
+                      ['Citation', 'Author-date system (in-text)'],
+                      ['Pagination', 'Bottom of page, right side'],
+                      ['Tables / Figures', 'Recommended: 5 each'],
+                      ['Page Count', '15–25 pages (excluding appendices)'],
+                    ].map(([label, value], i) => (
+                      <li key={i} className="text-xs">
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">{label}: </span>
+                        <span className="text-gray-600 dark:text-gray-400">{value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Sections */}
+                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-700">
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <span className="w-6 h-6 bg-orange-500 rounded text-white text-xs flex items-center justify-center font-black">S</span>
+                    Required Sections
+                  </h3>
+                  <ul className="space-y-2">
+                    {[
+                      ['Title', 'Centered, capitals, bold, 8–15 words'],
+                      ['Author/s', 'Based on contribution'],
+                      ['Abstract', '250–300 words'],
+                      ['Keywords', '≤5 words, italicized'],
+                      ['Introduction', '1,500–3,000 words'],
+                      ['Materials & Method / Methodology', '500–1,000 words'],
+                      ['Results and Discussion', '1,500–3,000 words'],
+                      ['Conclusion & Recommendations', '250–500 words'],
+                      ['References', 'APA format/style'],
+                    ].map(([section, detail], i) => (
+                      <li key={i} className="text-xs">
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">{section}: </span>
+                        <span className="text-gray-600 dark:text-gray-400">{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-1">
+                A reminder of these requirements will also appear each time you click Submit Research.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* ─── End IMRaD Guide ─── */}
+
+      {/* Quick Guides */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Guides</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -142,6 +238,7 @@ const Help = () => {
         </div>
       </div>
 
+      {/* FAQs */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All FAQs</h2>
@@ -206,6 +303,7 @@ const Help = () => {
         )}
       </div>
 
+      {/* Contact */}
       <div className="bg-gradient-to-r from-navy to-accent dark:from-blue-700 dark:to-blue-900 text-white rounded-xl p-6 text-center shadow-lg">
         <Mail size={40} className="mx-auto mb-3" />
         <h2 className="text-xl font-bold mb-2">Still Need Help?</h2>
