@@ -5,6 +5,7 @@ import SubmitResearch from '../research/SubmitResearch';
 import EditResearch from '../research/EditResearch';
 import ActivityLogs from '../analytics/ActivityLogs';
 import Toast from '../common/Toast';
+import IMRaDReminderModal from '../common/IMRaDReminderModal';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [showIMRaDModal, setShowIMRaDModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
   
   const submissionsRef = useRef(null);
@@ -294,7 +296,7 @@ const StudentDashboard = () => {
         <div className="px-3 sm:px-4 space-y-4 sm:space-y-6">
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
-              <button onClick={() => setShowSubmitModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-4 sm:p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
+              <button onClick={() => setShowIMRaDModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-4 sm:p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-xl flex items-center justify-center">
                     <Upload size={20} />
@@ -437,6 +439,7 @@ const StudentDashboard = () => {
           </div>
         </div>
       )}
+      {showIMRaDModal && <IMRaDReminderModal isOpen={showIMRaDModal} onClose={() => setShowIMRaDModal(false)} onConfirm={() => { setShowIMRaDModal(false); setShowSubmitModal(true); }} />}
     </>
   );
 };
