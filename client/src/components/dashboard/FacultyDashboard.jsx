@@ -7,6 +7,7 @@ import EditResearch from '../research/EditResearch';
 import ActivityLogs from '../analytics/ActivityLogs';
 import Toast from '../common/Toast';
 import Tooltip from '../common/Tooltip';
+import IMRaDReminderModal from '../common/IMRaDReminderModal';
 
 const FacultyDashboard = () => {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ const FacultyDashboard = () => {
   const [search, setSearch] = useState('');
   const [showReviewedPapers, setShowReviewedPapers] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [showIMRaDModal, setShowIMRaDModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
 
   const reviewsRef = useRef(null);
@@ -385,7 +387,7 @@ const FacultyDashboard = () => {
           {activeTab === 'overview' && (
             <>
               <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                <button onClick={() => setShowSubmitModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-4 sm:p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
+                <button onClick={() => setShowIMRaDModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-4 sm:p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-xl flex items-center justify-center">
                       <Upload size={20} />
@@ -526,7 +528,7 @@ const FacultyDashboard = () => {
                     </Tooltip>
                   </div>
                 </div>
-                <button onClick={() => setShowSubmitModal(true)} className="w-full flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-navy text-white rounded-xl font-semibold shadow-lg active:scale-95 transition-all text-sm">
+                <button onClick={() => setShowIMRaDModal(true)} className="w-full flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-navy text-white rounded-xl font-semibold shadow-lg active:scale-95 transition-all text-sm">
                   <Upload size={16} />Submit Research
                 </button>
               </div>
@@ -657,6 +659,7 @@ const FacultyDashboard = () => {
           </div>
         </div>
       )}
+      {showIMRaDModal && <IMRaDReminderModal isOpen={showIMRaDModal} onClose={() => setShowIMRaDModal(false)} onConfirm={() => { setShowIMRaDModal(false); setShowSubmitModal(true); }} />}
     </>
   );
 };
