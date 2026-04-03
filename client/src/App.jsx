@@ -21,6 +21,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Explore = lazy(() => import('./pages/Explore'));
 const ResearchDetail = lazy(() => import('./pages/ResearchDetail'));
 const Notifications = lazy(() => import('./pages/Notifications'));
+const UserSettings = lazy(() => import('./pages/UserSettings'));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -40,7 +41,7 @@ function App() {
               <Route path="/help" element={<Layout><Help /></Layout>} />
               <Route path="/terms" element={<Layout><Terms /></Layout>} />
               <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
-              
+
               <Route path="/login" element={<RoleSelect />} />
               <Route path="/login/student" element={<StudentLogin />} />
               <Route path="/login/faculty" element={<FacultyLogin />} />
@@ -53,6 +54,7 @@ function App() {
               <Route path="/explore" element={<ProtectedRoute><Layout><Explore /></Layout></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
               <Route path="/research/:id" element={<ProtectedRoute><Layout><ResearchDetail /></Layout></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Layout><UserSettings /></Layout></ProtectedRoute>} />
 
               <Route path="/browse" element={<Navigate to="/explore" replace />} />
               <Route path="/search" element={<Navigate to="/explore" replace />} />

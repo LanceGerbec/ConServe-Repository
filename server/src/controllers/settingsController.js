@@ -41,7 +41,7 @@ export const updateSettings = async (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to update settings' }); }
 };
 
-// ── Profile name update (any logged-in user) ──
+// ── Profile name + avatar update (any logged-in user) ──
 export const updateProfileName = async (req, res) => {
   try {
     const { firstName, lastName } = req.body;
@@ -55,6 +55,25 @@ export const updateProfileName = async (req, res) => {
     await AuditLog.create({ user: req.user._id, action: 'PROFILE_NAME_UPDATED', resource: 'User', resourceId: req.user._id, ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Profile updated', user });
   } catch { res.status(500).json({ error: 'Failed to update profile' }); }
+};
+
+export const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const user = await User.findById(req.user._id);
+    // Delete old avatar from cloudinary if exists
+    if (user.avatarCloudinaryId) {
+      try { await cloudinary.uploader.destroy(user.avatarCloudinaryId); } catch {}
+    }
+    const result = await uploadToCloudinary(req.file.buffer, 'avatars', {
+      transformation: [{ width: 300, height: 300, crop: 'fill', gravity: 'face' }]
+    });
+    user.avatar = result.secure_url;
+    user.avatarCloudinaryId = result.public_id;
+    await user.save();
+    await AuditLog.create({ user: req.user._id, action: 'AVATAR_UPLOADED', resource: 'User', resourceId: req.user._id, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ message: 'Avatar uploaded', avatar: result.secure_url });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Avatar upload failed' }); }
 };
 
 const makeLogoUploader = (key, folder, label, transformation) => async (req, res) => {

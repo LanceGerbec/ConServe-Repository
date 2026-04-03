@@ -1,6 +1,6 @@
+// client/src/components/admin/SettingsManagement.jsx
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Image, Bell, Shield, Save, CheckCircle, AlertCircle, Loader2, X, Eye, User, Pencil } from 'lucide-react';
-import ProfileEditModal from '../common/ProfileEditModal';
+import { Settings, Upload, Image, Bell, Shield, Save, CheckCircle, AlertCircle, Loader2, X, Eye, User, Pencil, Camera, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -79,19 +79,31 @@ const LogoUpload = ({ label, currentUrl, endpoint, onSuccess, hint, isImage = fa
 };
 
 const SettingsManagement = () => {
-  const { user, setUser } = useAuth();
+  const { user, updateUser } = useAuth();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [showProfileEdit, setShowProfileEdit] = useState(false);
+
+  // Profile state
+  const [name, setName] = useState({ firstName: user?.firstName || '', lastName: user?.lastName || '' });
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [savingName, setSavingName] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const avatarInputRef = useRef();
+
   const [form, setForm] = useState({ siteName: '', siteDescription: '' });
   const [features, setFeatures] = useState({ allowRegistration: true, requireApproval: true, enableNotifications: true, maintenanceMode: false });
   const [security, setSecurity] = useState({ maxLoginAttempts: 5, sessionTimeout: 20, passwordMinLength: 12 });
 
   const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => {
+    fetchSettings();
+    setName({ firstName: user?.firstName || '', lastName: user?.lastName || '' });
+    setAvatarPreview(user?.avatar || null);
+  }, [user]);
 
   const fetchSettings = async () => {
     try {
@@ -106,7 +118,7 @@ const SettingsManagement = () => {
     finally { setLoading(false); }
   };
 
-  const handleSave = async () => {
+  const handleSaveSettings = async () => {
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
@@ -120,6 +132,55 @@ const SettingsManagement = () => {
     } catch { showToast('Save failed', 'error'); }
     finally { setSaving(false); }
   };
+
+  const handleSaveName = async () => {
+    if (!name.firstName.trim() || !name.lastName.trim()) return showToast('Both fields required', 'error');
+    setSavingName(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/settings/profile`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: name.firstName.trim(), lastName: name.lastName.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.error || 'Failed', 'error');
+      updateUser({ firstName: data.user.firstName, lastName: data.user.lastName });
+      showToast('Name updated!');
+    } catch { showToast('Connection error', 'error'); }
+    finally { setSavingName(false); }
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return showToast('Max 5MB', 'error');
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!avatarFile) return;
+    setSavingAvatar(true);
+    try {
+      const token = localStorage.getItem('token');
+      const fd = new FormData();
+      fd.append('avatar', avatarFile);
+      const res = await fetch(`${API_URL}/settings/avatar`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.error || 'Upload failed', 'error');
+      updateUser({ avatar: data.avatar });
+      setAvatarFile(null);
+      showToast('Profile picture updated!');
+    } catch { showToast('Upload failed', 'error'); }
+    finally { setSavingAvatar(false); }
+  };
+
+  const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-navy dark:text-accent" size={32} /></div>;
 
@@ -136,7 +197,7 @@ const SettingsManagement = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">Manage configuration & appearance</p>
           </div>
         </div>
-        <button onClick={handleSave} disabled={saving}
+        <button onClick={handleSaveSettings} disabled={saving}
           className="flex items-center gap-2 px-5 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-bold hover:opacity-90 transition shadow-lg disabled:opacity-50">
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {saving ? 'Saving...' : 'Save Changes'}
@@ -150,19 +211,65 @@ const SettingsManagement = () => {
         </div>
       )}
 
-      {/* ── Profile ── */}
+      {/* ── Admin Profile: Avatar + Name ── */}
       <Section title="My Profile" icon={User}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-white">{user?.firstName} {user?.lastName}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
-            <p className="text-xs text-gray-400 capitalize mt-0.5">{user?.role} · {user?.studentId}</p>
+        <div className="flex flex-col sm:flex-row items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0">
+            <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-gray-200 dark:border-gray-600 shadow-lg">
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-navy to-accent flex items-center justify-center">
+                  <span className="text-3xl font-black text-white">{initials}</span>
+                </div>
+              )}
+            </div>
+            <button onClick={() => avatarInputRef.current?.click()}
+              className="absolute -bottom-2 -right-2 w-8 h-8 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition border-2 border-white dark:border-gray-800">
+              <Camera size={14} className="text-white" />
+            </button>
           </div>
-          <button onClick={() => setShowProfileEdit(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-navy/10 dark:bg-blue-900/30 text-navy dark:text-blue-400 rounded-xl text-sm font-semibold hover:bg-navy/20 transition">
-            <Pencil size={14} />Edit Name
-          </button>
+
+          <div className="flex-1 text-center sm:text-left">
+            <p className="font-bold text-gray-900 dark:text-white text-lg">{user?.firstName} {user?.lastName}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{user?.email} · Admin</p>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            <div className="flex gap-2 flex-wrap justify-center sm:justify-start">
+              <button onClick={() => avatarInputRef.current?.click()}
+                className="px-3 py-1.5 border-2 border-navy dark:border-blue-500 text-navy dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-navy/5 transition">
+                Choose Photo
+              </button>
+              {avatarFile && (
+                <button onClick={handleSaveAvatar} disabled={savingAvatar}
+                  className="px-3 py-1.5 bg-navy dark:bg-blue-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1">
+                  {savingAvatar ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  {savingAvatar ? 'Uploading...' : 'Save Photo'}
+                </button>
+              )}
+            </div>
+            {avatarFile && <p className="text-xs text-blue-500 mt-2">New photo selected — click Save Photo to apply</p>}
+          </div>
         </div>
+
+        {/* Name edit */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">First Name</label>
+            <input value={name.firstName} onChange={e => setName({ ...name, firstName: e.target.value })}
+              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Last Name</label>
+            <input value={name.lastName} onChange={e => setName({ ...name, lastName: e.target.value })}
+              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
+          </div>
+        </div>
+        <button onClick={handleSaveName} disabled={savingName}
+          className="flex items-center gap-2 px-5 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition disabled:opacity-50">
+          {savingName ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+          {savingName ? 'Saving...' : 'Save Name'}
+        </button>
       </Section>
 
       {/* ── General ── */}
@@ -192,9 +299,9 @@ const SettingsManagement = () => {
       {/* ── Logos ── */}
       <Section title="Site Logos" icon={Image}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <LogoUpload label="School Logo" currentUrl={settings?.logos?.school?.url} endpoint="logo/school" hint="NEUST logo. 200×200px." onSuccess={fetchSettings} />
-          <LogoUpload label="College Logo" currentUrl={settings?.logos?.college?.url} endpoint="logo/college" hint="College of Nursing logo. 200×200px." onSuccess={fetchSettings} />
-          <LogoUpload label="ConServe Logo" currentUrl={settings?.logos?.conserve?.url} endpoint="logo/conserve" hint="Navbar app logo. 200×200px." onSuccess={fetchSettings} />
+          <LogoUpload label="School Logo (NEUST)" currentUrl={settings?.logos?.school?.url} endpoint="logo/school" hint="200×200px. Links to neust.edu.ph" onSuccess={fetchSettings} />
+          <LogoUpload label="College Logo (CON)" currentUrl={settings?.logos?.college?.url} endpoint="logo/college" hint="200×200px. Links to NEUSTCON Facebook" onSuccess={fetchSettings} />
+          <LogoUpload label="CONserve Logo" currentUrl={settings?.logos?.conserve?.url} endpoint="logo/conserve" hint="200×200px. Links to home page" onSuccess={fetchSettings} />
         </div>
       </Section>
 
@@ -235,26 +342,12 @@ const SettingsManagement = () => {
       </Section>
 
       <div className="flex justify-end pt-2">
-        <button onClick={handleSave} disabled={saving}
+        <button onClick={handleSaveSettings} disabled={saving}
           className="flex items-center gap-2 px-8 py-3 bg-navy dark:bg-blue-600 text-white rounded-xl font-bold hover:opacity-90 transition shadow-lg disabled:opacity-50">
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {saving ? 'Saving...' : 'Save All Settings'}
         </button>
       </div>
-
-      {showProfileEdit && (
-        <ProfileEditModal
-          isOpen={showProfileEdit}
-          onClose={() => setShowProfileEdit(false)}
-          user={user}
-          onSuccess={(updatedUser) => {
-            // Update localStorage user cache
-            const stored = JSON.parse(localStorage.getItem('user') || '{}');
-            localStorage.setItem('user', JSON.stringify({ ...stored, firstName: updatedUser.firstName, lastName: updatedUser.lastName }));
-            showToast('Name updated successfully!');
-          }}
-        />
-      )}
     </div>
   );
 };

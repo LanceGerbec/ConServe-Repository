@@ -11,15 +11,19 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
-  
-  // 🆕 SUPER ADMIN FIELD
+
+  // Avatar
+  avatar: { type: String, default: null },
+  avatarCloudinaryId: { type: String, default: null },
+
+  // SUPER ADMIN FIELD
   isSuperAdmin: { type: Boolean, default: false },
-  
+
   // SOFT DELETE FIELDS
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  
+
   canUploadOnBehalf: { type: Boolean, default: false },
   twoFactorSecret: String,
   twoFactorEnabled: { type: Boolean, default: false },
@@ -33,7 +37,6 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(12);
@@ -43,23 +46,17 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
-// Compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Check if locked
 userSchema.methods.isLocked = function() {
   return !!(this.lockoutUntil && this.lockoutUntil > Date.now());
 };
 
-// Increment login attempts
 userSchema.methods.incLoginAttempts = function() {
   if (this.lockoutUntil && this.lockoutUntil < Date.now()) {
-    return this.updateOne({
-      $set: { loginAttempts: 1 },
-      $unset: { lockoutUntil: 1 }
-    });
+    return this.updateOne({ $set: { loginAttempts: 1 }, $unset: { lockoutUntil: 1 } });
   }
   const updates = { $inc: { loginAttempts: 1 } };
   const maxAttempts = 5;
@@ -70,7 +67,6 @@ userSchema.methods.incLoginAttempts = function() {
   return this.updateOne(updates);
 };
 
-// SOFT DELETE METHOD
 userSchema.methods.softDelete = async function(deletedByUserId) {
   this.isDeleted = true;
   this.deletedAt = new Date();
@@ -79,7 +75,6 @@ userSchema.methods.softDelete = async function(deletedByUserId) {
   return await this.save();
 };
 
-// RESTORE METHOD
 userSchema.methods.restore = async function() {
   this.isDeleted = false;
   this.deletedAt = null;
@@ -88,12 +83,10 @@ userSchema.methods.restore = async function() {
   return await this.save();
 };
 
-// INDEX - Allow same email if deleted
-userSchema.index({ email: 1, isDeleted: 1 }, { 
-  unique: true, 
-  partialFilterExpression: { isDeleted: false } 
+userSchema.index({ email: 1, isDeleted: 1 }, {
+  unique: true,
+  partialFilterExpression: { isDeleted: false }
 });
-
 userSchema.index({ role: 1, isApproved: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 
