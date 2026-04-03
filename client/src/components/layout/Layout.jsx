@@ -269,14 +269,30 @@ const Layout = ({ children }) => {
       {/* ── Footer ── */}
       <footer className="relative mt-auto">
         <div className="overflow-hidden leading-none">
-          <svg viewBox="0 0 1440 90" xmlns="http://www.w3.org/2000/svg" className="w-full block" preserveAspectRatio="none" style={{ height: '70px' }}>
-            <path d="M0,60 C240,10 480,80 720,45 C960,10 1200,75 1440,50 L1440,90 L0,90 Z" className="fill-navy/30 dark:fill-gray-800/60" />
-            <path d="M0,70 C200,30 400,80 600,55 C800,30 1000,75 1200,55 C1320,45 1400,65 1440,60 L1440,90 L0,90 Z" className="fill-navy/60 dark:fill-gray-900/80" />
-            <path d="M0,75 C180,55 360,85 540,70 C720,55 900,80 1080,68 C1260,56 1380,74 1440,72 L1440,90 L0,90 Z" className="fill-navy dark:fill-gray-950" />
-          </svg>
+         <svg viewBox="0 0 1440 90" xmlns="http://www.w3.org/2000/svg" className="w-full block" preserveAspectRatio="none" style={{ height: '70px' }}>
+  {/* Back layer */}
+  <path
+    d="M0,60 C240,10 480,80 720,45 C960,10 1200,75 1440,50 L1440,90 L0,90 Z"
+    className="fill-[#0a192f]/40 backdrop-blur-sm"
+  />
+  
+  {/* Mid layer */}
+  <path
+    d="M0,70 C200,30 400,80 600,55 C800,30 1000,75 1200,55 C1320,45 1400,65 1440,60 L1440,90 L0,90 Z"
+    className="fill-[#081424]/70"
+  />
+  
+  {/* Front layer (main) */}
+  <path
+    d="M0,75 C180,55 360,85 540,70 C720,55 900,80 1080,68 C1260,56 1380,74 1440,72 L1440,90 L0,90 Z"
+    className="fill-[#050f1f]"
+  />
+</svg>
+
         </div>
 
-        <div className="bg-[#041c41] dark:bg-gray-950 text-white py-10 px-4">
+        <div className="bg-[#050f1f] text-white py-10 px-4">
+
           
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
