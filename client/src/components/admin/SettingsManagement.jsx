@@ -1,269 +1,275 @@
-import { useState, useEffect } from 'react';
-import { Settings, Image, Upload, Save, AlertCircle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Settings, Upload, Image, Palette, Bell, Shield, Mail, Save, CheckCircle, AlertCircle, Loader2, X, Eye } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+const Section = ({ title, icon: Icon, children }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-5">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="w-9 h-9 bg-navy/10 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+        <Icon size={18} className="text-navy dark:text-accent" />
+      </div>
+      <h3 className="font-bold text-gray-900 dark:text-white">{title}</h3>
+    </div>
+    <div className="p-5">{children}</div>
+  </div>
+);
+
+const LogoUpload = ({ label, currentUrl, endpoint, onSuccess, hint, isImage = false }) => {
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(currentUrl);
+  const [toast, setToast] = useState(null);
+  const inputRef = useRef();
+
+  useEffect(() => { setPreview(currentUrl); }, [currentUrl]);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    const maxMB = isImage ? 10 : 2;
+    if (file.size > maxMB * 1024 * 1024) return showToast(`Max ${maxMB}MB allowed`, 'error');
+    if (isImage && !file.type.startsWith('image/')) return showToast('Images only', 'error');
+    if (!isImage && !file.type.startsWith('image/')) return showToast('Image files only', 'error');
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const fd = new FormData();
+      fd.append(isImage ? 'image' : 'logo', file);
+      const res = await fetch(`${API_URL}/settings/${endpoint}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const url = data.logo?.url;
+        setPreview(url);
+        showToast(`${label} updated!`);
+        onSuccess?.(url);
+      } else showToast(data.error || 'Upload failed', 'error');
+    } catch { showToast('Upload failed', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</label>
+      {hint && <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
+
+      {/* Preview */}
+      {preview && (
+        <div className={`relative overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 ${isImage ? 'h-40' : 'h-24 w-24'}`}>
+          <img src={preview} alt={label} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition flex items-center justify-center opacity-0 hover:opacity-100">
+            <Eye size={20} className="text-white" />
+          </div>
+        </div>
+      )}
+
+      <div
+        className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-navy dark:hover:border-accent transition cursor-pointer"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
+      >
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
+        {loading
+          ? <div className="flex flex-col items-center gap-2"><Loader2 size={24} className="animate-spin text-navy dark:text-accent" /><p className="text-sm text-gray-600 dark:text-gray-400">Uploading...</p></div>
+          : <div className="flex flex-col items-center gap-2">
+              <Upload size={24} className="text-gray-400" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Drop image or <span className="text-navy dark:text-accent">click to browse</span></p>
+              <p className="text-xs text-gray-500">PNG, JPG, WebP</p>
+            </div>
+        }
+      </div>
+
+      {toast && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${toast.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'}`}>
+          {toast.type === 'error' ? <AlertCircle size={14} /> : <CheckCircle size={14} />}{toast.msg}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SettingsManagement = () => {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState({ school: false, college: false, conserve: false });
-  const [message, setMessage] = useState('');
-  const [expandedSection, setExpandedSection] = useState('logos');
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({ siteName: '', siteDescription: '' });
+  const [features, setFeatures] = useState({ allowRegistration: true, requireApproval: true, enableNotifications: true, maintenanceMode: false });
+  const [security, setSecurity] = useState({ maxLoginAttempts: 5, sessionTimeout: 20, passwordMinLength: 12 });
+
+  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
 
   useEffect(() => { fetchSettings(); }, []);
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`);
+      const res = await fetch(`${API_URL}/settings`);
       const data = await res.json();
-      setSettings(data.settings);
-    } catch (error) {
-      setMessage('Failed to load');
-    } finally {
-      setLoading(false);
-    }
+      const s = data.settings || {};
+      setSettings(s);
+      setForm({ siteName: s.siteName || 'ConServe', siteDescription: s.siteDescription || '' });
+      setFeatures(s.features || features);
+      setSecurity(s.security || security);
+    } catch { showToast('Failed to load settings', 'error'); }
+    finally { setLoading(false); }
   };
 
-  const handleLogoUpload = async (type, file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      setMessage('Image file required');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setMessage('Max 2MB');
-      return;
-    }
-    setUploading({ ...uploading, [type]: true });
-    const formData = new FormData();
-    formData.append('logo', file);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/settings/logo/${type}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMessage(`✓ ${type} logo uploaded!`);
-        await fetchSettings();
-        window.dispatchEvent(new Event('logosUpdated'));
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        setMessage(data.error || 'Failed');
-      }
-    } catch (error) {
-      setMessage('Error');
-    } finally {
-      setUploading({ ...uploading, [type]: false });
-    }
-  };
-
-  const handleSaveSettings = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`, {
+      const res = await fetch(`${API_URL}/settings`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify({ siteName: form.siteName, siteDescription: form.siteDescription, features, security })
       });
-      if (res.ok) {
-        setMessage('✓ Saved');
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        const data = await res.json();
-        setMessage(data.error || 'Failed');
-      }
-    } catch (error) {
-      setMessage('Error');
-    } finally {
-      setSaving(false);
-    }
+      if (res.ok) { showToast('Settings saved successfully!'); fetchSettings(); }
+      else { const d = await res.json(); showToast(d.error || 'Save failed', 'error'); }
+    } catch { showToast('Save failed', 'error'); }
+    finally { setSaving(false); }
   };
 
-  const toggleSection = (section) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
-      </div>
-    );
-  }
-
-  const Section = ({ id, title, children }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <button onClick={() => toggleSection(id)} className="w-full flex items-center justify-between p-3 md:p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
-        <h3 className="text-sm md:text-base font-bold text-gray-900 dark:text-white">{title}</h3>
-        {expandedSection === id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-      </button>
-      {expandedSection === id && <div className="p-3 md:p-4 border-t border-gray-200 dark:border-gray-700">{children}</div>}
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="animate-spin text-navy dark:text-accent" size={32} />
     </div>
   );
 
   return (
-    <div className="space-y-3">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Settings size={24} className="flex-shrink-0" />
-          Settings
-        </h2>
-        <button onClick={handleSaveSettings} disabled={saving} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition disabled:opacity-50 text-sm font-bold">
-          <Save size={16} />
-          {saving ? 'Saving...' : 'Save'}
+    <div className="space-y-2 pb-10">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Settings size={22} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">System Settings</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage site configuration & appearance</p>
+          </div>
+        </div>
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-2 px-5 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-bold hover:bg-navy-800 dark:hover:bg-blue-700 transition shadow-lg disabled:opacity-50">
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
-      {message && (
-        <div className={`border-l-4 p-3 rounded text-sm ${message.startsWith('✓') ? 'bg-green-50 dark:bg-green-900/20 border-green-500' : 'bg-red-50 dark:bg-red-900/20 border-red-500'}`}>
-          <div className="flex items-center gap-2">
-            {message.startsWith('✓') ? <CheckCircle className="text-green-500 flex-shrink-0" size={16} /> : <AlertCircle className="text-red-500 flex-shrink-0" size={16} />}
-            <p className={message.startsWith('✓') ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>{message}</p>
-          </div>
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-20 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold border-2 animate-slide-up ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>
+          {toast.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}{toast.msg}
+          <button onClick={() => setToast(null)}><X size={14} /></button>
         </div>
       )}
 
-      {/* LOGOS - HORIZONTAL SCROLL ON MOBILE */}
-      <Section id="logos" title="Logo Management">
-        {/* MOBILE: HORIZONTAL SCROLL */}
-        <div className="flex md:hidden gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide -mx-3 px-3">
-          {['school', 'college', 'conserve'].map((type) => (
-            <div key={type} className="flex-shrink-0 w-[75vw] sm:w-64 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-center snap-center">
-              <p className="font-bold text-gray-900 dark:text-white mb-2 text-sm capitalize">{type} Logo</p>
-              {settings?.logos?.[type]?.url ? (
-                <div className="mb-3">
-                  <img src={settings.logos[type].url} alt={`${type} logo`} className="w-24 h-24 object-contain mx-auto mb-2 rounded-lg bg-gray-100 dark:bg-gray-700 p-2" />
-                  <p className="text-xs text-gray-500">
-                    {new Date(settings.logos[type].uploadedAt).toLocaleDateString()}
-                  </p>
+      {/* ── General Info ── */}
+      <Section title="General Information" icon={Settings}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Site Name</label>
+            <input value={form.siteName} onChange={e => setForm({ ...form, siteName: e.target.value })}
+              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Site Description</label>
+            <input value={form.siteDescription} onChange={e => setForm({ ...form, siteDescription: e.target.value })}
+              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" />
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Hero Background ── */}
+      <Section title="Hero Background Image" icon={Image}>
+        <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-lg">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
+            <strong>This image appears as the full-screen background</strong> on the home page hero section. Best dimensions: <strong>1920×1080px</strong> or wider. JPEG/WebP recommended for smaller file size.
+          </p>
+        </div>
+        <LogoUpload
+          label="Hero Background"
+          currentUrl={settings?.logos?.heroBg?.url}
+          endpoint="hero-background"
+          isImage
+          hint="Upload a high-quality campus or nursing-related photo. Max 10MB."
+          onSuccess={fetchSettings}
+        />
+        {settings?.logos?.heroBg?.uploadedAt && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Last updated: {new Date(settings.logos.heroBg.uploadedAt).toLocaleString()}
+          </p>
+        )}
+      </Section>
+
+      {/* ── Logos ── */}
+      <Section title="Site Logos" icon={Image}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LogoUpload label="School Logo" currentUrl={settings?.logos?.school?.url} endpoint="logo/school" hint="NEUST logo. Recommended 200×200px." onSuccess={fetchSettings} />
+          <LogoUpload label="College Logo" currentUrl={settings?.logos?.college?.url} endpoint="logo/college" hint="College of Nursing logo. Recommended 200×200px." onSuccess={fetchSettings} />
+          <LogoUpload label="ConServe Logo" currentUrl={settings?.logos?.conserve?.url} endpoint="logo/conserve" hint="App logo shown in navbar. Recommended 200×200px." onSuccess={fetchSettings} />
+        </div>
+      </Section>
+
+      {/* ── Features ── */}
+      <Section title="Feature Toggles" icon={Bell}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            ['allowRegistration',   'Allow New Registrations',  'Students & faculty can register new accounts'],
+            ['requireApproval',     'Require Admin Approval',   'New accounts need admin approval before access'],
+            ['enableNotifications', 'Enable Notifications',     'Send in-app and email notifications to users'],
+            ['maintenanceMode',     'Maintenance Mode',         'Show maintenance page to all non-admin users'],
+          ].map(([key, label, desc]) => (
+            <label key={key} className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${features[key] ? 'border-navy/30 bg-navy/5 dark:border-blue-700 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
+              <div className="relative flex-shrink-0 mt-0.5">
+                <input type="checkbox" checked={features[key]} onChange={e => setFeatures({ ...features, [key]: e.target.checked })} className="sr-only" />
+                <div className={`w-11 h-6 rounded-full transition-colors ${features[key] ? 'bg-navy dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm absolute top-1 transition-transform ${features[key] ? 'translate-x-6' : 'translate-x-1'}`} />
                 </div>
-              ) : (
-                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-lg mx-auto mb-3 flex items-center justify-center">
-                  <Image className="text-gray-400" size={24} />
-                </div>
-              )}
-              <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${uploading[type] ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-navy text-white hover:bg-navy-800'}`}>
-                {uploading[type] ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={12} />
-                    {settings?.logos?.[type]?.url ? 'Change' : 'Upload'}
-                  </>
-                )}
-                <input type="file" accept="image/*" className="hidden" disabled={uploading[type]} onChange={(e) => handleLogoUpload(type, e.target.files[0])} />
-              </label>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── Security ── */}
+      <Section title="Security Settings" icon={Shield}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            ['maxLoginAttempts',  'Max Login Attempts',    1, 20],
+            ['sessionTimeout',    'Session Timeout (min)', 5, 120],
+            ['passwordMinLength', 'Min Password Length',   8, 32],
+          ].map(([key, label, min, max]) => (
+            <div key={key}>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
+              <input type="number" min={min} max={max} value={security[key]}
+                onChange={e => setSecurity({ ...security, [key]: parseInt(e.target.value) || min })}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" />
             </div>
           ))}
         </div>
+      </Section>
 
-        {/* DESKTOP: GRID */}
-        <div className="hidden md:grid grid-cols-3 gap-4">
-          {['school', 'college', 'conserve'].map((type) => (
-            <div key={type} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-center">
-              <p className="font-bold text-gray-900 dark:text-white mb-3 capitalize">{type} Logo</p>
-              {settings?.logos?.[type]?.url ? (
-                <div className="mb-4">
-                  <img src={settings.logos[type].url} alt={`${type} logo`} className="w-32 h-32 object-contain mx-auto mb-2 rounded-lg bg-gray-100 dark:bg-gray-700 p-2" />
-                  <p className="text-xs text-gray-500">
-                    Uploaded: {new Date(settings.logos[type].uploadedAt).toLocaleDateString()}
-                  </p>
-                </div>
-              ) : (
-                <div className="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                  <Image className="text-gray-400" size={32} />
-                </div>
-              )}
-              <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${uploading[type] ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-navy text-white hover:bg-navy-800'}`}>
-                {uploading[type] ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={16} />
-                    {settings?.logos?.[type]?.url ? 'Change' : 'Upload'}
-                  </>
-                )}
-                <input type="file" accept="image/*" className="hidden" disabled={uploading[type]} onChange={(e) => handleLogoUpload(type, e.target.files[0])} />
-              </label>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-3 rounded">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="text-blue-500 flex-shrink-0 mt-0.5" size={16} />
-            <div className="text-xs text-blue-700 dark:text-blue-400">
-              <p className="font-bold mb-1">Guidelines:</p>
-              <ul className="list-disc list-inside space-y-0.5">
-                <li>200x200px recommended</li>
-                <li>PNG/JPG, max 2MB</li>
-              </ul>
-            </div>
-          </div>
-          </div>
-  </Section>
-
-  {/* GENERAL */}
-  <Section id="general" title="General Settings">
-    <div className="space-y-3">
-      <div>
-        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Site Name</label>
-        <input type="text" value={settings?.siteName || ''} onChange={(e) => setSettings({ ...settings, siteName: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Description</label>
-        <input type="text" value={settings?.siteDescription || ''} onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
+      {/* Save button (bottom) */}
+      <div className="flex justify-end pt-2">
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-2 px-8 py-3 bg-navy dark:bg-blue-600 text-white rounded-xl font-bold hover:bg-navy-800 dark:hover:bg-blue-700 transition shadow-lg disabled:opacity-50">
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {saving ? 'Saving...' : 'Save All Settings'}
+        </button>
       </div>
     </div>
-  </Section>
-
-  {/* FEATURES */}
-  <Section id="features" title="Features">
-    <div className="space-y-2">
-      {[
-        { key: 'allowRegistration', label: 'Allow Registrations', desc: 'Users can create accounts' },
-        { key: 'requireApproval', label: 'Require Approval', desc: 'New users need approval' },
-        { key: 'enableNotifications', label: 'Notifications', desc: 'Send email notifications' },
-        { key: 'maintenanceMode', label: 'Maintenance Mode', desc: 'Disable public access' }
-      ].map((feature) => (
-        <label key={feature.key} className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-          <input type="checkbox" checked={settings?.features?.[feature.key] || false} onChange={(e) => setSettings({ ...settings, features: { ...settings.features, [feature.key]: e.target.checked } })} className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy mt-0.5 cursor-pointer flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 dark:text-white text-sm">{feature.label}</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">{feature.desc}</p>
-          </div>
-        </label>
-      ))}
-    </div>
-  </Section>
-
-  {/* SECURITY - HORIZONTAL ON MOBILE */}
-  <Section id="security" title="Security">
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div>
-        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Max Login Attempts</label>
-        <input type="number" min="3" max="10" value={settings?.security?.maxLoginAttempts || 5} onChange={(e) => setSettings({ ...settings, security: { ...settings.security, maxLoginAttempts: parseInt(e.target.value) } })} className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Session Timeout (min)</label>
-        <input type="number" min="10" max="120" value={settings?.security?.sessionTimeout || 20} onChange={(e) => setSettings({ ...settings, security: { ...settings.security, sessionTimeout: parseInt(e.target.value) } })} className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Min Password Length</label>
-        <input type="number" min="8" max="20" value={settings?.security?.passwordMinLength || 12} onChange={(e) => setSettings({ ...settings, security: { ...settings.security, passwordMinLength: parseInt(e.target.value) } })} className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-navy focus:outline-none bg-white dark:bg-gray-700 text-sm" />
-      </div>
-    </div>
-  </Section>
-</div>
-);
+  );
 };
+
 export default SettingsManagement;
