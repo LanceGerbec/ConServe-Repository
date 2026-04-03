@@ -1,4 +1,5 @@
 import Settings from '../models/Settings.js';
+import User from '../models/User.js';
 import cloudinary from '../config/cloudinary.js';
 import { Readable } from 'stream';
 import AuditLog from '../models/AuditLog.js';
@@ -11,40 +12,55 @@ const uploadToCloudinary = (buffer, folder, opts = {}) => new Promise((resolve, 
   Readable.from(buffer).pipe(stream);
 });
 
-const getOrCreateSettings = async () => {
+const getOrCreate = async () => {
   let s = await Settings.findOne();
   if (!s) s = await Settings.create({});
   return s;
 };
 
 export const getSettings = async (req, res) => {
-  try {
-    res.json({ settings: await getOrCreateSettings() });
-  } catch { res.status(500).json({ error: 'Failed to fetch settings' }); }
+  try { res.json({ settings: await getOrCreate() }); }
+  catch { res.status(500).json({ error: 'Failed to fetch settings' }); }
 };
 
 export const updateSettings = async (req, res) => {
   try {
     const { siteName, siteDescription, theme, features, email, security } = req.body;
-    const s = await getOrCreateSettings();
-    if (siteName)        s.siteName = siteName;
+    const s = await getOrCreate();
+    if (siteName) s.siteName = siteName;
     if (siteDescription) s.siteDescription = siteDescription;
-    if (theme)           s.theme = { ...s.theme, ...theme };
-    if (features)        s.features = { ...s.features, ...features };
-    if (email)           s.email = { ...s.email, ...email };
-    if (security)        s.security = { ...s.security, ...security };
+    if (theme) s.theme = { ...s.theme, ...theme };
+    if (features) s.features = { ...s.features, ...features };
+    if (email) s.email = { ...s.email, ...email };
+    if (security) s.security = { ...s.security, ...security };
     s.updatedBy = req.user._id;
     s.updatedAt = new Date();
     await s.save();
     await AuditLog.create({ user: req.user._id, action: 'SETTINGS_UPDATED', resource: 'Settings', ipAddress: req.ip, userAgent: req.get('user-agent') });
-    res.json({ message: 'Settings updated successfully', settings: s });
+    res.json({ message: 'Settings updated', settings: s });
   } catch { res.status(500).json({ error: 'Failed to update settings' }); }
+};
+
+// ── Profile name update (any logged-in user) ──
+export const updateProfileName = async (req, res) => {
+  try {
+    const { firstName, lastName } = req.body;
+    if (!firstName?.trim() || !lastName?.trim())
+      return res.status(400).json({ error: 'First and last name are required' });
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { firstName: firstName.trim(), lastName: lastName.trim() },
+      { new: true }
+    ).select('-password -passwordHistory');
+    await AuditLog.create({ user: req.user._id, action: 'PROFILE_NAME_UPDATED', resource: 'User', resourceId: req.user._id, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ message: 'Profile updated', user });
+  } catch { res.status(500).json({ error: 'Failed to update profile' }); }
 };
 
 const makeLogoUploader = (key, folder, label, transformation) => async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const s = await getOrCreateSettings();
+    const s = await getOrCreate();
     if (s.logos?.[key]?.cloudinaryId) {
       try { await cloudinary.uploader.destroy(s.logos[key].cloudinaryId); } catch {}
     }

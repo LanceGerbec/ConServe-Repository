@@ -365,14 +365,20 @@ const AdminDashboard = () => {
     });
   }, [paperSortConfig]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const adminReviewId = params.get('adminReview');
-    if (adminReviewId) {
-      fetchPaperForReview(adminReviewId);
-      navigate('/dashboard', { replace: true });
-    }
-  }, [location.search, navigate]);
+ useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const adminReviewId = params.get('adminReview');
+  const tabParam = params.get('tab');
+  if (adminReviewId) {
+    fetchPaperForReview(adminReviewId);
+    navigate('/dashboard', { replace: true });
+  }
+  if (tabParam) {
+    setActiveTab(tabParam);
+    navigate('/dashboard', { replace: true });
+  }
+}, [location.search, navigate]);
+ 
 
   const fetchPaperForReview = async (paperId) => {
     try {
