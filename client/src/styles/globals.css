@@ -74,100 +74,38 @@ iframe {
   animation: fade-in 0.2s ease-out;
 }
 
-@keyframes waveMove {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-25px); }
-  100% { transform: translateX(0); }
-}
 
-.wave-slow {
-  animation: waveMove 12s ease-in-out infinite;
-}
-
-.wave-medium {
-  animation: waveMove 8s ease-in-out infinite;
-}
-
-.wave-fast {
-  animation: waveMove 5s ease-in-out infinite;
-}
-
-/* Base wave animation */
-.wave {
-  animation: waveMove 12s ease-in-out infinite alternate;
-  backdrop-filter: blur(8px);
-}
-
-/* Different speeds = parallax depth */
-.wave-slow {
-  animation-duration: 18s;
-  opacity: 0.6;
-}
-
-.wave-medium {
-  animation-duration: 12s;
-  opacity: 0.75;
-}
-
-.wave-fast {
-  animation-duration: 8s;
-  opacity: 0.9;
-}
-
-/* Motion */
-@keyframes waveMove {
-  0% {
-    transform: translateX(0) translateY(0);
-  }
-  50% {
-    transform: translateX(-20px) translateY(2px);
-  }
-  100% {
-    transform: translateX(20px) translateY(-2px);
-  }
-}
-
-/* Looping animation (no cut) */
-.wave-loop-slow {
-  animation: waveLoop 20s linear infinite;
-}
-
-.wave-loop-medium {
-  animation: waveLoop 14s linear infinite;
-}
-
-.wave-loop-fast {
-  animation: waveLoop 9s linear infinite;
-}
-
-/* Move exactly half (since width is doubled) */
 @keyframes waveLoop {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
+from {
+transform: translateX(0);
+}
+to {
+transform: translateX(-50%);
+}
 }
 
-.wave-loop-slow path,
-.wave-loop-medium path {
-  filter: blur(2px);
+/* Base wave */
+.wave {
+animation: waveLoop linear infinite;
+will-change: transform;
 }
 
-.wave-container {
-  animation: waveFlow 30s ease-in-out infinite;
+/* Back layer (slowest, blurred) */
+.wave-back {
+animation-duration: 20s;
+opacity: 0.5;
+filter: blur(3px);
 }
 
-/* smoother + slower + natural */
-@keyframes waveFlow {
-  0% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(-25%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+/* Middle layer */
+.wave-mid {
+animation-duration: 14s;
+opacity: 0.7;
+filter: blur(1.5px);
+}
+
+/* Front layer (fastest, sharpest) */
+.wave-front {
+animation-duration: 8s;
+opacity: 0.95;
 }
