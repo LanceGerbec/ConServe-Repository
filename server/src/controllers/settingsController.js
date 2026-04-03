@@ -97,3 +97,89 @@ export const uploadSchoolLogo   = makeLogoUploader('school',   'school',   'Scho
 export const uploadCollegeLogo  = makeLogoUploader('college',  'college',  'College logo',  [{ width: 200, height: 200, crop: 'limit' }]);
 export const uploadConserveLogo = makeLogoUploader('conserve', 'conserve', 'ConServe logo', [{ width: 200, height: 200, crop: 'limit' }]);
 export const uploadHeroBg       = makeLogoUploader('heroBg',   'hero-bg',  'Hero background', [{ width: 1920, height: 1080, crop: 'limit', quality: 'auto' }]);
+
+export const addBannerImage = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const s = await getOrCreate();
+
+    const result = await uploadToCloudinary(req.file.buffer, 'banners', {
+      transformation: [{ width: 1920, height: 600, crop: 'limit', quality: 'auto' }]
+    });
+
+    const banners = s.bannerImages || [];
+
+    if (banners.length >= 8) {
+      return res.status(400).json({ error: 'Max 8 banners allowed' });
+    }
+
+    banners.push({
+      url: result.secure_url,
+      cloudinaryId: result.public_id,
+      caption: req.body.caption || '',
+      addedAt: new Date()
+    });
+
+    s.bannerImages = banners;
+    s.updatedBy = req.user._id;
+
+    await s.save();
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'BANNER_IMAGE_ADDED',
+      resource: 'Settings',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.json({ message: 'Banner added', bannerImages: banners });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+};
+
+export const deleteBannerImage = async (req, res) => {
+  try {
+    const idx = parseInt(req.params.index);
+
+    const s = await getOrCreate();
+    const banners = s.bannerImages || [];
+
+    if (idx < 0 || idx >= banners.length) {
+      return res.status(404).json({ error: 'Banner not found' });
+    }
+
+    const removed = banners[idx];
+
+    if (removed.cloudinaryId) {
+      try {
+        await cloudinary.uploader.destroy(removed.cloudinaryId);
+      } catch {}
+    }
+
+    banners.splice(idx, 1);
+
+    s.bannerImages = banners;
+    s.updatedBy = req.user._id;
+
+    await s.save();
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'BANNER_IMAGE_DELETED',
+      resource: 'Settings',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.json({ message: 'Banner removed', bannerImages: banners });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Delete failed' });
+  }
+};

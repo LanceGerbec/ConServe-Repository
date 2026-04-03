@@ -3,7 +3,8 @@ import {
   getSettings, updateSettings,
   uploadSchoolLogo, uploadCollegeLogo,
   uploadConserveLogo, uploadHeroBg,
-  updateProfileName, uploadAvatar
+  updateProfileName, uploadAvatar,
+  addBannerImage, deleteBannerImage 
 } from '../controllers/settingsController.js';
 import { auth, authorize } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -18,5 +19,7 @@ router.post('/logo/school',     auth, authorize('admin'), upload.single('logo'),
 router.post('/logo/college',    auth, authorize('admin'), upload.single('logo'), uploadCollegeLogo);
 router.post('/logo/conserve',   auth, authorize('admin'), upload.single('logo'), uploadConserveLogo);
 router.post('/hero-background', auth, authorize('admin'), upload.single('image'), uploadHeroBg);
+router.post('/banners', auth, authorize('admin'), upload.single('image'), addBannerImage);
+router.delete('/banners/:index', auth, authorize('admin'), deleteBannerImage);
 
 export default router;

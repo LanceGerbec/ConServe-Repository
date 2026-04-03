@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Settings, Upload, Image, Bell, Shield, Save, CheckCircle, AlertCircle, Loader2, X, Eye, User, Pencil, Camera, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import BannerManagement from './BannerManagement';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -290,11 +291,16 @@ const SettingsManagement = () => {
 
       {/* ── Hero BG ── */}
       <Section title="Hero Background Image" icon={Image}>
+        
         <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-lg text-sm text-blue-800 dark:text-blue-300">
           Full-screen background on home page. Best: <strong>1920×1080px</strong>. Max 10MB.
         </div>
         <LogoUpload label="Hero Background" currentUrl={settings?.logos?.heroBg?.url} endpoint="hero-background" isImage onSuccess={fetchSettings} />
       </Section>
+
+      <Section title="Explore Page Banners (Slideshow)" icon={Image}>
+  <BannerManagement />
+</Section>
 
       {/* ── Logos ── */}
       <Section title="Site Logos" icon={Image}>
