@@ -25,7 +25,7 @@ export const getSettings = async (req, res) => {
 
 export const updateSettings = async (req, res) => {
   try {
-    const { siteName, siteDescription, theme, features, email, security } = req.body;
+    const { siteName, siteDescription, theme, features, email, security, featuredPapers } = req.body;
     const s = await getOrCreate();
     if (siteName) s.siteName = siteName;
     if (siteDescription) s.siteDescription = siteDescription;
@@ -33,6 +33,8 @@ export const updateSettings = async (req, res) => {
     if (features) s.features = { ...s.features, ...features };
     if (email) s.email = { ...s.email, ...email };
     if (security) s.security = { ...s.security, ...security };
+    // ✅ FIX: Save featuredPapers to DB so it persists for all users
+    if (featuredPapers !== undefined) s.featuredPapers = featuredPapers;
     s.updatedBy = req.user._id;
     s.updatedAt = new Date();
     await s.save();
@@ -41,17 +43,11 @@ export const updateSettings = async (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to update settings' }); }
 };
 
-// ── Profile name + avatar update (any logged-in user) ──
 export const updateProfileName = async (req, res) => {
   try {
     const { firstName, lastName } = req.body;
-    if (!firstName?.trim() || !lastName?.trim())
-      return res.status(400).json({ error: 'First and last name are required' });
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { firstName: firstName.trim(), lastName: lastName.trim() },
-      { new: true }
-    ).select('-password -passwordHistory');
+    if (!firstName?.trim() || !lastName?.trim()) return res.status(400).json({ error: 'First and last name are required' });
+    const user = await User.findByIdAndUpdate(req.user._id, { firstName: firstName.trim(), lastName: lastName.trim() }, { new: true }).select('-password -passwordHistory');
     await AuditLog.create({ user: req.user._id, action: 'PROFILE_NAME_UPDATED', resource: 'User', resourceId: req.user._id, ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Profile updated', user });
   } catch { res.status(500).json({ error: 'Failed to update profile' }); }
@@ -61,13 +57,8 @@ export const uploadAvatar = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const user = await User.findById(req.user._id);
-    // Delete old avatar from cloudinary if exists
-    if (user.avatarCloudinaryId) {
-      try { await cloudinary.uploader.destroy(user.avatarCloudinaryId); } catch {}
-    }
-    const result = await uploadToCloudinary(req.file.buffer, 'avatars', {
-      transformation: [{ width: 300, height: 300, crop: 'fill', gravity: 'face' }]
-    });
+    if (user.avatarCloudinaryId) { try { await cloudinary.uploader.destroy(user.avatarCloudinaryId); } catch {} }
+    const result = await uploadToCloudinary(req.file.buffer, 'avatars', { transformation: [{ width: 300, height: 300, crop: 'fill', gravity: 'face' }] });
     user.avatar = result.secure_url;
     user.avatarCloudinaryId = result.public_id;
     await user.save();
@@ -80,9 +71,7 @@ const makeLogoUploader = (key, folder, label, transformation) => async (req, res
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const s = await getOrCreate();
-    if (s.logos?.[key]?.cloudinaryId) {
-      try { await cloudinary.uploader.destroy(s.logos[key].cloudinaryId); } catch {}
-    }
+    if (s.logos?.[key]?.cloudinaryId) { try { await cloudinary.uploader.destroy(s.logos[key].cloudinaryId); } catch {} }
     const result = await uploadToCloudinary(req.file.buffer, folder, { transformation });
     s.logos = s.logos || {};
     s.logos[key] = { url: result.secure_url, cloudinaryId: result.public_id, uploadedAt: new Date() };
@@ -101,85 +90,32 @@ export const uploadHeroBg       = makeLogoUploader('heroBg',   'hero-bg',  'Hero
 export const addBannerImage = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
     const s = await getOrCreate();
-
-    const result = await uploadToCloudinary(req.file.buffer, 'banners', {
-      transformation: [{ width: 1920, height: 600, crop: 'limit', quality: 'auto' }]
-    });
-
+    const result = await uploadToCloudinary(req.file.buffer, 'banners', { transformation: [{ width: 1920, height: 600, crop: 'limit', quality: 'auto' }] });
     const banners = s.bannerImages || [];
-
-    if (banners.length >= 8) {
-      return res.status(400).json({ error: 'Max 8 banners allowed' });
-    }
-
-    banners.push({
-      url: result.secure_url,
-      cloudinaryId: result.public_id,
-      caption: req.body.caption || '',
-      addedAt: new Date()
-    });
-
+    if (banners.length >= 8) return res.status(400).json({ error: 'Max 8 banners allowed' });
+    banners.push({ url: result.secure_url, cloudinaryId: result.public_id, caption: req.body.caption || '', addedAt: new Date() });
     s.bannerImages = banners;
     s.updatedBy = req.user._id;
-
     await s.save();
-
-    await AuditLog.create({
-      user: req.user._id,
-      action: 'BANNER_IMAGE_ADDED',
-      resource: 'Settings',
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
-
+    await AuditLog.create({ user: req.user._id, action: 'BANNER_IMAGE_ADDED', resource: 'Settings', ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Banner added', bannerImages: banners });
-
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Upload failed' });
-  }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Upload failed' }); }
 };
 
 export const deleteBannerImage = async (req, res) => {
   try {
     const idx = parseInt(req.params.index);
-
     const s = await getOrCreate();
     const banners = s.bannerImages || [];
-
-    if (idx < 0 || idx >= banners.length) {
-      return res.status(404).json({ error: 'Banner not found' });
-    }
-
+    if (idx < 0 || idx >= banners.length) return res.status(404).json({ error: 'Banner not found' });
     const removed = banners[idx];
-
-    if (removed.cloudinaryId) {
-      try {
-        await cloudinary.uploader.destroy(removed.cloudinaryId);
-      } catch {}
-    }
-
+    if (removed.cloudinaryId) { try { await cloudinary.uploader.destroy(removed.cloudinaryId); } catch {} }
     banners.splice(idx, 1);
-
     s.bannerImages = banners;
     s.updatedBy = req.user._id;
-
     await s.save();
-
-    await AuditLog.create({
-      user: req.user._id,
-      action: 'BANNER_IMAGE_DELETED',
-      resource: 'Settings',
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
-
+    await AuditLog.create({ user: req.user._id, action: 'BANNER_IMAGE_DELETED', resource: 'Settings', ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Banner removed', bannerImages: banners });
-
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Delete failed' });
-  }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Delete failed' }); }
 };
