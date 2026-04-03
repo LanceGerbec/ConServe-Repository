@@ -76,12 +76,17 @@ iframe {
 
 
 @keyframes waveLoop {
-from {
-transform: translateX(0);
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
-to {
-transform: translateX(-50%);
-}
+
+/* Apply to SVG */
+.wave-container {
+  animation: waveLoop 20s linear infinite;
 }
 
 /* Base wave */
@@ -92,20 +97,16 @@ will-change: transform;
 
 /* Back layer (slowest, blurred) */
 .wave-back {
-animation-duration: 20s;
-opacity: 0.5;
-filter: blur(3px);
+  animation: waveLoop 30s linear infinite;
+  opacity: 0.5;
 }
 
-/* Middle layer */
 .wave-mid {
-animation-duration: 14s;
-opacity: 0.7;
-filter: blur(1.5px);
+  animation: waveLoop 20s linear infinite;
+  opacity: 0.7;
 }
 
-/* Front layer (fastest, sharpest) */
 .wave-front {
-animation-duration: 8s;
-opacity: 0.95;
+  animation: waveLoop 12s linear infinite;
+  opacity: 1;
 }

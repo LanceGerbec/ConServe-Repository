@@ -271,7 +271,7 @@
   <div className="overflow-hidden relative">
     <svg
       viewBox="0 0 1440 90"
-      className="w-[200%] h-[70px] block -mb-[2px]"
+      className="w-[200%] h-[70px] block wave-container -mb-[2px]"
       preserveAspectRatio="none"
     >
       {/* Gradient */}
