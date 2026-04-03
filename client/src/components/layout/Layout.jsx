@@ -269,43 +269,69 @@
       {/* ── Footer ── */}
 <footer className="relative mt-auto">
   <div className="overflow-hidden relative">
-    <svg
-      viewBox="0 0 1440 90"
-      className="w-[200%] h-[70px] block wave-container -mb-[2px]"
-      preserveAspectRatio="none"
-    >
-      {/* Gradient */}
-      <defs>
-        <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#03142b" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#020617" stopOpacity="1" />
-        </linearGradient>
-      </defs>
+  <svg
+  viewBox="0 0 1440 90"
+  className="w-[200%] h-[70px] block wave-container -mb-[2px]"
+  preserveAspectRatio="none"
+>
+  <defs>
+    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#03142b" stopOpacity="0.5" />
+      <stop offset="100%" stopColor="#020617" stopOpacity="1" />
+    </linearGradient>
+  </defs>
 
-      {/* BACK */}
-      <path
-        d="M0,60 C180,20 360,80 540,60 C720,40 900,80 1080,60 C1260,40 1440,70 1440,70 L1440,90 L0,90 Z
-           M1440,60 C1620,20 1800,80 1980,60 C2160,40 2340,80 2520,60 C2700,40 2880,70 2880,70 L2880,90 L1440,90 Z"
-        fill="#020c1b"
-        className="wave wave-back"
-      />
+  {/* BACK */}
+  <path
+    d="
+      M0,60 
+      C240,30 480,90 720,60 
+      C960,30 1200,90 1440,60 
+      L1440,90 L0,90 Z
 
-      {/* MID */}
-      <path
-        d="M0,65 C180,30 360,85 540,65 C720,45 900,85 1080,65 C1260,45 1440,75 1440,75 L1440,90 L0,90 Z
-           M1440,65 C1620,30 1800,85 1980,65 C2160,45 2340,85 2520,65 C2700,45 2880,75 2880,75 L2880,90 L1440,90 Z"
-        fill="#03142b"
-        className="wave wave-mid"
-      />
+      M1440,60 
+      C1680,30 1920,90 2160,60 
+      C2400,30 2640,90 2880,60 
+      L2880,90 L1440,90 Z
+    "
+    fill="#020c1b"
+    className="wave wave-back"
+  />
 
-      {/* FRONT */}
-      <path
-        d="M0,70 C180,40 360,90 540,70 C720,50 900,90 1080,70 C1260,50 1440,80 1440,80 L1440,90 L0,90 Z
-           M1440,70 C1620,40 1800,90 1980,70 C2160,50 2340,90 2520,70 C2700,50 2880,80 2880,80 L2880,90 L1440,90 Z"
-        fill="url(#waveGradient)"
-        className="wave wave-front"
-      />
-    </svg>
+  {/* MID */}
+  <path
+    d="
+      M0,65 
+      C240,35 480,95 720,65 
+      C960,35 1200,95 1440,65 
+      L1440,90 L0,90 Z
+
+      M1440,65 
+      C1680,35 1920,95 2160,65 
+      C2400,35 2640,95 2880,65 
+      L2880,90 L1440,90 Z
+    "
+    fill="#03142b"
+    className="wave wave-mid"
+  />
+
+  {/* FRONT */}
+  <path
+    d="
+      M0,70 
+      C240,40 480,100 720,70 
+      C960,40 1200,100 1440,70 
+      L1440,90 L0,90 Z
+
+      M1440,70 
+      C1680,40 1920,100 2160,70 
+      C2400,40 2640,100 2880,70 
+      L2880,90 L1440,90 Z
+    "
+    fill="url(#waveGradient)"
+    className="wave wave-front"
+  />
+</svg>
   </div>
 
   {/* Footer Content */}

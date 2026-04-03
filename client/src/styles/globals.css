@@ -80,39 +80,8 @@ iframe {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-1440px); /* exact width of one wave */
+    transform: translateX(-50%);
   }
-}
-
-/* Apply to SVG */
-.wave-container {
-  animation: waveLoop 20s linear infinite;
-}
-
-/* Base wave */
-.wave {
-animation: waveLoop linear infinite;
-will-change: transform;
-}
-
-/* Back layer (slowest, blurred) */
-.wave-back {
-animation-duration: 20s;
-opacity: 0.5;
-filter: blur(3px);
-}
-
-/* Middle layer */
-.wave-mid {
-animation-duration: 14s;
-opacity: 0.7;
-filter: blur(1.5px);
-}
-
-/* Front layer (fastest, sharpest) */
-.wave-front {
-animation-duration: 8s;
-opacity: 0.95;
 }
 
 .wave {
@@ -121,10 +90,23 @@ opacity: 0.95;
   backface-visibility: hidden;
 }
 
-.wave-container {
-  transform: translateZ(0);
+.wave-back {
+  animation-duration: 20s;
+  opacity: 0.5;
+  filter: blur(3px);
 }
 
-svg {
-  shape-rendering: geometricPrecision;
+.wave-mid {
+  animation-duration: 14s;
+  opacity: 0.7;
+  filter: blur(1.5px);
+}
+
+.wave-front {
+  animation-duration: 8s;
+  opacity: 0.95;
+}
+
+.wave-container {
+  transform: translateZ(0);
 }
