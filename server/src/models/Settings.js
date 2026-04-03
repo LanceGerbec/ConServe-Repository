@@ -1,3 +1,4 @@
+// server/src/models/Settings.js
 import mongoose from 'mongoose';
 
 const settingsSchema = new mongoose.Schema({
@@ -9,14 +10,17 @@ const settingsSchema = new mongoose.Schema({
     conserve: { url: String, cloudinaryId: String, uploadedAt: Date },
     heroBg:   { url: String, cloudinaryId: String, uploadedAt: Date }
   },
-
   bannerImages: [{
-  url: { type: String, required: true },
-  cloudinaryId: String,
-  caption: { type: String, default: '' },
-  addedAt: { type: Date, default: Date.now }
-}],
-
+    url: { type: String, required: true },
+    cloudinaryId: String,
+    caption: { type: String, default: '' },
+    addedAt: { type: Date, default: Date.now }
+  }],
+  // Featured papers for Explore page carousel
+  featuredPapers: [{
+    paperId: { type: mongoose.Schema.Types.ObjectId, ref: 'Research' },
+    caption: { type: String, default: '' }
+  }],
   theme: {
     primaryColor: { type: String, default: '#1e3a8a' },
     accentColor:  { type: String, default: '#60a5fa' }
@@ -40,6 +44,5 @@ const settingsSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
-
 
 export default mongoose.model('Settings', settingsSchema);
