@@ -91,3 +91,38 @@ iframe {
 .wave-fast {
   animation: waveMove 5s ease-in-out infinite;
 }
+
+/* Base wave animation */
+.wave {
+  animation: waveMove 12s ease-in-out infinite alternate;
+  backdrop-filter: blur(8px);
+}
+
+/* Different speeds = parallax depth */
+.wave-slow {
+  animation-duration: 18s;
+  opacity: 0.6;
+}
+
+.wave-medium {
+  animation-duration: 12s;
+  opacity: 0.75;
+}
+
+.wave-fast {
+  animation-duration: 8s;
+  opacity: 0.9;
+}
+
+/* Motion */
+@keyframes waveMove {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(-20px) translateY(2px);
+  }
+  100% {
+    transform: translateX(20px) translateY(-2px);
+  }
+}

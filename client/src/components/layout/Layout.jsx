@@ -269,35 +269,60 @@ const Layout = ({ children }) => {
       {/* ── Footer ── */}
       <footer className="relative mt-auto">
         <div className="overflow-hidden leading-none">
-        <svg
+       <svg
   viewBox="0 0 1440 90"
   xmlns="http://www.w3.org/2000/svg"
   className="w-full block"
   preserveAspectRatio="none"
   style={{ height: '70px' }}
 >
-  {/* Back layer (slowest) */}
+  <defs>
+    {/* Gradient layers */}
+    <linearGradient id="waveGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#0a192f" stopOpacity="0.6" />
+      <stop offset="50%" stopColor="#112240" stopOpacity="0.5" />
+      <stop offset="100%" stopColor="#0f172a" stopOpacity="0.6" />
+    </linearGradient>
+
+    <linearGradient id="waveGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#081424" stopOpacity="0.7" />
+      <stop offset="50%" stopColor="#0b1e3a" stopOpacity="0.6" />
+      <stop offset="100%" stopColor="#050f1f" stopOpacity="0.7" />
+    </linearGradient>
+
+    <linearGradient id="waveGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#050f1f" />
+      <stop offset="100%" stopColor="#020617" />
+    </linearGradient>
+  </defs>
+
+  {/* Back wave */}
   <path
     d="M0,60 C240,10 480,80 720,45 C960,10 1200,75 1440,50 L1440,90 L0,90 Z"
-    className="fill-[#0a192f]/40 wave-slow"
+    fill="url(#waveGradient1)"
+    className="wave wave-slow"
   />
 
-  {/* Mid layer */}
+  {/* Middle wave */}
   <path
     d="M0,70 C200,30 400,80 600,55 C800,30 1000,75 1200,55 C1320,45 1400,65 1440,60 L1440,90 L0,90 Z"
-    className="fill-[#081424]/70 wave-medium"
+    fill="url(#waveGradient2)"
+    className="wave wave-medium"
   />
 
-  {/* Front layer (main) */}
+  {/* Front wave */}
   <path
     d="M0,75 C180,55 360,85 540,70 C720,55 900,80 1080,68 C1260,56 1380,74 1440,72 L1440,90 L0,90 Z"
-    className="fill-[#050f1f] wave-fast"
+    fill="url(#waveGradient3)"
+    className="wave wave-fast"
   />
 </svg>
 
+
         </div>
 
-        <div className="bg-[#050f1f] text-white py-10 px-4">
+        <div className="bg-gradient-to-b from-[#050f1f] via-[#030712] to-black text-white py-10 px-4 backdrop-blur-xl">
+
 
           
           <div className="max-w-6xl mx-auto">
