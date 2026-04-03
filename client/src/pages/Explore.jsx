@@ -526,7 +526,7 @@ const Explore = () => {
     </div>
   );
 
-  return (
+ return (
     <>
       <style>{`
         @keyframes progress-bar { from { width: 0% } to { width: 100% } }
@@ -555,7 +555,14 @@ const Explore = () => {
           )}
         </div>
 
-        {/* ══ SECTION 2: SEARCH & FILTER (moved up — always visible) ══ */}
+        {/* ══ SECTION 2: FEATURED PAPERS ══ */}
+        {(resolvedFeatured.length > 0 || isAdmin) && (
+          <div className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+            <FeaturedPapersSection papers={resolvedFeatured} onPaperClick={id => navigate(`/research/${id}`)} isAdmin={isAdmin} onManage={() => setShowFeaturedManager(true)} />
+          </div>
+        )}
+
+        {/* ══ SECTION 3: SEARCH & FILTER ══ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-navy/5 to-white dark:from-navy/20 dark:to-gray-800">
             <div className="w-8 h-8 bg-navy dark:bg-blue-600 rounded-lg flex items-center justify-center"><Search size={16} className="text-white" /></div>
@@ -633,13 +640,6 @@ const Explore = () => {
             )}
           </div>
         </div>
-
-        {/* ══ SECTION 3: FEATURED PAPERS (for ALL users when set) ══ */}
-        {(resolvedFeatured.length > 0 || isAdmin) && (
-          <div className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-            <FeaturedPapersSection papers={resolvedFeatured} onPaperClick={id => navigate(`/research/${id}`)} isAdmin={isAdmin} onManage={() => setShowFeaturedManager(true)} />
-          </div>
-        )}
 
         {/* ══ SECTION 4: RESULTS ══ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">

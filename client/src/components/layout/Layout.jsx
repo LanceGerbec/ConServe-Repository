@@ -277,6 +277,7 @@ const Layout = ({ children }) => {
         </div>
 
         <div className="bg-navy dark:bg-gray-950 text-white py-10 px-4">
+            <div className="absolute inset-0 bg-black/10"></div>
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
               {/* Brand */}
