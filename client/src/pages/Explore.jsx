@@ -142,7 +142,7 @@ const FeaturedPapersSection = memo(({ papers, onPaperClick, isAdmin, onManage })
             <Crown size={15} className="text-amber-600 dark:text-amber-400" />
             <span className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">Featured Research</span>
           </div>
-          <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">Curated by administrators</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block"></span>
         </div>
         {isAdmin && (
           <button onClick={onManage} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-300 transition">
