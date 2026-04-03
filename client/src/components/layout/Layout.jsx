@@ -266,120 +266,131 @@
           {children}
         </main>
 
-        {/* ── Footer ── */}
-        <footer className="relative mt-auto">
-    <div className="overflow-hidden relative">
-   <svg
-  viewBox="0 0 1440 90"
-  className="w-[200%] h-[70px] block"
-  preserveAspectRatio="none"
->
-  {/* ✅ ADD THIS PART */}
-  <defs>
-    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#0b1e3a" stopOpacity="0.4" />
-      <stop offset="100%" stopColor="#050f1f" stopOpacity="1" />
-    </linearGradient>
-  </defs>
+      {/* ── Footer ── */}
+<footer className="relative mt-auto">
+  <div className="overflow-hidden relative">
+    <svg
+      viewBox="0 0 1440 90"
+      className="w-[200%] h-[70px] block -mb-[2px]"
+      preserveAspectRatio="none"
+    >
+      {/* Gradient */}
+      <defs>
+        <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#03142b" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#020617" stopOpacity="1" />
+        </linearGradient>
+      </defs>
 
-  {/* BACK */}
-  <path
-    d="M0,60 C180,20 360,80 540,60 C720,40 900,80 1080,60 C1260,40 1440,70 1440,70 L1440,90 L0,90 Z
-       M1440,60 C1620,20 1800,80 1980,60 C2160,40 2340,80 2520,60 C2700,40 2880,70 2880,70 L2880,90 L1440,90 Z"
-    fill="#0a192f"
-    className="wave wave-back"
-  />
+      {/* BACK */}
+      <path
+        d="M0,60 C180,20 360,80 540,60 C720,40 900,80 1080,60 C1260,40 1440,70 1440,70 L1440,90 L0,90 Z
+           M1440,60 C1620,20 1800,80 1980,60 C2160,40 2340,80 2520,60 C2700,40 2880,70 2880,70 L2880,90 L1440,90 Z"
+        fill="#020c1b"
+        className="wave wave-back"
+      />
 
-  {/* MID */}
-  <path
-    d="M0,65 C180,30 360,85 540,65 C720,45 900,85 1080,65 C1260,45 1440,75 1440,75 L1440,90 L0,90 Z
-       M1440,65 C1620,30 1800,85 1980,65 C2160,45 2340,85 2520,65 C2700,45 2880,75 2880,75 L2880,90 L1440,90 Z"
-    fill="#0b1e3a"
-    className="wave wave-mid"
-  />
+      {/* MID */}
+      <path
+        d="M0,65 C180,30 360,85 540,65 C720,45 900,85 1080,65 C1260,45 1440,75 1440,75 L1440,90 L0,90 Z
+           M1440,65 C1620,30 1800,85 1980,65 C2160,45 2340,85 2520,65 C2700,45 2880,75 2880,75 L2880,90 L1440,90 Z"
+        fill="#03142b"
+        className="wave wave-mid"
+      />
 
-  {/* FRONT */}
-  <path
-    d="M0,70 C180,40 360,90 540,70 C720,50 900,90 1080,70 C1260,50 1440,80 1440,80 L1440,90 L0,90 Z
-       M1440,70 C1620,40 1800,90 1980,70 C2160,50 2340,90 2520,70 C2700,50 2880,80 2880,80 L2880,90 L1440,90 Z"
-    fill="url(#waveGradient)"  // ✅ THIS NOW WORKS
-    className="wave wave-front"
-  />
-</svg>
+      {/* FRONT */}
+      <path
+        d="M0,70 C180,40 360,90 540,70 C720,50 900,90 1080,70 C1260,50 1440,80 1440,80 L1440,90 L0,90 Z
+           M1440,70 C1620,40 1800,90 1980,70 C2160,50 2340,90 2520,70 C2700,50 2880,80 2880,80 L2880,90 L1440,90 Z"
+        fill="url(#waveGradient)"
+        className="wave wave-front"
+      />
+    </svg>
   </div>
 
+  {/* Footer Content */}
+  <div className="bg-[#020617] text-white py-10 px-4 -mt-1">
+    <div className="max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
 
+        {/* Brand */}
+        <div>
+          <div className="flex items-center gap-2.5 mb-4">
+            <a href="https://neust.edu.ph/" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 rounded-full border-2 border-white/20 overflow-hidden bg-white hover:scale-110 transition flex-shrink-0">
+              {logos.school?.url
+                ? <img src={logos.school.url} alt="NEUST" className="w-full h-full object-cover" />
+                : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-600">N</span>}
+            </a>
 
-          <div className="bg-gradient-to-b from-[#050f1f] via-[#030712] to-black text-white py-10 px-4 backdrop-blur-xl">
+            <a href="https://www.facebook.com/NEUSTCON" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 rounded-full border-2 border-white/20 overflow-hidden bg-white hover:scale-110 transition flex-shrink-0">
+              {logos.college?.url
+                ? <img src={logos.college.url} alt="CON" className="w-full h-full object-cover" />
+                : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-600">C</span>}
+            </a>
 
+            <Link to="/"
+              className="w-9 h-9 rounded-lg bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center flex-shrink-0 hover:scale-110 transition">
+              {logos.conserve?.url
+                ? <img src={logos.conserve.url} alt="ConServe" className="w-full h-full object-cover" />
+                : <BookOpen size={16} className="text-blue-300" />}
+            </Link>
 
-            
-            <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                {/* Brand */}
-                <div>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <a href="https://neust.edu.ph/" target="_blank" rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full border-2 border-white/20 overflow-hidden bg-white hover:scale-110 transition flex-shrink-0" title="NEUST">
-                      {logos.school?.url
-                        ? <img src={logos.school.url} alt="NEUST" className="w-full h-full object-cover" />
-                        : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-600">N</span>}
-                    </a>
-                    <a href="https://www.facebook.com/NEUSTCON" target="_blank" rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full border-2 border-white/20 overflow-hidden bg-white hover:scale-110 transition flex-shrink-0" title="College of Nursing">
-                      {logos.college?.url
-                        ? <img src={logos.college.url} alt="CON" className="w-full h-full object-cover" />
-                        : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-600">C</span>}
-                    </a>
-                    <Link to="/"
-                      className="w-9 h-9 rounded-lg bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center flex-shrink-0 hover:scale-110 transition">
-                      {logos.conserve?.url
-                        ? <img src={logos.conserve.url} alt="ConServe" className="w-full h-full object-cover" />
-                        : <BookOpen size={16} className="text-blue-300" />}
-                    </Link>
-                    <span className="font-black text-xl">
-                      <span className="text-blue-300">CON</span><span className="text-white">serve</span>
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-200/70 leading-relaxed">NEUST College of Nursing<br />Research Repository</p>
-                </div>
+            <span className="font-black text-xl">
+              <span className="text-blue-400">CON</span>
+              <span className="text-white">serve</span>
+            </span>
+          </div>
 
-                {/* Quick Links */}
-                <div>
-                  <h4 className="font-bold text-white text-sm mb-4 uppercase tracking-wider">Quick Links</h4>
-                  <div className="space-y-2">
-                    {[['/', 'Home'], ['/about', 'About Us'], ['/help', 'Help Center'], ['/terms', 'Terms & Conditions'], ['/privacy', 'Privacy Policy']].map(([to, label]) => (
-                      <Link key={to} to={to} className="block text-sm text-blue-200/70 hover:text-white transition font-medium">{label}</Link>
-                    ))}
-                  </div>
-                </div>
+          <p className="text-sm text-blue-300/70 leading-relaxed">
+            NEUST College of Nursing<br />Research Repository
+          </p>
+        </div>
 
-                {/* Contact */}
-                <div>
-                  <h4 className="font-bold text-white text-sm mb-4 uppercase tracking-wider">Contact</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-2.5 text-sm text-blue-200/70">
-                      <MapPin size={15} className="text-blue-300 mt-0.5 flex-shrink-0" />
-                      <span>Nueva Ecija University of Science and Technology — College of Nursing</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-sm text-blue-200/70">
-                      <Mail size={15} className="text-blue-300 flex-shrink-0" />
-                      <a href="mailto:conserve2025@gmail.com" className="hover:text-white transition break-all">conserve2025@gmail.com</a>
-                    </div>
-                  </div>
-                  <Link to="/help" className="inline-block mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-bold text-white transition">
-                    Get Help →
-                  </Link>
-                </div>
-              </div>
+        {/* Quick Links */}
+        <div>
+          <h4 className="font-bold text-white text-sm mb-4 uppercase tracking-wider">Quick Links</h4>
+          <div className="space-y-2">
+            {[['/', 'Home'], ['/about', 'About Us'], ['/help', 'Help Center'], ['/terms', 'Terms & Conditions'], ['/privacy', 'Privacy Policy']].map(([to, label]) => (
+              <Link key={to} to={to} className="block text-sm text-blue-300/70 hover:text-white transition font-medium">
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
 
-              <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-blue-300/60">
-                <p>© {new Date().getFullYear()} NEUST College of Nursing. All Rights Reserved.</p>
-                <p>Secured under RA 10173 (Data Privacy Act)</p>
-              </div>
+        {/* Contact */}
+        <div>
+          <h4 className="font-bold text-white text-sm mb-4 uppercase tracking-wider">Contact</h4>
+          <div className="space-y-3">
+            <div className="flex items-start gap-2.5 text-sm text-blue-300/70">
+              <MapPin size={15} className="text-blue-400 mt-0.5 flex-shrink-0" />
+              <span>Nueva Ecija University of Science and Technology — College of Nursing</span>
+            </div>
+
+            <div className="flex items-center gap-2.5 text-sm text-blue-300/70">
+              <Mail size={15} className="text-blue-400 flex-shrink-0" />
+              <a href="mailto:conserve2025@gmail.com" className="hover:text-white transition break-all">
+                conserve2025@gmail.com
+              </a>
             </div>
           </div>
-        </footer>
+
+          <Link to="/help"
+            className="inline-block mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-bold text-white transition">
+            Get Help →
+          </Link>
+        </div>
+      </div>
+
+      <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-blue-300/60">
+        <p>© {new Date().getFullYear()} NEUST College of Nursing. All Rights Reserved.</p>
+        <p>Secured under RA 10173 (Data Privacy Act)</p>
+      </div>
+    </div>
+  </div>
+</footer>
       </div>
     );
   };
