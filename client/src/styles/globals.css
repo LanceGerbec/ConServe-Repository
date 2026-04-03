@@ -126,3 +126,32 @@ iframe {
     transform: translateX(20px) translateY(-2px);
   }
 }
+
+/* Looping animation (no cut) */
+.wave-loop-slow {
+  animation: waveLoop 20s linear infinite;
+}
+
+.wave-loop-medium {
+  animation: waveLoop 14s linear infinite;
+}
+
+.wave-loop-fast {
+  animation: waveLoop 9s linear infinite;
+}
+
+/* Move exactly half (since width is doubled) */
+@keyframes waveLoop {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.wave-loop-slow path,
+.wave-loop-medium path {
+  filter: blur(2px);
+}
+
