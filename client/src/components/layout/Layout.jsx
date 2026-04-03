@@ -268,54 +268,43 @@ const Layout = ({ children }) => {
 
       {/* ── Footer ── */}
       <footer className="relative mt-auto">
-      <div className="overflow-hidden relative">
+  <div className="overflow-hidden relative">
   <svg
-    viewBox="0 0 2880 90" // 🔥 doubled width
+    viewBox="0 0 1440 90"
     xmlns="http://www.w3.org/2000/svg"
-    className="w-[200%] block"
+    className="w-[200%] block wave-container"
     preserveAspectRatio="none"
     style={{ height: '70px' }}
   >
     <defs>
-      <linearGradient id="waveGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#0a192f" stopOpacity="0.6" />
-        <stop offset="50%" stopColor="#112240" stopOpacity="0.5" />
-        <stop offset="100%" stopColor="#0f172a" stopOpacity="0.6" />
-      </linearGradient>
-
-      <linearGradient id="waveGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#081424" stopOpacity="0.7" />
+      <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#0a192f" stopOpacity="0.7" />
         <stop offset="50%" stopColor="#0b1e3a" stopOpacity="0.6" />
-        <stop offset="100%" stopColor="#050f1f" stopOpacity="0.7" />
-      </linearGradient>
-
-      <linearGradient id="waveGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#050f1f" />
-        <stop offset="100%" stopColor="#020617" />
+        <stop offset="100%" stopColor="#050f1f" stopOpacity="0.8" />
       </linearGradient>
     </defs>
 
-    {/* 🔥 DUPLICATED WAVES FOR LOOPING */}
-    
-    {/* Back */}
-    <g className="wave-loop-slow">
-      <path d="M0,60 C240,10 480,80 720,45 C960,10 1200,75 1440,50 L1440,90 L0,90 Z" fill="url(#waveGradient1)" />
-      <path d="M1440,60 C1680,10 1920,80 2160,45 C2400,10 2640,75 2880,50 L2880,90 L1440,90 Z" fill="url(#waveGradient1)" />
-    </g>
+    {/* 🔥 PERFECTLY LOOPABLE SHAPE */}
+    <path
+      d="
+        M0,60 
+        C180,20 360,80 540,60 
+        C720,40 900,80 1080,60 
+        C1260,40 1440,70 1440,70 
+        L1440,90 L0,90 Z
 
-    {/* Mid */}
-    <g className="wave-loop-medium">
-      <path d="M0,70 C200,30 400,80 600,55 C800,30 1000,75 1200,55 C1320,45 1400,65 1440,60 L1440,90 L0,90 Z" fill="url(#waveGradient2)" />
-      <path d="M1440,70 C1640,30 1840,80 2040,55 C2240,30 2440,75 2640,55 C2760,45 2840,65 2880,60 L2880,90 L1440,90 Z" fill="url(#waveGradient2)" />
-    </g>
-
-    {/* Front */}
-    <g className="wave-loop-fast">
-      <path d="M0,75 C180,55 360,85 540,70 C720,55 900,80 1080,68 C1260,56 1380,74 1440,72 L1440,90 L0,90 Z" fill="url(#waveGradient3)" />
-      <path d="M1440,75 C1620,55 1800,85 1980,70 C2160,55 2340,80 2520,68 C2700,56 2820,74 2880,72 L2880,90 L1440,90 Z" fill="url(#waveGradient3)" />
-    </g>
+        M1440,60 
+        C1620,20 1800,80 1980,60 
+        C2160,40 2340,80 2520,60 
+        C2700,40 2880,70 2880,70 
+        L2880,90 L1440,90 Z
+      "
+      fill="url(#waveGradient)"
+      className="wave-smooth"
+    />
   </svg>
 </div>
+
 
 
         <div className="bg-gradient-to-b from-[#050f1f] via-[#030712] to-black text-white py-10 px-4 backdrop-blur-xl">

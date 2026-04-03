@@ -155,3 +155,19 @@ iframe {
   filter: blur(2px);
 }
 
+.wave-container {
+  animation: waveFlow 30s ease-in-out infinite;
+}
+
+/* smoother + slower + natural */
+@keyframes waveFlow {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-25%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
