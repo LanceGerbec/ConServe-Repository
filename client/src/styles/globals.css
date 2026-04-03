@@ -80,7 +80,7 @@ iframe {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-50%);
+    transform: translateX(-1440px); /* exact width of one wave */
   }
 }
 
@@ -113,4 +113,18 @@ filter: blur(1.5px);
 .wave-front {
 animation-duration: 8s;
 opacity: 0.95;
+}
+
+.wave {
+  animation: waveLoop linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.wave-container {
+  transform: translateZ(0);
+}
+
+svg {
+  shape-rendering: geometricPrecision;
 }
