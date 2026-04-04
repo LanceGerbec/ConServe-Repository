@@ -52,7 +52,6 @@ const ImgCard = ({ url, alt = '', className = '' }) => (
   </div>
 );
 
-// ✅ KEY FIX: extracts .url if value is an object (from MongoDB), or returns string directly
 const extractUrl = (img) => {
   if (!img) return '';
   if (typeof img === 'string') return img;
@@ -70,14 +69,10 @@ export default function Home() {
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/settings`).then(r => r.json()).then(d => {
       const s = d.settings || {};
-
-      // Build hero slides
       const imgs = [];
       if (s.logos?.heroBg?.url) imgs.push({ url: s.logos.heroBg.url, headline: 'DISCOVER NURSING RESEARCH', sub: 'Access peer-reviewed nursing papers from NEUST.' });
       (s.bannerImages || []).forEach(b => imgs.push({ url: b.url, headline: (b.caption || 'EXPLORE NURSING RESEARCH').toUpperCase(), sub: 'Discover, cite, and collaborate on nursing research.' }));
       if (imgs.length) setSlides(imgs);
-
-      // ✅ FIX: always extract .url from objects — MongoDB returns {url, cloudinaryId, addedAt}
       if (s.homeImages) {
         setHomeImages({
           about: (s.homeImages.about || []).map(extractUrl),
@@ -87,7 +82,6 @@ export default function Home() {
         const bi = (s.bannerImages || []).map(b => b.url);
         setHomeImages({ about: [bi[0] || '', bi[1] || '', bi[2] || ''], types: [bi[0] || '', bi[1] || '', bi[2] || ''] });
       }
-
       if (s.homeStats) setStats(s.homeStats);
     }).catch(() => {});
   }, []);
@@ -111,6 +105,38 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         .font-sans { font-family: 'Inter', system-ui, -apple-system, sans-serif !important; }
         @keyframes hprogress { from { width: 0 } to { width: 100% } }
+
+        /* Floating animations — each image gets a unique rhythm */
+        @keyframes float-1 {
+          0%,100% { transform: translateY(0px) rotate(0deg); }
+          33%      { transform: translateY(-12px) rotate(0.4deg); }
+          66%      { transform: translateY(-5px) rotate(-0.3deg); }
+        }
+        @keyframes float-2 {
+          0%,100% { transform: translateY(0px) rotate(0deg); }
+          40%      { transform: translateY(-9px) rotate(-0.5deg); }
+          70%      { transform: translateY(-4px) rotate(0.4deg); }
+        }
+        @keyframes float-3 {
+          0%,100% { transform: translateY(0px) rotate(0deg); }
+          30%      { transform: translateY(-14px) rotate(0.6deg); }
+          65%      { transform: translateY(-6px) rotate(-0.4deg); }
+        }
+        @keyframes float-badge {
+          0%,100% { transform: translateY(0px) scale(1); }
+          50%      { transform: translateY(-7px) scale(1.03); }
+        }
+
+        .about-img-1      { animation: float-1     7s   ease-in-out         infinite; will-change: transform; }
+        .about-img-2      { animation: float-2     5.5s ease-in-out 0.8s    infinite; will-change: transform; }
+        .about-img-3      { animation: float-3     6.5s ease-in-out 1.5s    infinite; will-change: transform; }
+        .about-badge-1    { animation: float-badge 4s   ease-in-out 0.4s    infinite; will-change: transform; }
+        .about-badge-2    { animation: float-badge 4s   ease-in-out 1.2s    infinite; will-change: transform; }
+
+        /* Pause on hover for comfortable reading */
+        .about-img-1:hover,
+        .about-img-2:hover,
+        .about-img-3:hover { animation-play-state: paused; }
       `}</style>
 
       <HeroSlideshow slides={slides} />
@@ -118,27 +144,40 @@ export default function Home() {
       {/* ── ABOUT ── */}
       <section className="bg-gray-50 dark:bg-gray-950 py-12 md:py-20">
         <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2"><ImgCard url={homeImages.about[0]} alt="About 1" className="w-full rounded-xl shadow-xl" /></div>
-            <div>
-              <div className="relative">
-                <div className="absolute -top-4 -left-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg px-4 py-3 border border-gray-100 dark:border-gray-700">
+
+          {/* Floating image grid */}
+          <div className="grid grid-cols-2 gap-3" style={{ perspective: '1200px' }}>
+
+            {/* Image 1 — wide top card, slowest float */}
+            <div className="col-span-2 about-img-1">
+              <ImgCard url={homeImages.about[0]} alt="About 1" className="w-full rounded-xl shadow-xl hover:shadow-2xl transition-shadow duration-500" />
+            </div>
+
+            {/* Image 2 — bottom-left, medium float */}
+            <div className="about-img-2">
+              <div className="relative mt-1">
+                <div className="about-badge-1 absolute -top-4 -left-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg px-4 py-3 border border-gray-100 dark:border-gray-700">
                   <p className="text-3xl font-black text-[#0d1f3c] dark:text-white leading-none font-sans">{stats.papers}</p>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1 font-sans">Research Papers</p>
                 </div>
-                <ImgCard url={homeImages.about[1]} alt="About 2" className="w-full rounded-xl shadow-lg mt-6" />
+                <ImgCard url={homeImages.about[1]} alt="About 2" className="w-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-500 mt-6" />
               </div>
             </div>
-            <div>
+
+            {/* Image 3 — bottom-right, fastest float */}
+            <div className="about-img-3">
               <div className="relative">
-                <ImgCard url={homeImages.about[2]} alt="About 3" className="w-full rounded-xl shadow-lg" />
-                <div className="absolute -bottom-4 -right-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg px-4 py-3 border border-gray-100 dark:border-gray-700">
+                <ImgCard url={homeImages.about[2]} alt="About 3" className="w-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-500" />
+                <div className="about-badge-2 absolute -bottom-4 -right-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg px-4 py-3 border border-gray-100 dark:border-gray-700">
                   <p className="text-3xl font-black text-[#0d1f3c] dark:text-white leading-none font-sans">{stats.users}</p>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1 font-sans">Active Users</p>
                 </div>
               </div>
             </div>
+
           </div>
+
+          {/* Text */}
           <div>
             <span className="inline-block px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6 font-sans">ABOUT US</span>
             <h2 className="text-3xl md:text-4xl font-black text-[#0d1f3c] dark:text-white uppercase leading-tight mb-5 font-sans" style={{ letterSpacing: '-0.02em' }}>FIND AND EXPLORE<br />THE RESEARCH<br />OF YOUR DREAMS</h2>
@@ -186,7 +225,6 @@ export default function Home() {
           <div className="flex gap-3 overflow-x-auto pb-4 md:pb-0 md:grid md:grid-cols-3 md:gap-1 scrollbar-hide snap-x snap-mandatory">
             {TYPES.map((t, i) => (
               <Link to="/explore" key={i} className="group relative overflow-hidden bg-[#0d1f3c] block flex-shrink-0 w-72 md:w-auto snap-start rounded-xl md:rounded-none" style={{ aspectRatio: '3/4' }}>
-                {/* ✅ homeImages.types[i] is now a plain URL string after the fix */}
                 {homeImages.types[i]
                   ? <img src={homeImages.types[i]} alt={t.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   : <div className="absolute inset-0 bg-gradient-to-br from-[#1e3a8a] to-[#0d1f3c]" />
