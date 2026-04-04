@@ -25,7 +25,7 @@ export const getSettings = async (req, res) => {
 
 export const updateSettings = async (req, res) => {
   try {
-    const { siteName, siteDescription, theme, features, email, security, featuredPapers } = req.body;
+    const { siteName, siteDescription, theme, features, email, security, featuredPapers, homeStats } = req.body;
     const s = await getOrCreate();
     if (siteName) s.siteName = siteName;
     if (siteDescription) s.siteDescription = siteDescription;
@@ -33,8 +33,9 @@ export const updateSettings = async (req, res) => {
     if (features) s.features = { ...s.features, ...features };
     if (email) s.email = { ...s.email, ...email };
     if (security) s.security = { ...s.security, ...security };
-    // ✅ FIX: Save featuredPapers to DB so it persists for all users
     if (featuredPapers !== undefined) s.featuredPapers = featuredPapers;
+    // NEW: Save home stats
+    if (homeStats) s.homeStats = { ...((s.homeStats || {})), ...homeStats };
     s.updatedBy = req.user._id;
     s.updatedAt = new Date();
     await s.save();
@@ -117,5 +118,55 @@ export const deleteBannerImage = async (req, res) => {
     await s.save();
     await AuditLog.create({ user: req.user._id, action: 'BANNER_IMAGE_DELETED', resource: 'Settings', ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Banner removed', bannerImages: banners });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Delete failed' }); }
+};
+
+// NEW: Upload home page section images (about / types)
+export const addHomeImage = async (req, res) => {
+  try {
+    const { section, index } = req.params; // section = 'about' | 'types', index = 0|1|2
+    if (!['about', 'types'].includes(section)) return res.status(400).json({ error: 'Invalid section' });
+    const idx = parseInt(index);
+    if (idx < 0 || idx > 2) return res.status(400).json({ error: 'Index must be 0-2' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const s = await getOrCreate();
+    if (!s.homeImages) s.homeImages = { about: [], types: [] };
+    if (!s.homeImages[section]) s.homeImages[section] = [];
+
+    // Delete old cloudinary image if exists
+    const existing = s.homeImages[section][idx];
+    if (existing?.cloudinaryId) { try { await cloudinary.uploader.destroy(existing.cloudinaryId); } catch {} }
+
+    const result = await uploadToCloudinary(req.file.buffer, `home-${section}`, {
+      transformation: [{ width: 1200, height: 900, crop: 'fill', quality: 'auto' }]
+    });
+
+    s.homeImages[section][idx] = { url: result.secure_url, cloudinaryId: result.public_id, addedAt: new Date() };
+    s.markModified('homeImages');
+    s.updatedBy = req.user._id;
+    await s.save();
+
+    await AuditLog.create({ user: req.user._id, action: 'HOME_IMAGE_UPLOADED', resource: 'Settings', details: { section, index: idx }, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ message: 'Home image updated', homeImages: s.homeImages });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Upload failed' }); }
+};
+
+export const deleteHomeImage = async (req, res) => {
+  try {
+    const { section, index } = req.params;
+    if (!['about', 'types'].includes(section)) return res.status(400).json({ error: 'Invalid section' });
+    const idx = parseInt(index);
+    const s = await getOrCreate();
+    if (!s.homeImages?.[section]?.[idx]) return res.status(404).json({ error: 'Image not found' });
+
+    const img = s.homeImages[section][idx];
+    if (img?.cloudinaryId) { try { await cloudinary.uploader.destroy(img.cloudinaryId); } catch {} }
+    s.homeImages[section][idx] = null;
+    s.markModified('homeImages');
+    s.updatedBy = req.user._id;
+    await s.save();
+
+    res.json({ message: 'Home image deleted', homeImages: s.homeImages });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Delete failed' }); }
 };

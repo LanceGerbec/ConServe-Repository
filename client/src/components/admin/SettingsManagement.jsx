@@ -1,6 +1,6 @@
 // client/src/components/admin/SettingsManagement.jsx
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Image, Bell, Shield, Save, CheckCircle, AlertCircle, Loader2, X, Eye, User, Pencil, Camera, Trash2 } from 'lucide-react';
+import { Settings, Upload, Image, Bell, Shield, Save, CheckCircle, AlertCircle, Loader2, X, Eye, User, Camera, Home, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import BannerManagement from './BannerManagement';
 
@@ -55,25 +55,105 @@ const LogoUpload = ({ label, currentUrl, endpoint, onSuccess, hint, isImage = fa
       {preview && (
         <div className={`relative overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 ${isImage ? 'h-40' : 'h-24 w-24'}`}>
           <img src={preview} alt={label} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition flex items-center justify-center opacity-0 hover:opacity-100">
-            <Eye size={20} className="text-white" />
-          </div>
         </div>
       )}
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-navy dark:hover:border-accent transition cursor-pointer"
+      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-5 text-center hover:border-navy dark:hover:border-accent transition cursor-pointer"
         onClick={() => inputRef.current?.click()}
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}>
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files[0])} />
         {loading
-          ? <div className="flex flex-col items-center gap-2"><Loader2 size={24} className="animate-spin text-navy dark:text-accent" /><p className="text-sm text-gray-600">Uploading...</p></div>
-          : <div className="flex flex-col items-center gap-2"><Upload size={24} className="text-gray-400" /><p className="text-sm font-medium text-gray-700 dark:text-gray-300">Drop or <span className="text-navy dark:text-accent">click to browse</span></p><p className="text-xs text-gray-500">PNG, JPG, WebP</p></div>
+          ? <div className="flex flex-col items-center gap-2"><Loader2 size={22} className="animate-spin text-navy dark:text-accent" /><p className="text-sm text-gray-600">Uploading...</p></div>
+          : <div className="flex flex-col items-center gap-2"><Upload size={22} className="text-gray-400" /><p className="text-sm font-medium text-gray-700 dark:text-gray-300">Drop or <span className="text-navy dark:text-accent">click to browse</span></p></div>
         }
       </div>
       {toast && (
         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${toast.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700' : 'bg-green-50 dark:bg-green-900/20 text-green-700'}`}>
           {toast.type === 'error' ? <AlertCircle size={14} /> : <CheckCircle size={14} />}{toast.msg}
         </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Home Page Image Uploader (per slot) ── */
+const HomeImageSlot = ({ label, url, section, index, onSuccess }) => {
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(url);
+  const [toast, setToast] = useState(null);
+  const inputRef = useRef();
+
+  useEffect(() => { setPreview(url); }, [url]);
+
+  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
+
+  const handleFile = async (file) => {
+    if (!file || !file.type.startsWith('image/')) return showToast('Images only', 'error');
+    if (file.size > 10 * 1024 * 1024) return showToast('Max 10MB', 'error');
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch(`${API_URL}/settings/home-images/${section}/${index}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
+      });
+      const data = await res.json();
+      if (res.ok) { setPreview(data.homeImages[section][index]?.url); showToast('Image updated!'); onSuccess?.(); }
+      else showToast(data.error || 'Upload failed', 'error');
+    } catch { showToast('Upload failed', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!preview) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/settings/home-images/${section}/${index}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+      });
+      setPreview(null);
+      showToast('Removed');
+      onSuccess?.();
+    } catch { showToast('Failed', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">{label}</label>
+      <div
+        className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden cursor-pointer hover:border-navy dark:hover:border-accent transition"
+        style={{ aspectRatio: '4/3' }}
+        onClick={() => !loading && inputRef.current?.click()}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
+      >
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files[0])} />
+        {preview
+          ? <img src={preview} alt={label} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-50 dark:bg-gray-900">
+              <Upload size={20} className="text-gray-400" />
+              <p className="text-xs text-gray-500">Click to upload</p>
+            </div>
+        }
+        {loading && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <Loader2 size={24} className="animate-spin text-white" />
+          </div>
+        )}
+        {preview && !loading && (
+          <button
+            onClick={e => { e.stopPropagation(); handleDelete(); }}
+            className="absolute top-2 right-2 w-7 h-7 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white shadow-md transition"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {toast && (
+        <p className={`text-xs font-medium ${toast.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>{toast.msg}</p>
       )}
     </div>
   );
@@ -86,7 +166,6 @@ const SettingsManagement = () => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Profile state
   const [name, setName] = useState({ firstName: user?.firstName || '', lastName: user?.lastName || '' });
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -97,6 +176,10 @@ const SettingsManagement = () => {
   const [form, setForm] = useState({ siteName: '', siteDescription: '' });
   const [features, setFeatures] = useState({ allowRegistration: true, requireApproval: true, enableNotifications: true, maintenanceMode: false });
   const [security, setSecurity] = useState({ maxLoginAttempts: 5, sessionTimeout: 20, passwordMinLength: 12 });
+  
+  // NEW: Home stats editable by admin
+  const [homeStats, setHomeStats] = useState({ papers: '500+', users: '300+', completed: '200+', published: '100+', faculty: '500+' });
+  const [savingStats, setSavingStats] = useState(false);
 
   const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
 
@@ -115,6 +198,7 @@ const SettingsManagement = () => {
       setForm({ siteName: s.siteName || 'ConServe', siteDescription: s.siteDescription || '' });
       setFeatures(f => ({ ...f, ...(s.features || {}) }));
       setSecurity(sec => ({ ...sec, ...(s.security || {}) }));
+      if (s.homeStats) setHomeStats(hs => ({ ...hs, ...s.homeStats }));
     } catch { showToast('Failed to load settings', 'error'); }
     finally { setLoading(false); }
   };
@@ -132,6 +216,21 @@ const SettingsManagement = () => {
       else { const d = await res.json(); showToast(d.error || 'Save failed', 'error'); }
     } catch { showToast('Save failed', 'error'); }
     finally { setSaving(false); }
+  };
+
+  const handleSaveStats = async () => {
+    setSavingStats(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/settings`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ homeStats })
+      });
+      if (res.ok) showToast('Stats saved!');
+      else showToast('Failed to save stats', 'error');
+    } catch { showToast('Save failed', 'error'); }
+    finally { setSavingStats(false); }
   };
 
   const handleSaveName = async () => {
@@ -183,11 +282,14 @@ const SettingsManagement = () => {
 
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
 
+  // Get homeImages from settings safely
+  const aboutImgs = settings?.homeImages?.about || [null, null, null];
+  const typesImgs = settings?.homeImages?.types || [null, null, null];
+
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-navy dark:text-accent" size={32} /></div>;
 
   return (
     <div className="space-y-2 pb-10">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -212,26 +314,21 @@ const SettingsManagement = () => {
         </div>
       )}
 
-      {/* ── Admin Profile: Avatar + Name ── */}
+      {/* ── Admin Profile ── */}
       <Section title="My Profile" icon={User}>
         <div className="flex flex-col sm:flex-row items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-          {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-gray-200 dark:border-gray-600 shadow-lg">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-navy to-accent flex items-center justify-center">
-                  <span className="text-3xl font-black text-white">{initials}</span>
-                </div>
-              )}
+              {avatarPreview
+                ? <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-gradient-to-br from-navy to-accent flex items-center justify-center"><span className="text-3xl font-black text-white">{initials}</span></div>
+              }
             </div>
             <button onClick={() => avatarInputRef.current?.click()}
               className="absolute -bottom-2 -right-2 w-8 h-8 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition border-2 border-white dark:border-gray-800">
               <Camera size={14} className="text-white" />
             </button>
           </div>
-
           <div className="flex-1 text-center sm:text-left">
             <p className="font-bold text-gray-900 dark:text-white text-lg">{user?.firstName} {user?.lastName}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{user?.email} · Admin</p>
@@ -249,22 +346,16 @@ const SettingsManagement = () => {
                 </button>
               )}
             </div>
-            {avatarFile && <p className="text-xs text-blue-500 mt-2">New photo selected — click Save Photo to apply</p>}
           </div>
         </div>
-
-        {/* Name edit */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">First Name</label>
-            <input value={name.firstName} onChange={e => setName({ ...name, firstName: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Last Name</label>
-            <input value={name.lastName} onChange={e => setName({ ...name, lastName: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
-          </div>
+          {['firstName', 'lastName'].map(field => (
+            <div key={field}>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{field === 'firstName' ? 'First Name' : 'Last Name'}</label>
+              <input value={name[field]} onChange={e => setName({ ...name, [field]: e.target.value })}
+                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
+            </div>
+          ))}
         </div>
         <button onClick={handleSaveName} disabled={savingName}
           className="flex items-center gap-2 px-5 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition disabled:opacity-50">
@@ -276,38 +367,108 @@ const SettingsManagement = () => {
       {/* ── General ── */}
       <Section title="General Information" icon={Settings}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Site Name</label>
-            <input value={form.siteName} onChange={e => setForm({ ...form, siteName: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Site Description</label>
-            <input value={form.siteDescription} onChange={e => setForm({ ...form, siteDescription: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
-          </div>
+          {[['siteName', 'Site Name'], ['siteDescription', 'Site Description']].map(([key, label]) => (
+            <div key={key}>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
+              <input value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
+            </div>
+          ))}
         </div>
       </Section>
 
-      {/* ── Hero BG ── */}
+      {/* ── NEW: Home Page Stats ── */}
+      <Section title="Home Page Statistics" icon={BarChart3}>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">These numbers display on the home page (e.g. "500+ Research Papers"). Edit for accuracy.</p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+          {[
+            ['papers', 'Total Papers'],
+            ['users', 'Active Users'],
+            ['completed', 'Completed'],
+            ['published', 'Published'],
+            ['faculty', 'Faculty'],
+          ].map(([key, label]) => (
+            <div key={key}>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">{label}</label>
+              <input
+                value={homeStats[key]}
+                onChange={e => setHomeStats({ ...homeStats, [key]: e.target.value })}
+                placeholder="500+"
+                className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-sm font-bold text-gray-900 dark:text-white text-center"
+              />
+            </div>
+          ))}
+        </div>
+        <button onClick={handleSaveStats} disabled={savingStats}
+          className="flex items-center gap-2 px-5 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition disabled:opacity-50">
+          {savingStats ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+          {savingStats ? 'Saving...' : 'Save Stats'}
+        </button>
+      </Section>
+
+      {/* ── Hero Background ── */}
       <Section title="Hero Background Image" icon={Image}>
-        
         <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-lg text-sm text-blue-800 dark:text-blue-300">
           Full-screen background on home page. Best: <strong>1920×1080px</strong>. Max 10MB.
         </div>
         <LogoUpload label="Hero Background" currentUrl={settings?.logos?.heroBg?.url} endpoint="hero-background" isImage onSuccess={fetchSettings} />
       </Section>
 
-      <Section title="Explore Page Banners (Slideshow)" icon={Image}>
-  <BannerManagement />
-</Section>
+      {/* ── Explore Page Banners (Hero Slideshow) ── */}
+      <Section title="Hero Slideshow Banners" icon={Image}>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">These images appear in the hero slideshow at the top of the home page.</p>
+        <BannerManagement />
+      </Section>
 
-      {/* ── Logos ── */}
+      {/* ── NEW: Home Page Section Images ── */}
+      <Section title="Home Page Section Images" icon={Home}>
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-lg text-sm text-blue-800 dark:text-blue-300">
+          Control images shown in the <strong>"About Us"</strong> and <strong>"Research Types"</strong> sections of the home page. These are separate from the hero slideshow banners.
+        </div>
+
+        {/* About Section Images */}
+        <div className="mb-6">
+          <h4 className="font-bold text-gray-900 dark:text-white mb-1 text-sm">About Us Section (3 images)</h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Displayed as a proportional image grid beside the "Find and Explore" text.</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map(i => (
+              <HomeImageSlot
+                key={`about-${i}`}
+                label={`Image ${i + 1}`}
+                url={aboutImgs[i]?.url || ''}
+                section="about"
+                index={i}
+                onSuccess={fetchSettings}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Research Types Images */}
+        <div>
+          <h4 className="font-bold text-gray-900 dark:text-white mb-1 text-sm">Research Types Section (3 images)</h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Background images for the "Completed Research", "Published Research", and "Faculty Works" cards.</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map(i => (
+              <HomeImageSlot
+                key={`types-${i}`}
+                label={['Completed', 'Published', 'Faculty'][i]}
+                url={typesImgs[i]?.url || ''}
+                section="types"
+                index={i}
+                onSuccess={fetchSettings}
+              />
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Site Logos ── */}
       <Section title="Site Logos" icon={Image}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <LogoUpload label="School Logo (NEUST)" currentUrl={settings?.logos?.school?.url} endpoint="logo/school" hint="200×200px. Links to neust.edu.ph" onSuccess={fetchSettings} />
-          <LogoUpload label="College Logo (CON)" currentUrl={settings?.logos?.college?.url} endpoint="logo/college" hint="200×200px. Links to NEUSTCON Facebook" onSuccess={fetchSettings} />
-          <LogoUpload label="CONserve Logo" currentUrl={settings?.logos?.conserve?.url} endpoint="logo/conserve" hint="200×200px. Links to home page" onSuccess={fetchSettings} />
+          <LogoUpload label="School Logo (NEUST)" currentUrl={settings?.logos?.school?.url} endpoint="logo/school" hint="200×200px" onSuccess={fetchSettings} />
+          <LogoUpload label="College Logo (CON)" currentUrl={settings?.logos?.college?.url} endpoint="logo/college" hint="200×200px" onSuccess={fetchSettings} />
+          <LogoUpload label="CONserve Logo" currentUrl={settings?.logos?.conserve?.url} endpoint="logo/conserve" hint="200×200px" onSuccess={fetchSettings} />
         </div>
       </Section>
 

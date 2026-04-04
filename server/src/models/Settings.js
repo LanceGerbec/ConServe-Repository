@@ -16,6 +16,21 @@ const settingsSchema = new mongoose.Schema({
     caption: { type: String, default: '' },
     addedAt: { type: Date, default: Date.now }
   }],
+  // NEW: Separate home page section images
+  homeImages: {
+    // "About Us" section - 3 images
+    about: [{ url: String, cloudinaryId: String, addedAt: { type: Date, default: Date.now } }],
+    // "Research Types" section - 3 images
+    types: [{ url: String, cloudinaryId: String, addedAt: { type: Date, default: Date.now } }]
+  },
+  // NEW: Admin-editable stats displayed on home page
+  homeStats: {
+    papers:    { type: String, default: '500+' },
+    users:     { type: String, default: '300+' },
+    completed: { type: String, default: '200+' },
+    published: { type: String, default: '100+' },
+    faculty:   { type: String, default: '500+' }
+  },
   // Featured papers for Explore page carousel
   featuredPapers: [{
     paperId: { type: mongoose.Schema.Types.ObjectId, ref: 'Research' },
