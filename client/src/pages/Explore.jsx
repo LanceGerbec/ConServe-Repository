@@ -213,9 +213,12 @@ const FeaturedSection = memo(({ papers, onPaperClick, isAdmin, onManage }) => {
       </div>
 
       {limited.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+        /* Mobile: horizontal scroll row. sm+: 3-col grid */
+        <div className="flex gap-5 overflow-x-auto pb-3 pt-4 scrollbar-hide sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
           {limited.map((item, i) => (
-            <FeaturedCard key={`${(item.paper || item)._id}-${i}`} item={item} index={i} onClick={onPaperClick} />
+            <div key={`${(item.paper || item)._id}-${i}`} className="flex-shrink-0 w-[75vw] max-w-[280px] sm:w-auto sm:max-w-none">
+              <FeaturedCard item={item} index={i} onClick={onPaperClick} />
+            </div>
           ))}
         </div>
       ) : isAdmin ? (
