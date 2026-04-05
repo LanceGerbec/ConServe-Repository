@@ -26,7 +26,7 @@ const HeroSlideshow = ({ slides }) => {
         <div className="max-w-xl" style={{ opacity: fading ? 0 : 1, transition: 'opacity 0.5s ease 0.1s' }}>
           <p className="text-xs font-bold tracking-[0.25em] text-blue-300 uppercase mb-4 font-sans">NEUST College of Nursing</p>
           <h1 className="text-4xl md:text-6xl font-black text-white uppercase leading-tight mb-5 font-sans" style={{ letterSpacing: '-0.02em' }}>{slide.headline || 'DISCOVER\nNURSING\nRESEARCH'}</h1>
-          <p className="text-sm md:text-base text-white/70 mb-8 leading-relaxed max-w-sm font-sans">{slide.sub || 'Access peer-reviewed nursing papers from NEUST. Collaborate, submit, and cite with ease.'}</p>
+          <p className="text-sm md:text-base text-white/70 mb-8 leading-relaxed max-w-sm font-sans">{slide.sub || 'Access peer-reviewed nursing papers from NEUST-CON. Collaborate, submit, and cite with ease.'}</p>
           <Link to="/explore" className="inline-flex items-center gap-2 px-8 py-3.5 border-2 border-white text-white font-bold uppercase text-sm tracking-widest hover:bg-white hover:text-[#0d1f3c] transition-all duration-200 font-sans">EXPLORE →</Link>
         </div>
       </div>
@@ -218,7 +218,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
             <div>
               <span className="inline-block px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 font-sans">RESEARCH TYPES</span>
-              <h2 className="text-2xl md:text-4xl font-black text-[#0d1f3c] dark:text-white uppercase leading-tight font-sans" style={{ letterSpacing: '-0.02em' }}>WHICH RESEARCH<br />TYPE SUITS<br />YOU BEST?</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-[#0d1f3c] dark:text-white uppercase leading-tight font-sans" style={{ letterSpacing: '-0.02em' }}>FIND THE<br />NURSING RESEARCH<br />YOU NEED</h2>
             </div>
             <Link to="/explore" className="self-start inline-flex items-center gap-2 px-6 py-3 bg-[#0d1f3c] dark:bg-blue-600 text-white font-bold uppercase text-sm tracking-widest hover:bg-blue-900 dark:hover:bg-blue-700 transition-all whitespace-nowrap font-sans">SHOW MORE →</Link>
           </div>
