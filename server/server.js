@@ -8,7 +8,6 @@ import mongoose from 'mongoose';
 import connectDB from './src/config/db.js';
 import { initGridFS } from './src/config/gridfs.js';
 
-// Routes
 import authRoutes from './src/routes/auth.routes.js';
 import researchRoutes from './src/routes/research.routes.js';
 import userRoutes from './src/routes/user.routes.js';
@@ -26,7 +25,6 @@ import awardsRoutes from './src/routes/awards.routes.js';
 import reportRoutes from './src/routes/report.routes.js';
 import adminManagementRoutes from './src/routes/adminManagement.routes.js';
 
-// Security middleware
 import { noSqlSanitize, xssSanitizer, paramPollution, securityHeaders, suspiciousPatternLogger } from './src/middleware/security.js';
 import { apiLimiter, loginLimiter, searchLimiter, uploadLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
@@ -37,14 +35,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const isProd = process.env.NODE_ENV === 'production';
 
-// ── Trust Proxy (required for correct IP in rate limiters behind Render/Railway) ──
 app.set('trust proxy', 1);
 
-// ── Database ──────────────────────────────────────────────────────────────────
 connectDB();
 initGridFS();
 
-// ── Index Migration ───────────────────────────────────────────────────────────
 mongoose.connection.once('open', async () => {
   try {
     const col = mongoose.connection.db.collection('users');
@@ -62,18 +57,16 @@ mongoose.connection.once('open', async () => {
   }
 });
 
-// ── Email Service Check ────────────────────────────────────────────────────────
 (async () => {
   const r = await testEmailConnection();
   console.log(r.success ? '✅ Email service ready' : `❌ Email error: ${r.error}`);
 })();
 
-// ── CORS — Strict Origin Whitelist ────────────────────────────────────────────
-// Only listed origins can make cross-site requests. All others get blocked.
-// This prevents CSRF and unauthorized API access from malicious websites.
+// ── CORS — FIX: Added both Vercel URL variants ────────────────────────────────
 const ALLOWED_ORIGINS = [
   'https://conserve-repository.onrender.com',
   'https://conserve-repository.vercel.app',
+  'https://con-serve-repository.vercel.app',   // ← FIXED: was missing this
   'http://localhost:5173',
   'http://localhost:3000',
   process.env.CLIENT_URL
@@ -81,32 +74,30 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin && !isProd) return cb(null, true); // allow no-origin in dev (Postman)
+    if (!origin && !isProd) return cb(null, true);
     if (!origin) return cb(new Error('Origin required in production'), false);
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     console.warn(`🚫 CORS blocked: ${origin}`);
-    cb(null, false); // silently block rather than error (avoids info leakage)
+    cb(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400 // cache preflight for 24h — reduces OPTIONS requests
+  maxAge: 86400
 }));
 
-// ── Security Headers via Helmet ───────────────────────────────────────────────
-// Helmet sets ~12 HTTP headers that instruct browsers on safe behavior.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],   // React needs inline scripts
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "blob:"],
       connectSrc: ["'self'", ...ALLOWED_ORIGINS, "https://api.cloudinary.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      objectSrc: ["'none'"],                       // block Flash etc.
-      frameSrc: ["'none'"],                        // block iframes
-      upgradeInsecureRequests: isProd ? [] : null  // force HTTPS in production
+      objectSrc: ["'none'"],
+      frameSrc: ["'none'"],
+      upgradeInsecureRequests: isProd ? [] : null
     }
   },
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -115,10 +106,8 @@ app.use(helmet({
   hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
 }));
 
-// ── Custom Security Headers ────────────────────────────────────────────────────
 app.use(securityHeaders);
 
-// ── CORS Fallback (for PDF streaming etc.) ────────────────────────────────────
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -129,30 +118,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Input Security Pipeline ───────────────────────────────────────────────────
-// Order matters: log suspicious patterns → strip NoSQL operators → encode XSS → fix HPP
 app.use(suspiciousPatternLogger);
-app.use(noSqlSanitize);    // strips $where, $gt etc. from body/query
-app.use(xssSanitizer);     // encodes <script>, javascript: etc.
-app.use(paramPollution);   // keeps last value for duplicate params
+app.use(noSqlSanitize);
+app.use(xssSanitizer);
+app.use(paramPollution);
 
-// ── Standard Middleware ───────────────────────────────────────────────────────
 app.use(compression());
 app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── Health Check (no auth, no rate limit) ─────────────────────────────────────
 app.get('/', (req, res) => res.json({ message: 'ConServe API', status: 'running', timestamp: new Date().toISOString() }));
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
-// ── Routes with specific limiters ─────────────────────────────────────────────
 console.log('📋 Registering routes...');
 
 app.use('/api/auth',              authRoutes);
-app.use('/api/auth/login',        loginLimiter);         // 5 attempts per 15 min
+app.use('/api/auth/login',        loginLimiter);
 app.use('/api/research',          researchRoutes);
-app.use('/api/research',          uploadLimiter);         // 10 uploads per hour
+app.use('/api/research',          uploadLimiter);
 app.use('/api/users',             userRoutes);
 app.use('/api/bookmarks',         bookmarkRoutes);
 app.use('/api/reviews',           reviewRoutes);
@@ -163,38 +147,29 @@ app.use('/api/valid-faculty-ids', validFacultyIdRoutes);
 app.use('/api/team',              teamRoutes);
 app.use('/api/notifications',     notificationRoutes);
 app.use('/api/bulk-upload',       bulkUploadRoutes);
-app.use('/api/search',            searchLimiter, searchRoutes); // 30 searches per min
+app.use('/api/search',            searchLimiter, searchRoutes);
 app.use('/api/research',          awardsRoutes);
 app.use('/api/reports',           reportRoutes);
 app.use('/api/admin-management',  adminManagementRoutes);
-app.use('/api',                   apiLimiter);           // general 100 req/15 min
+app.use('/api',                   apiLimiter);
 
 console.log('✅ All routes registered');
 
-// ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found', path: req.originalUrl });
 });
 
-// ── Global Error Handler ──────────────────────────────────────────────────────
-// In production: never expose stack traces — they reveal your app structure.
-// In development: show full error for debugging.
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.message);
-
-  // CORS errors
   if (err.message?.includes('CORS') || err.message?.includes('Origin')) {
     return res.status(403).json({ error: 'Access denied' });
   }
-
   const status = err.status || 500;
   const response = { error: isProd ? 'An error occurred' : err.message, timestamp: new Date().toISOString() };
   if (!isProd) response.stack = err.stack;
-
   res.status(status).json(response);
 });
 
-// ── Start Server ──────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
   console.log('\n' + '='.repeat(55));
   console.log(`🚀 ConServe API running on port ${PORT}`);
