@@ -25,6 +25,8 @@ import reportRoutes from './src/routes/report.routes.js';
 import { apiLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
 import adminManagementRoutes from './src/routes/adminManagement.routes.js';
+import sanitize from './src/middleware/sanitize.js';
+
 
 dotenv.config();
 
@@ -159,6 +161,7 @@ app.use((req, res, next) => {
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
+app.use(sanitize);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================
