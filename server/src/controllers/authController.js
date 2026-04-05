@@ -1,13 +1,19 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import AuditLog from '../models/AuditLog.js';
+import BlacklistedToken from '../models/BlacklistedToken.js';
 import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
 import { sendWelcomeEmail, sendAdminNewUserNotification } from '../utils/emailService.js';
 import { notifyNewUserRegistered } from '../utils/notificationService.js';
 import Notification from '../models/Notification.js';
 
-const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
+// Each token gets a unique ID (jti) so it can be individually revoked on logout.
+const generateToken = (id) => {
+  const jti = randomBytes(16).toString('hex');
+  return jwt.sign({ id, jti }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
+};
 
 const safeUser = (user) => ({
   id: user._id,
@@ -40,7 +46,6 @@ export const register = async (req, res) => {
       const validFacultyId = await ValidFacultyId.findOne({ facultyId: studentId.toUpperCase(), status: 'active' });
       if (!validFacultyId) return res.status(400).json({ error: 'Invalid faculty ID' });
       if (validFacultyId.isUsed) return res.status(400).json({ error: 'Faculty ID already registered' });
-
       const user = await User.create({ firstName, lastName, email: email.toLowerCase(), studentId, password, role: 'faculty', isApproved: false, isDeleted: false });
       validFacultyId.isUsed = true; validFacultyId.registeredUser = user._id;
       await validFacultyId.save();
@@ -54,7 +59,6 @@ export const register = async (req, res) => {
     const validStudentId = await ValidStudentId.findOne({ studentId: studentId.toUpperCase(), status: 'active' });
     if (!validStudentId) return res.status(400).json({ error: 'Invalid student ID' });
     if (validStudentId.isUsed) return res.status(400).json({ error: 'Student ID already registered' });
-
     const user = await User.create({ firstName, lastName, email: email.toLowerCase(), studentId, password, role: role || 'student', isApproved: false, isDeleted: false });
     validStudentId.isUsed = true; validStudentId.registeredUser = user._id;
     await validStudentId.save();
@@ -77,8 +81,11 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
-
     const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false });
+
+    // ── Account Enumeration Prevention ────────────────────────────────────
+    // Both "user not found" and "wrong password" return the same message.
+    // This prevents attackers from using your API to discover valid emails.
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (user.isLocked()) return res.status(423).json({ error: 'Account locked. Try again later.' });
     if (!user.isApproved) return res.status(403).json({ error: 'Account pending admin approval' });
@@ -90,8 +97,6 @@ export const login = async (req, res) => {
     await User.findByIdAndUpdate(user._id, { $set: { loginAttempts: 0, lastLogin: new Date() }, $unset: { lockoutUntil: 1 } });
     const token = generateToken(user._id);
     await AuditLog.create({ user: user._id, action: 'USER_LOGIN', ipAddress: req.ip, userAgent: req.get('user-agent') });
-
-    // ✅ FIX: Include avatar in login response so it persists in localStorage
     res.json({ token, user: safeUser(user) });
   } catch (error) {
     console.error('Login error:', error);
@@ -101,6 +106,16 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
+    const decoded = req.tokenDecoded;
+    // ── Blacklist this token's unique ID ──────────────────────────────────
+    // Even if someone captures this JWT, it becomes useless immediately.
+    if (decoded?.jti && decoded?.exp) {
+      await BlacklistedToken.create({
+        jti: decoded.jti,
+        userId: req.user._id,
+        expiresAt: new Date(decoded.exp * 1000)
+      }).catch(() => {}); // ignore duplicate key errors
+    }
     await AuditLog.create({ user: req.user._id, action: 'USER_LOGOUT', ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Logged out successfully' });
   } catch (error) { res.status(500).json({ error: 'Logout failed' }); }
@@ -122,13 +137,12 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
     const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false });
+    // Always return same message — prevents email enumeration
     if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' });
-
     const resetToken = jwt.sign({ id: user._id, email: user.email, type: 'password-reset' }, process.env.JWT_SECRET, { expiresIn: '1h' });
     user.passwordResetToken = resetToken;
     user.passwordResetExpires = new Date(Date.now() + 3600000);
     await user.save();
-
     const { sendPasswordResetEmail } = await import('../utils/emailService.js');
     await sendPasswordResetEmail(user, resetToken);
     await AuditLog.create({ user: user._id, action: 'PASSWORD_RESET_REQUESTED', ipAddress: req.ip, userAgent: req.get('user-agent') });
@@ -162,21 +176,17 @@ export const resetPassword = async (req, res) => {
     if (newPassword.length < 12) return res.status(400).json({ error: 'Password must be at least 12 characters' });
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
     if (!passwordRegex.test(newPassword)) return res.status(400).json({ error: 'Password must include uppercase, lowercase, number, and special character' });
-
     let decoded;
     try { decoded = jwt.verify(token, process.env.JWT_SECRET); } catch { return res.status(400).json({ error: 'Invalid or expired token' }); }
     if (decoded.type !== 'password-reset') return res.status(400).json({ error: 'Invalid token type' });
-
     const user = await User.findOne({ _id: decoded.id, passwordResetToken: token, passwordResetExpires: { $gt: Date.now() }, isDeleted: false });
     if (!user) return res.status(400).json({ error: 'Token expired or already used' });
     const isSame = await user.comparePassword(newPassword);
     if (isSame) return res.status(400).json({ error: 'New password cannot be the same as current password' });
-
     user.password = newPassword;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
-
     await AuditLog.create({ user: user._id, action: 'PASSWORD_RESET_COMPLETED', ipAddress: req.ip, userAgent: req.get('user-agent') });
     const { sendPasswordResetConfirmation } = await import('../utils/emailService.js');
     await sendPasswordResetConfirmation(user);

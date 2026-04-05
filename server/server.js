@@ -7,6 +7,8 @@ import compression from 'compression';
 import mongoose from 'mongoose';
 import connectDB from './src/config/db.js';
 import { initGridFS } from './src/config/gridfs.js';
+
+// Routes
 import authRoutes from './src/routes/auth.routes.js';
 import researchRoutes from './src/routes/research.routes.js';
 import userRoutes from './src/routes/user.routes.js';
@@ -22,79 +24,54 @@ import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
 import searchRoutes from './src/routes/search.routes.js';
 import awardsRoutes from './src/routes/awards.routes.js';
 import reportRoutes from './src/routes/report.routes.js';
-import { apiLimiter } from './src/middleware/rateLimiter.js';
-import { testEmailConnection } from './src/utils/emailService.js';
 import adminManagementRoutes from './src/routes/adminManagement.routes.js';
-import sanitize from './src/middleware/sanitize.js';
 
+// Security middleware
+import { noSqlSanitize, xssSanitizer, paramPollution, securityHeaders, suspiciousPatternLogger } from './src/middleware/security.js';
+import { apiLimiter, loginLimiter, searchLimiter, uploadLimiter } from './src/middleware/rateLimiter.js';
+import { testEmailConnection } from './src/utils/emailService.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const isProd = process.env.NODE_ENV === 'production';
 
-// ============================================
-// TRUST PROXY - MUST BE FIRST
-// ============================================
+// ── Trust Proxy (required for correct IP in rate limiters behind Render/Railway) ──
 app.set('trust proxy', 1);
 
-// ============================================
-// DATABASE CONNECTION
-// ============================================
+// ── Database ──────────────────────────────────────────────────────────────────
 connectDB();
 initGridFS();
 
-// ============================================
-// ONE-TIME INDEX MIGRATION (Remove after first run)
-// ============================================
+// ── Index Migration ───────────────────────────────────────────────────────────
 mongoose.connection.once('open', async () => {
   try {
-    console.log('🔄 Checking database indexes...');
-    const collection = mongoose.connection.db.collection('users');
-    const indexes = await collection.indexes();
-    
-    // Check if old indexes exist
-    const hasOldEmailIndex = indexes.some(idx => idx.name === 'email_1' && !idx.partialFilterExpression);
-    const hasOldStudentIdIndex = indexes.some(idx => idx.name === 'studentId_1' && !idx.partialFilterExpression);
-    
-    if (hasOldEmailIndex) {
-      await collection.dropIndex('email_1');
+    const col = mongoose.connection.db.collection('users');
+    const indexes = await col.indexes();
+    if (indexes.some(i => i.name === 'email_1' && !i.partialFilterExpression)) {
+      await col.dropIndex('email_1');
       console.log('✅ Dropped old email_1 index');
     }
-    
-    if (hasOldStudentIdIndex) {
-      await collection.dropIndex('studentId_1');
+    if (indexes.some(i => i.name === 'studentId_1' && !i.partialFilterExpression)) {
+      await col.dropIndex('studentId_1');
       console.log('✅ Dropped old studentId_1 index');
     }
-    
-    if (hasOldEmailIndex || hasOldStudentIdIndex) {
-      console.log('✅ Old indexes removed - new partial indexes will recreate automatically');
-      console.log('⚠️  IMPORTANT: Remove this migration code block after first successful run!');
-    } else {
-      console.log('✅ Indexes already migrated or up to date');
-    }
   } catch (err) {
-    console.log('⚠️  Index migration check failed (probably already migrated):', err.message);
+    console.log('⚠️ Index migration check:', err.message);
   }
 });
 
-// ============================================
-// EMAIL SERVICE CHECK
-// ============================================
+// ── Email Service Check ────────────────────────────────────────────────────────
 (async () => {
-  const emailTest = await testEmailConnection();
-  if (emailTest.success) {
-    console.log('✅ Email service ready');
-  } else {
-    console.error('❌ Email service error:', emailTest.error);
-    console.error('⚠️ Check EMAIL_USER and EMAIL_PASS in .env');
-  }
+  const r = await testEmailConnection();
+  console.log(r.success ? '✅ Email service ready' : `❌ Email error: ${r.error}`);
 })();
 
-// ============================================
-// CORS CONFIGURATION
-// ============================================
-const allowedOrigins = [
+// ── CORS — Strict Origin Whitelist ────────────────────────────────────────────
+// Only listed origins can make cross-site requests. All others get blocked.
+// This prevents CSRF and unauthorized API access from malicious websites.
+const ALLOWED_ORIGINS = [
   'https://conserve-repository.onrender.com',
   'https://conserve-repository.vercel.app',
   'http://localhost:5173',
@@ -103,222 +80,132 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true);
-    }
+  origin: (origin, cb) => {
+    if (!origin && !isProd) return cb(null, true); // allow no-origin in dev (Postman)
+    if (!origin) return cb(new Error('Origin required in production'), false);
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    console.warn(`🚫 CORS blocked: ${origin}`);
+    cb(null, false); // silently block rather than error (avoids info leakage)
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400 // cache preflight for 24h — reduces OPTIONS requests
 }));
 
-// ============================================
-// SECURITY HEADERS
-// ============================================
+// ── Security Headers via Helmet ───────────────────────────────────────────────
+// Helmet sets ~12 HTTP headers that instruct browsers on safe behavior.
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],   // React needs inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "blob:"],
+      connectSrc: ["'self'", ...ALLOWED_ORIGINS, "https://api.cloudinary.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],                       // block Flash etc.
+      frameSrc: ["'none'"],                        // block iframes
+      upgradeInsecureRequests: isProd ? [] : null  // force HTTPS in production
+    }
+  },
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
 }));
 
-// ============================================
-// MANUAL CORS HEADERS (Backup)
-// ============================================
+// ── Custom Security Headers ────────────────────────────────────────────────────
+app.use(securityHeaders);
+
+// ── CORS Fallback (for PDF streaming etc.) ────────────────────────────────────
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
   next();
 });
 
-// ============================================
-// REQUEST LOGGING MIDDLEWARE
-// ============================================
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} | ${req.method} ${req.path}`);
-  next();
-});
+// ── Input Security Pipeline ───────────────────────────────────────────────────
+// Order matters: log suspicious patterns → strip NoSQL operators → encode XSS → fix HPP
+app.use(suspiciousPatternLogger);
+app.use(noSqlSanitize);    // strips $where, $gt etc. from body/query
+app.use(xssSanitizer);     // encodes <script>, javascript: etc.
+app.use(paramPollution);   // keeps last value for duplicate params
 
-// ============================================
-// COMPRESSION & PARSING
-// ============================================
+// ── Standard Middleware ───────────────────────────────────────────────────────
 app.use(compression());
-app.use(morgan('dev'));
+app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
-app.use(sanitize);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ============================================
-// HEALTH CHECK
-// ============================================
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'ConServe API', 
-    status: 'running', 
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV 
-  });
-});
+// ── Health Check (no auth, no rate limit) ─────────────────────────────────────
+app.get('/', (req, res) => res.json({ message: 'ConServe API', status: 'running', timestamp: new Date().toISOString() }));
+app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
-  });
-});
-
-// ============================================
-// API ROUTES - CRITICAL ORDER
-// ============================================
+// ── Routes with specific limiters ─────────────────────────────────────────────
 console.log('📋 Registering routes...');
 
-app.use('/api/research', researchRoutes);
-console.log('✅ Research routes registered');
-
-app.use('/api/auth', authRoutes);
-console.log('✅ Auth routes registered');
-
-app.use('/api/users', userRoutes);
-console.log('✅ User routes registered');
-
-app.use('/api/bookmarks', bookmarkRoutes);
-console.log('✅ Bookmark routes registered');
-
-app.use('/api/reviews', reviewRoutes);
-console.log('✅ Review routes registered');
-
-app.use('/api/analytics', analyticsRoutes);
-console.log('✅ Analytics routes registered');
-
-app.use('/api/settings', settingsRoutes);
-console.log('✅ Settings routes registered');
-
+app.use('/api/auth',              authRoutes);
+app.use('/api/auth/login',        loginLimiter);         // 5 attempts per 15 min
+app.use('/api/research',          researchRoutes);
+app.use('/api/research',          uploadLimiter);         // 10 uploads per hour
+app.use('/api/users',             userRoutes);
+app.use('/api/bookmarks',         bookmarkRoutes);
+app.use('/api/reviews',           reviewRoutes);
+app.use('/api/analytics',         analyticsRoutes);
+app.use('/api/settings',          settingsRoutes);
 app.use('/api/valid-student-ids', validStudentIdRoutes);
-console.log('✅ Valid Student ID routes registered');
-
 app.use('/api/valid-faculty-ids', validFacultyIdRoutes);
-console.log('✅ Valid Faculty ID routes registered');
+app.use('/api/team',              teamRoutes);
+app.use('/api/notifications',     notificationRoutes);
+app.use('/api/bulk-upload',       bulkUploadRoutes);
+app.use('/api/search',            searchLimiter, searchRoutes); // 30 searches per min
+app.use('/api/research',          awardsRoutes);
+app.use('/api/reports',           reportRoutes);
+app.use('/api/admin-management',  adminManagementRoutes);
+app.use('/api',                   apiLimiter);           // general 100 req/15 min
 
-app.use('/api/team', teamRoutes);
-console.log('✅ Team routes registered');
+console.log('✅ All routes registered');
 
-app.use('/api/notifications', notificationRoutes);
-console.log('✅ Notification routes registered');
-
-app.use('/api/bulk-upload', bulkUploadRoutes);
-console.log('✅ Bulk Upload routes registered');
-
-app.use('/api/search', searchRoutes);
-console.log('✅ Search routes registered');
-
-app.use('/api/research', awardsRoutes);
-console.log('✅ Awards routes registered');
-
-app.use('/api/reports', reportRoutes);
-console.log('✅ Report routes registered');
-
-app.use('/api/admin-management', adminManagementRoutes);
-console.log('✅ Admin Management routes registered');
-
-app.use('/api', apiLimiter);
-console.log('✅ Rate limiter applied');
-
-// ============================================
-// 404 HANDLER
-// ============================================
+// ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  console.log('❌ 404 Route not found:', req.method, req.originalUrl);
-  res.status(404).json({ 
-    error: 'Route not found', 
-    path: req.originalUrl, 
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
+  res.status(404).json({ error: 'Route not found', path: req.originalUrl });
 });
 
-// ============================================
-// GLOBAL ERROR HANDLER
-// ============================================
+// ── Global Error Handler ──────────────────────────────────────────────────────
+// In production: never expose stack traces — they reveal your app structure.
+// In development: show full error for debugging.
 app.use((err, req, res, next) => {
-  console.error('❌ Server Error:', err.stack || err);
-  
-  const errorResponse = {
-    error: err.message || 'Internal server error',
-    timestamp: new Date().toISOString()
-  };
-  
-  if (process.env.NODE_ENV !== 'production') {
-    errorResponse.stack = err.stack;
+  console.error('❌ Server Error:', err.message);
+
+  // CORS errors
+  if (err.message?.includes('CORS') || err.message?.includes('Origin')) {
+    return res.status(403).json({ error: 'Access denied' });
   }
-  
-  res.status(err.status || 500).json(errorResponse);
+
+  const status = err.status || 500;
+  const response = { error: isProd ? 'An error occurred' : err.message, timestamp: new Date().toISOString() };
+  if (!isProd) response.stack = err.stack;
+
+  res.status(status).json(response);
 });
 
-// ============================================
-// START SERVER
-// ============================================
+// ── Start Server ──────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('\n' + '='.repeat(60));
-  console.log(`🚀 ConServe Server Started`);
-  console.log('='.repeat(60));
-  console.log(`📍 Port: ${PORT}`);
+  console.log('\n' + '='.repeat(55));
+  console.log(`🚀 ConServe API running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API Base: http://localhost:${PORT}/api`);
-  console.log(`🔒 GridFS: ${process.env.MONGO_URI ? 'Configured' : 'NOT CONFIGURED'}`);
-  console.log(`📧 Email: ${process.env.EMAIL_USER ? 'Configured' : 'NOT CONFIGURED'}`);
-  console.log('='.repeat(60) + '\n');
-  
-  if (!process.env.MONGO_URI) {
-    console.error('⚠️  WARNING: MONGO_URI not set!');
-  }
-  if (!process.env.JWT_SECRET) {
-    console.error('⚠️  WARNING: JWT_SECRET not set!');
-  }
-  if (!process.env.EMAIL_USER) {
-    console.error('⚠️  WARNING: EMAIL_USER not set - emails will fail!');
-  }
+  console.log(`🔒 Security: NoSQL + XSS + HPP + JWT Blacklist`);
+  console.log('='.repeat(55) + '\n');
 });
 
-// ============================================
-// GRACEFUL SHUTDOWN
-// ============================================
-process.on('SIGTERM', () => {
-  console.log('👋 SIGTERM received, shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('\n👋 SIGINT received, shutting down gracefully...');
-  process.exit(0);
-});
-
-// ============================================
-// UNHANDLED REJECTIONS
-// ============================================
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
-});
+process.on('SIGTERM', () => { console.log('👋 Shutting down...'); process.exit(0); });
+process.on('SIGINT',  () => { console.log('\n👋 Shutting down...'); process.exit(0); });
+process.on('unhandledRejection', (reason) => console.error('❌ Unhandled Rejection:', reason));
+process.on('uncaughtException',  (error)  => { console.error('❌ Uncaught Exception:', error); process.exit(1); });
 
 export default app;
