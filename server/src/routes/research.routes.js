@@ -9,8 +9,6 @@ import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOfApprovedPaper } from '../utils/notificationService.js';
 import { sendResearchSubmissionNotification, sendResearchApprovedNotification, sendResearchRevisionNotification, sendResearchRejectedNotification, sendFacultyApprovedPaperNotification } from '../utils/emailService.js';
-import { validateResearch, validateMongoId } from '../middleware/validator.js';
-import { verifyFileContent } from '../middleware/upload.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -524,16 +522,5 @@ router.delete('/:id/author-delete', auth, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete paper' });
   }
 });
-
-// Add verifyFileContent after upload middleware
-router.post('/', auth, upload.single('file'), verifyFileContent, validateResearch, async (req, res) => {
-  // existing handler
-});
- 
-// Add MongoId validation to param routes
-router.get('/:id', auth, ...validateMongoId('id'), async (req, res) => {
-  // existing handler
-});
- 
 
 export default router;

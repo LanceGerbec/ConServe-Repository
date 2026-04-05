@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import mongoose from 'mongoose';
@@ -25,16 +26,6 @@ import { apiLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
 import adminManagementRoutes from './src/routes/adminManagement.routes.js';
 import sanitize from './src/middleware/sanitize.js';
-import securityLogger from './src/middleware/securityLogger.js';
-import { securityHeaders, noCacheHeaders } from './src/middleware/securityHeaders.js';
-import {
-  loginLimiter,
-  registerLimiter,
-  uploadLimiter,
-  searchLimiter,
-  apiLimiter
-} from './src/middleware/rateLimiter.js';
-
 
 
 dotenv.config();
@@ -129,7 +120,12 @@ app.use(cors({
 // ============================================
 // SECURITY HEADERS
 // ============================================
-app.use(securityHeaders);
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginEmbedderPolicy: false
+}));
 
 // ============================================
 // MANUAL CORS HEADERS (Backup)
@@ -165,11 +161,8 @@ app.use((req, res, next) => {
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Security middleware (correct order)
 app.use(sanitize);
-app.use(securityLogger);
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================
 // HEALTH CHECK
@@ -196,10 +189,10 @@ app.get('/health', (req, res) => {
 // ============================================
 console.log('📋 Registering routes...');
 
-app.use('/api/research', uploadLimiter, researchRoutes);
+app.use('/api/research', researchRoutes);
 console.log('✅ Research routes registered');
 
-app.use('/api/auth', noCacheHeaders, authRoutes);
+app.use('/api/auth', authRoutes);
 console.log('✅ Auth routes registered');
 
 app.use('/api/users', userRoutes);
@@ -232,7 +225,7 @@ console.log('✅ Notification routes registered');
 app.use('/api/bulk-upload', bulkUploadRoutes);
 console.log('✅ Bulk Upload routes registered');
 
-app.use('/api/search', searchLimiter, searchRoutes);
+app.use('/api/search', searchRoutes);
 console.log('✅ Search routes registered');
 
 app.use('/api/research', awardsRoutes);
@@ -246,8 +239,6 @@ console.log('✅ Admin Management routes registered');
 
 app.use('/api', apiLimiter);
 console.log('✅ Rate limiter applied');
-
-app.use('/api/users', noCacheHeaders);
 
 // ============================================
 // 404 HANDLER
