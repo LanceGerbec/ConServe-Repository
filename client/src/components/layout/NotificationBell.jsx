@@ -104,122 +104,148 @@ const NotificationBell = () => {
   if (!user) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Bell Button */}
-      <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-      >
-        <Bell size={20} className="text-gray-700 dark:text-gray-300" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 animate-pulse">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {/* Dropdown Panel */}
+    <>
+      {/* Backdrop for mobile */}
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-[380px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-            <h3 className="text-lg font-black text-gray-900 dark:text-white">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/20 md:hidden"
+          onClick={() => setShowDropdown(false)}
+        />
+      )}
+
+      <div className="relative" ref={dropdownRef}>
+        {/* Bell Button */}
+        <button
+          onClick={() => setShowDropdown(!showDropdown)}
+          className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+          aria-label="Notifications"
+        >
+          <Bell size={20} className="text-gray-700 dark:text-gray-300" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 animate-pulse">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {/* Dropdown Panel */}
+        {showDropdown && (
+          <div className={`
+            z-[100] bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden
+            animate-fade-in rounded-2xl
+            /* Mobile: fixed, full-width, top-positioned */
+            fixed left-2 right-2 top-[64px]
+            /* Desktop: absolute, right-aligned */
+            md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-[380px] md:fixed-none
+          `}
+            style={{ maxHeight: 'calc(100vh - 80px)' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+              <h3 className="text-base font-black text-gray-900 dark:text-white">Notifications</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline whitespace-nowrap"
+                  >
+                    <CheckCheck size={13} /> Mark all read
+                  </button>
+                )}
                 <button
-                  onClick={markAllAsRead}
-                  className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
-                  title="Mark all as read"
+                  onClick={() => setShowDropdown(false)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex-shrink-0"
                 >
-                  <CheckCheck size={13} /> Mark all read
+                  <X size={15} className="text-gray-500" />
                 </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-1 px-3 pt-2 pb-1 flex-shrink-0">
+              {['all', 'unread'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition ${
+                    filter === f
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'unread' && unreadCount > 0 && (
+                    <span className="ml-1 bg-red-500 text-white text-[10px] px-1 rounded-full">{unreadCount}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Notification List — scrollable */}
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+              {filtered.length === 0 ? (
+                <div className="py-10 text-center">
+                  <Bell size={32} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">No {filter !== 'all' ? filter : ''} notifications</p>
+                </div>
+              ) : (
+                filtered.slice(0, 15).map(notif => (
+                  <div
+                    key={notif._id}
+                    onClick={() => handleClick(notif)}
+                    className={`group flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition relative ${
+                      !notif.isRead ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''
+                    }`}
+                  >
+                    {/* Icon Circle */}
+                    <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {getIcon(notif.type)}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1 pr-2">
+                        {notif.title?.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim()}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5 leading-relaxed">
+                        {notif.message}
+                      </p>
+                      <p className={`text-xs font-semibold mt-1 ${!notif.isRead ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
+                        {timeAgo(notif.createdAt)}
+                      </p>
+                    </div>
+
+                    {/* Right side: unread dot + delete */}
+                    <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                      {!notif.isRead && (
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mt-1" />
+                      )}
+                      <button
+                        onClick={(e) => deleteNotif(notif._id, e)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition"
+                        aria-label="Delete notification"
+                      >
+                        <Trash2 size={12} className="text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
-              <button onClick={() => setShowDropdown(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
-                <X size={15} className="text-gray-500" />
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+              <button
+                onClick={() => { navigate('/notifications'); setShowDropdown(false); }}
+                className="w-full py-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              >
+                See All Notifications
               </button>
             </div>
           </div>
-
-          {/* Filter Tabs — like Facebook's All / Unread */}
-          <div className="flex gap-1 px-3 pt-2 pb-1">
-            {['all', 'unread'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition ${
-                  filter === f
-                    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Notification List */}
-          <div className="max-h-[420px] overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="py-10 text-center">
-                <Bell size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No {filter !== 'all' ? filter : ''} notifications</p>
-              </div>
-            ) : (
-              filtered.slice(0, 10).map(notif => (
-                <div
-                  key={notif._id}
-                  onClick={() => handleClick(notif)}
-                  className={`group flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition relative ${
-                    !notif.isRead ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''
-                  }`}
-                >
-                  {/* Icon Circle */}
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    {getIcon(notif.type)}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
-                      {notif.title?.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim()}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5 leading-relaxed">
-                      {notif.message}
-                    </p>
-                    <p className={`text-xs font-semibold mt-1 ${!notif.isRead ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
-                      {timeAgo(notif.createdAt)}
-                    </p>
-                  </div>
-
-                  {/* Right side: unread dot + delete */}
-                  <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                    {!notif.isRead && (
-                      <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mt-1" />
-                    )}
-                    <button
-                      onClick={(e) => deleteNotif(notif._id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition"
-                    >
-                      <Trash2 size={12} className="text-red-500" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Footer — See All link */}
-          <div className="border-t border-gray-100 dark:border-gray-800">
-            <button
-              onClick={() => { navigate('/notifications'); setShowDropdown(false); }}
-              className="w-full py-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-            >
-              See All Notifications
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 };
 
