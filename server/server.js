@@ -28,6 +28,7 @@ import adminManagementRoutes from './src/routes/adminManagement.routes.js';
 import { noSqlSanitize, xssSanitizer, paramPollution, securityHeaders, suspiciousPatternLogger } from './src/middleware/security.js';
 import { apiLimiter, loginLimiter, searchLimiter, uploadLimiter } from './src/middleware/rateLimiter.js';
 import { testEmailConnection } from './src/utils/emailService.js';
+import likeRoutes from './src/routes/like.routes.js';
 
 dotenv.config();
 
@@ -152,6 +153,7 @@ app.use('/api/research',          awardsRoutes);
 app.use('/api/reports',           reportRoutes);
 app.use('/api/admin-management',  adminManagementRoutes);
 app.use('/api',                   apiLimiter);
+app.use('/api/likes', likeRoutes);
 
 console.log('✅ All routes registered');
 

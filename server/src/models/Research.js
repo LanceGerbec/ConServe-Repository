@@ -32,6 +32,7 @@ const researchSchema = new mongoose.Schema({
   views: { type: Number, default: 0 },
   bookmarks: { type: Number, default: 0 },
   citations: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
   versionHistory: [{
     fileUrl: String,
     uploadedAt: { type: Date, default: Date.now },
@@ -59,6 +60,8 @@ const researchSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
+
+
 
 researchSchema.index({ title: 'text', abstract: 'text', keywords: 'text' });
 researchSchema.index({ status: 1, submittedBy: 1 });

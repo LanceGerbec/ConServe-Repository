@@ -158,17 +158,20 @@ export const generateResearchReport = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     
-    const headers = ['Title', 'Authors', 'Category', 'Year', 'Status', 'Views', 'Submitted By', 'Date'];
-    const rows = papers.map(p => [
-      p.title,
-      p.authors.join('; '),
-      p.category,
-      p.yearCompleted || 'N/A',
-      p.status.toUpperCase(),
-      p.views || 0,
-      `${p.submittedBy?.firstName || ''} ${p.submittedBy?.lastName || ''}`.trim(),
-      new Date(p.createdAt).toLocaleDateString()
-    ]);
+  const headers = ['Title', 'Authors', 'Category', 'Year', 'Status', 'Views', 'Likes', 'Bookmarks', 'Citations', 'Submitted By', 'Date'];
+ const rows = papers.map(p => [
+   p.title,
+   p.authors.join('; '),
+   p.category,
+   p.yearCompleted || 'N/A',
+   p.status.toUpperCase(),
+   p.views || 0,
+   p.likes || 0,
+   p.bookmarks || 0,
+   p.citations || 0,
+   `${p.submittedBy?.firstName || ''} ${p.submittedBy?.lastName || ''}`.trim(),
+   new Date(p.createdAt).toLocaleDateString()
+]);
     
     if (format === 'csv') {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
