@@ -1,5 +1,3 @@
-// client/src/App.jsx
-// CHANGE: Added /portal/ret route for RET Department login
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
@@ -11,7 +9,6 @@ const RoleSelect = lazy(() => import('./pages/RoleSelect'));
 const StudentLogin = lazy(() => import('./components/auth/StudentLogin'));
 const FacultyLogin = lazy(() => import('./components/auth/FacultyLogin'));
 const AdminPortal = lazy(() => import('./pages/AdminPortal'));
-const RETPortal = lazy(() => import('./pages/RETPortal')); // NEW
 const Register = lazy(() => import('./components/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -49,7 +46,6 @@ function App() {
               <Route path="/login/student" element={<StudentLogin />} />
               <Route path="/login/faculty" element={<FacultyLogin />} />
               <Route path="/portal/admin" element={<AdminPortal />} />
-              <Route path="/portal/ret" element={<RETPortal />} /> {/* NEW — secret RET link */}
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />

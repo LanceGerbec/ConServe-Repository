@@ -1,14 +1,6 @@
 // client/src/components/dashboard/AdminDashboard.jsx
-// CHANGES:
-// 1. Added 'deleted' tab calling RecentlyDeleted component
-// 2. handleDeletePaper now uses PasswordDeleteModal (password-confirm before soft delete)
-// 3. Bulk delete also uses password confirmation
-// 4. ValidIdsManagement tab now includes RET IDs (passed via prop)
-// 5. Added ret to user management role filter options
-// NOTE: Only the modified sections are highlighted with comments. The rest is identical to original.
-
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
-import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload, Settings, ChevronLeft, RotateCcw } from 'lucide-react';
+import { Users, FileText, Shield, Activity, CheckCircle, XCircle, Eye, Bookmark, Search, X, Trash2, Grid, List, ChevronRight, Award, ArrowUp, ArrowDown, ArrowUpDown, Clock, Upload, Settings, ChevronLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AnalyticsHub from '../analytics/AnalyticsHub';
@@ -21,38 +13,59 @@ import Toast from '../common/Toast';
 import ConfirmModal from '../common/ConfirmModal';
 import DeleteUserModal from '../admin/DeleteUserModal';
 import AdminManagement from '../admin/AdminManagement';
-import RecentlyDeleted from '../admin/RecentlyDeleted'; // NEW
-import PasswordDeleteModal from '../common/PasswordDeleteModal'; // NEW
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// ── All sub-components (Pagination, StatCard, ViewToggle, etc.) are identical to original ──
 const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems }) => {
   const pages = useMemo(() => {
-    const range = [], dots = [];
-    for (let i = 1; i <= totalPages; i++) { if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) range.push(i); }
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      }
+    }
     let prev = 0;
-    for (const i of range) { if (prev + 1 !== i) dots.push('...'); dots.push(i); prev = i; }
-    return dots;
+    for (const i of range) {
+      if (prev + 1 !== i) rangeWithDots.push('...');
+      rangeWithDots.push(i);
+      prev = i;
+    }
+    return rangeWithDots;
   }, [currentPage, totalPages]);
+
   const start = (currentPage - 1) * itemsPerPage + 1;
   const end = Math.min(currentPage * itemsPerPage, totalItems);
+
   if (totalItems === 0) return null;
+
   return (
     <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
       <div className="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
         <span className="font-semibold">Showing {start}-{end} of {totalItems}</span>
         <select value={itemsPerPage} onChange={(e) => onItemsPerPageChange(Number(e.target.value))} className="px-2 py-1 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold text-xs">
-          {[5,10,20,50].map(n => <option key={n} value={n}>{n}/page</option>)}
+          <option value={5}>5/page</option>
+          <option value={10}>10/page</option>
+          <option value={20}>20/page</option>
+          <option value={50}>50/page</option>
         </select>
       </div>
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-1 flex-wrap">
-          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700 transition"><ChevronLeft size={14} className="text-gray-700 dark:text-gray-200" /></button>
-          {pages.map((page, idx) => page === '...' ? <span key={`dots-${idx}`} className="px-2 text-gray-500 dark:text-gray-400">...</span> : (
-            <button key={page} onClick={() => onPageChange(page)} className={`min-w-[32px] px-2 py-1.5 rounded-lg font-semibold text-xs transition ${currentPage === page ? 'bg-navy dark:bg-accent text-white shadow-md' : 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{page}</button>
+          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <ChevronLeft size={14} className="text-gray-700 dark:text-gray-200" />
+          </button>
+          {pages.map((page, idx) => page === '...' ? (
+            <span key={`dots-${idx}`} className="px-2 text-gray-500 dark:text-gray-400">...</span>
+          ) : (
+            <button key={page} onClick={() => onPageChange(page)} className={`min-w-[32px] px-2 py-1.5 rounded-lg font-semibold text-xs transition ${currentPage === page ? 'bg-navy dark:bg-accent text-white shadow-md' : 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+              {page}
+            </button>
           ))}
-          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700 transition"><ChevronRight size={14} className="text-gray-700 dark:text-gray-200" /></button>
+          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <ChevronRight size={14} className="text-gray-700 dark:text-gray-200" />
+          </button>
         </div>
       )}
     </div>
@@ -63,7 +76,9 @@ Pagination.displayName = 'Pagination';
 const StatCard = memo(({ icon: Icon, label, value, color, onClick }) => (
   <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 transition-all ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''}`}>
     <div className="flex items-center gap-3">
-      <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}><Icon className="text-white" size={20} /></div>
+      <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
+        <Icon className="text-white" size={20} />
+      </div>
       <div className="flex-1 min-w-0">
         <div className="text-2xl font-bold text-navy dark:text-accent">{value}</div>
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{label}</p>
@@ -76,8 +91,12 @@ StatCard.displayName = 'StatCard';
 
 const ViewToggle = memo(({ mode, onChange }) => (
   <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
-    <button onClick={() => onChange('grid')} className={`p-2 rounded-md transition ${mode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}><Grid size={18} className={mode === 'grid' ? 'text-navy dark:text-accent' : 'text-gray-500'} /></button>
-    <button onClick={() => onChange('list')} className={`p-2 rounded-md transition ${mode === 'list' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}><List size={18} className={mode === 'list' ? 'text-navy dark:text-accent' : 'text-gray-500'} /></button>
+    <button onClick={() => onChange('grid')} className={`p-2 rounded-md transition ${mode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>
+      <Grid size={18} className={mode === 'grid' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
+    </button>
+    <button onClick={() => onChange('list')} className={`p-2 rounded-md transition ${mode === 'list' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>
+      <List size={18} className={mode === 'list' ? 'text-navy dark:text-accent' : 'text-gray-500'} />
+    </button>
   </div>
 ));
 ViewToggle.displayName = 'ViewToggle';
@@ -86,7 +105,10 @@ const SortableHeader = memo(({ label, sortKey, currentSort, onSort }) => {
   const isActive = currentSort.key === sortKey;
   return (
     <th onClick={() => onSort(sortKey)} className="px-4 py-3 text-left text-xs font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none transition bg-gray-50 dark:bg-gray-900">
-      <div className="flex items-center gap-1">{label}{isActive ? (currentSort.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}</div>
+      <div className="flex items-center gap-1">
+        {label}
+        {isActive ? (currentSort.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+      </div>
     </th>
   );
 });
@@ -97,7 +119,9 @@ const BulkActionsBar = memo(({ count, onDelete, onCancel }) => (
     <div className="flex items-center justify-between gap-3">
       <span className="font-bold">✓ {count} selected</span>
       <div className="flex gap-2">
-        <button onClick={onDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm flex items-center gap-1.5 transition active:scale-95"><Trash2 size={16} />Delete</button>
+        <button onClick={onDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm flex items-center gap-1.5 transition active:scale-95">
+          <Trash2 size={16} />Delete
+        </button>
         <button onClick={onCancel} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-bold text-sm transition active:scale-95">Cancel</button>
       </div>
     </div>
@@ -117,7 +141,9 @@ const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate">{user.email}</p>
       <div className="flex items-center justify-between mt-3">
         <span className="text-xs text-gray-500">{user.studentId}</span>
-        <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{user.isApproved ? 'APPROVED' : 'PENDING'}</span>
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {user.isApproved ? 'APPROVED' : 'PENDING'}
+        </span>
       </div>
     </div>
   );
@@ -128,12 +154,23 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
   const isSelf = user._id === currentUserId;
   return (
     <tr className={`transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
-      <td className="px-4 py-3"><input type="checkbox" checked={selected} onChange={() => onSelect(user._id)} disabled={isSelf} className="w-4 h-4 rounded accent-navy" /></td>
-      <td className="px-4 py-3"><p className="font-semibold text-sm text-gray-900 dark:text-white">{user.firstName} {user.lastName}</p><p className="text-xs text-gray-500 truncate">{user.email}</p></td>
+      <td className="px-4 py-3">
+        <input type="checkbox" checked={selected} onChange={() => onSelect(user._id)} disabled={isSelf} className="w-4 h-4 rounded accent-navy" />
+      </td>
+      <td className="px-4 py-3">
+        <p className="font-semibold text-sm text-gray-900 dark:text-white">{user.firstName} {user.lastName}</p>
+        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+      </td>
       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{user.studentId}</td>
       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</td>
-      <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{user.isApproved ? 'APPROVED' : 'PENDING'}</span></td>
-      <td className="px-4 py-3 text-right">{!isSelf && <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600"><Trash2 size={14} /></button>}</td>
+      <td className="px-4 py-3">
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {user.isApproved ? 'APPROVED' : 'PENDING'}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-right">
+        {!isSelf && <button onClick={() => onDelete(user._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600"><Trash2 size={14} /></button>}
+      </td>
     </tr>
   );
 });
@@ -142,14 +179,16 @@ UserListRow.displayName = 'UserListRow';
 const PaperGridCard = memo(({ paper, selected, onSelect, onDelete, onReview, onManageAwards }) => (
   <div className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all ${selected ? 'ring-2 ring-navy dark:ring-accent' : 'border-2 border-gray-200 dark:border-gray-700'}`}>
     <div className="flex gap-1 mb-2">
-      <button onClick={() => onManageAwards(paper)} className="p-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition text-yellow-600"><Award size={14} /></button>
-      <button onClick={() => onDelete(paper)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
+      <button onClick={() => onManageAwards(paper)} className="p-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition text-yellow-600" title="Manage Awards"><Award size={14} /></button>
+      <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-600"><Trash2 size={16} /></button>
     </div>
     <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer hover:text-navy" onClick={() => onReview(paper)}>{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{paper.abstract}</p>
     <div className="flex items-center justify-between">
       <span className="text-xs text-gray-500">{paper.submittedBy?.firstName}</span>
-      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{paper.status?.toUpperCase()}</span>
+      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+        {paper.status?.toUpperCase()}
+      </span>
     </div>
   </div>
 ));
@@ -157,35 +196,55 @@ PaperGridCard.displayName = 'PaperGridCard';
 
 const PaperListRow = memo(({ paper, selected, onSelect, onDelete, onReview, onManageAwards }) => (
   <tr className={`transition ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
-    <td className="px-4 py-3"><input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy" /></td>
-    <td className="px-4 py-3"><p className="font-semibold text-sm text-gray-900 dark:text-white truncate cursor-pointer hover:text-navy max-w-xs" onClick={() => onReview(paper)}>{paper.title}</p><p className="text-xs text-gray-500">{paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p></td>
+    <td className="px-4 py-3">
+      <input type="checkbox" checked={selected} onChange={() => onSelect(paper._id)} className="w-4 h-4 rounded accent-navy" />
+    </td>
+    <td className="px-4 py-3">
+      <p className="font-semibold text-sm text-gray-900 dark:text-white truncate cursor-pointer hover:text-navy max-w-xs" onClick={() => onReview(paper)}>{paper.title}</p>
+      <p className="text-xs text-gray-500">{paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
+    </td>
     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{new Date(paper.createdAt).toLocaleDateString()}</td>
     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{paper.views || 0}</td>
-    <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-bold ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{paper.status?.toUpperCase()}</span></td>
-    <td className="px-4 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => onManageAwards(paper)} className="p-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded transition text-yellow-600"><Award size={14} /></button><button onClick={() => onDelete(paper)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600"><Trash2 size={14} /></button></div></td>
+    <td className="px-4 py-3">
+      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${paper.status === 'approved' ? 'bg-green-100 text-green-800' : paper.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+        {paper.status?.toUpperCase()}
+      </span>
+    </td>
+    <td className="px-4 py-3 text-right">
+      <div className="flex justify-end gap-2">
+        <button onClick={() => onManageAwards(paper)} className="p-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded transition text-yellow-600"><Award size={14} /></button>
+        <button onClick={() => onDelete(paper._id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition text-red-600"><Trash2 size={14} /></button>
+      </div>
+    </td>
   </tr>
 ));
 PaperListRow.displayName = 'PaperListRow';
 
 const PendingUserCard = memo(({ user, onApprove, onReject }) => (
-  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
+  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{user.firstName} {user.lastName}</h3>
     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{user.email}</p>
     <p className="text-xs text-gray-500 mb-3">ID: {user.studentId} • {user.role}</p>
     <div className="flex gap-2">
-      <button onClick={() => onApprove(user._id)} className="flex-1 bg-green-500 text-white px-4 py-2.5 rounded-xl hover:bg-green-600 text-sm font-bold flex items-center justify-center gap-1.5"><CheckCircle size={16} />Approve</button>
-      <button onClick={() => onReject(user._id)} className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-xl hover:bg-red-600 text-sm font-bold flex items-center justify-center gap-1.5"><XCircle size={16} />Reject</button>
+      <button onClick={() => onApprove(user._id)} className="flex-1 bg-green-500 text-white px-4 py-2.5 rounded-xl hover:bg-green-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+        <CheckCircle size={16} />Approve
+      </button>
+      <button onClick={() => onReject(user._id)} className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-xl hover:bg-red-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+        <XCircle size={16} />Reject
+      </button>
     </div>
   </div>
 ));
 PendingUserCard.displayName = 'PendingUserCard';
 
 const PendingResearchCard = memo(({ paper, onReview }) => (
-  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
+  <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
     <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 text-sm">{paper.title}</h3>
     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">By: {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}</p>
     <p className="text-xs text-gray-500 mb-3 line-clamp-2">{paper.abstract}</p>
-    <button onClick={() => onReview(paper)} className="w-full bg-blue-500 text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 text-sm font-bold flex items-center justify-center gap-1.5"><Eye size={16} />Review</button>
+    <button onClick={() => onReview(paper)} className="w-full bg-blue-500 text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 text-sm font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+      <Eye size={16} />Review
+    </button>
   </div>
 ));
 PendingResearchCard.displayName = 'PendingResearchCard';
@@ -201,6 +260,8 @@ const AdminDashboard = () => {
   const [selectedPapers, setSelectedPapers] = useState([]);
   const [userSortConfig, setUserSortConfig] = useState({ key: null, direction: 'asc' });
   const [paperSortConfig, setPaperSortConfig] = useState({ key: null, direction: 'asc' });
+  
+  // Pagination states
   const [pendingUsersPage, setPendingUsersPage] = useState(1);
   const [pendingUsersPerPage, setPendingUsersPerPage] = useState(5);
   const [pendingResearchPage, setPendingResearchPage] = useState(1);
@@ -209,6 +270,7 @@ const AdminDashboard = () => {
   const [usersPerPage, setUsersPerPage] = useState(10);
   const [papersPage, setPapersPage] = useState(1);
   const [papersPerPage, setPapersPerPage] = useState(10);
+  
   const [stats, setStats] = useState({ users: { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: { total: 0, pending: 0, approved: 0, rejected: 0 } });
   const [allUsers, setAllUsers] = useState([]);
   const [allResearch, setAllResearch] = useState([]);
@@ -219,8 +281,6 @@ const AdminDashboard = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', ids: [], user: null, onConfirm: null });
-  // NEW: password delete modal state
-  const [passwordDeleteModal, setPasswordDeleteModal] = useState({ isOpen: false, paper: null });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
@@ -228,20 +288,41 @@ const AdminDashboard = () => {
 
   const showToast = useCallback((msg, type = 'success') => setToast({ show: true, message: msg, type }), []);
 
-  const handleUserSort = useCallback((key) => setUserSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' })), []);
-  const handlePaperSort = useCallback((key) => setPaperSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' })), []);
+  const handleUserSort = useCallback((key) => {
+    setUserSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
+  }, []);
+
+  const handlePaperSort = useCallback((key) => {
+    setPaperSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
+  }, []);
 
   const getSortedUsers = useCallback((users) => {
     if (!userSortConfig.key) return users;
     return [...users].sort((a, b) => {
       let aVal, bVal;
       switch (userSortConfig.key) {
-        case 'name': aVal = `${a.firstName} ${a.lastName}`.toLowerCase(); bVal = `${b.firstName} ${b.lastName}`.toLowerCase(); break;
-        case 'email': aVal = a.email.toLowerCase(); bVal = b.email.toLowerCase(); break;
-        case 'id': aVal = a.studentId?.toLowerCase() || ''; bVal = b.studentId?.toLowerCase() || ''; break;
-        case 'date': aVal = new Date(a.createdAt); bVal = new Date(b.createdAt); break;
-        case 'status': aVal = a.isApproved ? 1 : 0; bVal = b.isApproved ? 1 : 0; break;
-        default: return 0;
+        case 'name':
+          aVal = `${a.firstName} ${a.lastName}`.toLowerCase();
+          bVal = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case 'email':
+          aVal = a.email.toLowerCase();
+          bVal = b.email.toLowerCase();
+          break;
+        case 'id':
+          aVal = a.studentId?.toLowerCase() || '';
+          bVal = b.studentId?.toLowerCase() || '';
+          break;
+        case 'date':
+          aVal = new Date(a.createdAt);
+          bVal = new Date(b.createdAt);
+          break;
+        case 'status':
+          aVal = a.isApproved ? 1 : 0;
+          bVal = b.isApproved ? 1 : 0;
+          break;
+        default:
+          return 0;
       }
       if (aVal < bVal) return userSortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return userSortConfig.direction === 'asc' ? 1 : -1;
@@ -254,12 +335,29 @@ const AdminDashboard = () => {
     return [...papers].sort((a, b) => {
       let aVal, bVal;
       switch (paperSortConfig.key) {
-        case 'title': aVal = a.title.toLowerCase(); bVal = b.title.toLowerCase(); break;
-        case 'author': aVal = `${a.submittedBy?.firstName || ''} ${a.submittedBy?.lastName || ''}`.toLowerCase(); bVal = `${b.submittedBy?.firstName || ''} ${b.submittedBy?.lastName || ''}`.toLowerCase(); break;
-        case 'date': aVal = new Date(a.createdAt); bVal = new Date(b.createdAt); break;
-        case 'views': aVal = a.views || 0; bVal = b.views || 0; break;
-        case 'status': const so = { pending: 0, approved: 1, rejected: 2 }; aVal = so[a.status] || 0; bVal = so[b.status] || 0; break;
-        default: return 0;
+        case 'title':
+          aVal = a.title.toLowerCase();
+          bVal = b.title.toLowerCase();
+          break;
+        case 'author':
+          aVal = `${a.submittedBy?.firstName || ''} ${a.submittedBy?.lastName || ''}`.toLowerCase();
+          bVal = `${b.submittedBy?.firstName || ''} ${b.submittedBy?.lastName || ''}`.toLowerCase();
+          break;
+        case 'date':
+          aVal = new Date(a.createdAt);
+          bVal = new Date(b.createdAt);
+          break;
+        case 'views':
+          aVal = a.views || 0;
+          bVal = b.views || 0;
+          break;
+        case 'status':
+          const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+          aVal = statusOrder[a.status] || 0;
+          bVal = statusOrder[b.status] || 0;
+          break;
+        default:
+          return 0;
       }
       if (aVal < bVal) return paperSortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return paperSortConfig.direction === 'asc' ? 1 : -1;
@@ -267,20 +365,33 @@ const AdminDashboard = () => {
     });
   }, [paperSortConfig]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const adminReviewId = params.get('adminReview');
-    const tabParam = params.get('tab');
-    if (adminReviewId) { fetchPaperForReview(adminReviewId); navigate('/dashboard', { replace: true }); }
-    if (tabParam) { setActiveTab(tabParam); navigate('/dashboard', { replace: true }); }
-  }, [location.search, navigate]);
+ useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const adminReviewId = params.get('adminReview');
+  const tabParam = params.get('tab');
+  if (adminReviewId) {
+    fetchPaperForReview(adminReviewId);
+    navigate('/dashboard', { replace: true });
+  }
+  if (tabParam) {
+    setActiveTab(tabParam);
+    navigate('/dashboard', { replace: true });
+  }
+}, [location.search, navigate]);
+ 
 
   const fetchPaperForReview = async (paperId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/research/${paperId}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { const data = await res.json(); setSelectedPaper(data.paper); setShowReviewModal(true); }
-    } catch {}
+      const res = await fetch(`${API_URL}/research/${paperId}`, { headers: { Authorization: `Bearer ${token}` }});
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedPaper(data.paper);
+        setShowReviewModal(true);
+      }
+    } catch (error) {
+      console.error('Fetch paper error:', error);
+    }
   };
 
   const fetchData = useCallback(async () => {
@@ -293,63 +404,83 @@ const AdminDashboard = () => {
         fetch(`${API_URL}/users?status=pending`, { headers }),
         fetch(`${API_URL}/research?status=pending`, { headers })
       ]);
-      const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([userStatsRes.json(), researchStatsRes.json(), pendingUsersRes.json(), pendingResearchRes.json()]);
-      setStats({ users: userStats || { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: researchStats || { total: 0, pending: 0, approved: 0, rejected: 0 } });
+      const [userStats, researchStats, pendingUsersData, pendingResearchData] = await Promise.all([
+        userStatsRes.json(), researchStatsRes.json(), pendingUsersRes.json(), pendingResearchRes.json()
+      ]);
+      setStats({ users: userStats || { totalUsers: 0, pendingApproval: 0, activeUsers: 0 }, research: researchStats || { total: 0, pending: 0, approved: 0, rejected: 0 }});
       setPendingUsers(pendingUsersData.users || []);
       setPendingResearch(pendingResearchData.papers || []);
-      if (activeTab === 'users') { const r = await fetch(`${API_URL}/users`, { headers }); const d = await r.json(); setAllUsers(d.users || []); }
-      if (activeTab === 'research') { const r = await fetch(`${API_URL}/research`, { headers }); const d = await r.json(); setAllResearch(d.papers || []); }
-      if (activeTab === 'bookmarks') { const r = await fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers }); const d = await r.json(); setBookmarks(d.bookmarks || []); }
-    } catch { showToast('Failed to load data', 'error'); }
-    finally { setLoading(false); }
+      if (activeTab === 'users') {
+        const usersRes = await fetch(`${API_URL}/users`, { headers });
+        const usersData = await usersRes.json();
+        setAllUsers(usersData.users || []);
+      }
+      if (activeTab === 'research') {
+        const researchRes = await fetch(`${API_URL}/research`, { headers });
+        const researchData = await researchRes.json();
+        setAllResearch(researchData.papers || []);
+      }
+      if (activeTab === 'bookmarks') {
+        const bookmarksRes = await fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers });
+        const bookmarksData = await bookmarksRes.json();
+        setBookmarks(bookmarksData.bookmarks || []);
+      }
+    } catch (error) {
+      showToast('Failed to load data', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [activeTab, showToast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleSelectUser = useCallback((userId) => setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]), []);
-  const handleSelectAllUsers = useCallback(() => { const s = allUsers.filter(u => u._id !== user._id); setSelectedUsers(selectedUsers.length === s.length ? [] : s.map(u => u._id)); }, [allUsers, selectedUsers, user]);
-  const handleSelectPaper = useCallback((paperId) => setSelectedPapers(prev => prev.includes(paperId) ? prev.filter(id => id !== paperId) : [...prev, paperId]), []);
-  const handleSelectAllPapers = useCallback(() => setSelectedPapers(selectedPapers.length === allResearch.length ? [] : allResearch.map(p => p._id)), [allResearch, selectedPapers]);
-
-  // CHANGED: handleDeletePaper now opens PasswordDeleteModal
-  const handleDeletePaper = useCallback((paper) => {
-    setPasswordDeleteModal({ isOpen: true, paper });
+  const handleSelectUser = useCallback((userId) => {
+    setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
   }, []);
 
-  // NEW: confirms password-protected delete
-  const confirmPasswordDelete = useCallback(async (password) => {
-    const { paper } = passwordDeleteModal;
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/research/${paper._id}/delete-with-password`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    });
-    if (!res.ok) {
-      const d = await res.json();
-      throw new Error(d.error || 'Failed to delete');
-    }
-    showToast('Paper moved to recently deleted');
-    setPasswordDeleteModal({ isOpen: false, paper: null });
-    setSelectedPapers([]);
-    fetchData();
-  }, [passwordDeleteModal, showToast, fetchData]);
+  const handleSelectAllUsers = useCallback(() => {
+    const selectableUsers = allUsers.filter(u => u._id !== user._id);
+    setSelectedUsers(selectedUsers.length === selectableUsers.length ? [] : selectableUsers.map(u => u._id));
+  }, [allUsers, selectedUsers, user]);
+
+  const handleSelectPaper = useCallback((paperId) => {
+    setSelectedPapers(prev => prev.includes(paperId) ? prev.filter(id => id !== paperId) : [...prev, paperId]);
+  }, []);
+
+  const handleSelectAllPapers = useCallback(() => {
+    setSelectedPapers(selectedPapers.length === allResearch.length ? [] : allResearch.map(p => p._id));
+  }, [allResearch, selectedPapers]);
 
   const handleDeleteUser = useCallback((userId) => {
     const userToDelete = allUsers.find(u => u._id === userId);
     if (!userToDelete) return;
-    setConfirmModal({ isOpen: true, type: 'deleteUser', user: userToDelete, onConfirm: async () => {
-      try {
-        const token = localStorage.getItem('token');
-        await fetch(`${API_URL}/users/${userId}/reject`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-        showToast('User deleted'); setSelectedUsers([]); fetchData();
-      } catch { showToast('Delete failed', 'error'); }
-      finally { setConfirmModal({ isOpen: false, type: '', user: null }); }
-    }});
+    
+    setConfirmModal({
+      isOpen: true,
+      type: 'deleteUser',
+      user: userToDelete,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await fetch(`${API_URL}/users/${userId}/reject`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          showToast('✅ User deleted');
+          setSelectedUsers([]);
+          fetchData();
+        } catch (error) {
+          showToast('Delete failed', 'error');
+        } finally {
+          setConfirmModal({ isOpen: false, type: '', user: null });
+        }
+      }
+    });
   }, [allUsers, showToast, fetchData]);
 
-  const handleBulkDeleteUsers = useCallback(() => setConfirmModal({ isOpen: true, type: 'user', ids: selectedUsers }), [selectedUsers]);
-  const handleBulkDeletePapers = useCallback(() => setConfirmModal({ isOpen: true, type: 'paper', ids: selectedPapers }), [selectedPapers]);
+  const handleDeletePaper = useCallback((paperId) => { setConfirmModal({ isOpen: true, type: 'paper', ids: [paperId] }); }, []);
+  const handleBulkDeleteUsers = useCallback(() => { setConfirmModal({ isOpen: true, type: 'user', ids: selectedUsers }); }, [selectedUsers]);
+  const handleBulkDeletePapers = useCallback(() => { setConfirmModal({ isOpen: true, type: 'paper', ids: selectedPapers }); }, [selectedPapers]);
 
   const confirmDelete = useCallback(async () => {
     const { type, ids } = confirmModal;
@@ -357,59 +488,135 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       const endpoint = type === 'user' ? 'users' : 'research';
       for (const id of ids) {
-        await fetch(`${API_URL}/${endpoint}/${id}${type === 'user' ? '/reject' : ''}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        await fetch(`${API_URL}/${endpoint}/${id}${type === 'user' ? '/reject' : ''}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
       }
-      showToast(`Deleted ${ids.length} ${type}(s)`); setSelectedUsers([]); setSelectedPapers([]); fetchData();
-    } catch { showToast('Delete failed', 'error'); }
-    finally { setConfirmModal({ isOpen: false, type: '', ids: [] }); }
+      showToast(`✅ Deleted ${ids.length} ${type}(s)`);
+      setSelectedUsers([]);
+      setSelectedPapers([]);
+      fetchData();
+    } catch (error) {
+      showToast('Delete failed', 'error');
+    } finally {
+      setConfirmModal({ isOpen: false, type: '', ids: [] });
+    }
   }, [confirmModal, showToast, fetchData]);
 
   const handleApproveUser = useCallback(async (userId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/users/${userId}/approve`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { showToast('User approved'); fetchData(); } else { const d = await res.json(); showToast(d.error || 'Failed to approve', 'error'); }
-    } catch { showToast('Connection error', 'error'); }
+      const res = await fetch(`${API_URL}/users/${userId}/approve`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('✅ User approved');
+        fetchData();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Failed to approve', 'error');
+      }
+    } catch (error) {
+      showToast('Connection error', 'error');
+    }
   }, [showToast, fetchData]);
 
   const handleRejectUser = async (userId) => {
     const userToDelete = pendingUsers.find(u => u._id === userId);
     if (!userToDelete) return;
-    setConfirmModal({ isOpen: true, type: 'deleteUser', user: userToDelete, onConfirm: async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/users/${userId}/reject`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) { showToast('User deleted'); fetchData(); }
-      } catch { showToast('Connection error', 'error'); }
-      finally { setConfirmModal({ isOpen: false, type: '', user: null }); }
-    }});
+    
+    setConfirmModal({
+      isOpen: true,
+      type: 'deleteUser',
+      user: userToDelete,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch(`${API_URL}/users/${userId}/reject`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            showToast('✅ User deleted');
+            fetchData();
+          }
+        } catch (error) {
+          showToast('Connection error', 'error');
+        } finally {
+          setConfirmModal({ isOpen: false, type: '', user: null });
+        }
+      }
+    });
   };
 
-  const handleReviewPaper = useCallback((paper) => { setSelectedPaper(paper); setShowReviewModal(true); }, []);
-  const handleManageAwards = useCallback((paper) => { setSelectedPaper(paper); setShowAwardsModal(true); }, []);
+  const handleReviewPaper = useCallback((paper) => {
+    setSelectedPaper(paper);
+    setShowReviewModal(true);
+  }, []);
+
+  const handleManageAwards = useCallback((paper) => {
+    setSelectedPaper(paper);
+    setShowAwardsModal(true);
+  }, []);
+
   const handleRemoveBookmark = useCallback(async (bookmarkId, researchId) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/bookmarks/toggle/${researchId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      setBookmarks(prev => prev.filter(b => b._id !== bookmarkId)); showToast('Bookmark removed');
-    } catch { showToast('Failed to remove', 'error'); }
+      await fetch(`${API_URL}/bookmarks/toggle/${researchId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBookmarks(prev => prev.filter(b => b._id !== bookmarkId));
+      showToast('✅ Bookmark removed');
+    } catch (error) {
+      showToast('Failed to remove', 'error');
+    }
   }, [showToast]);
 
   const filteredUsers = allUsers.filter(u => {
-    const matchesSearch = search ? (u.firstName?.toLowerCase().includes(search.toLowerCase()) || u.lastName?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())) : true;
+    const matchesSearch = search ? (
+      u.firstName?.toLowerCase().includes(search.toLowerCase()) || 
+      u.lastName?.toLowerCase().includes(search.toLowerCase()) || 
+      u.email?.toLowerCase().includes(search.toLowerCase())
+    ) : true;
     const matchesRole = roleFilter === 'all' ? true : u.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
   const filteredResearch = allResearch.filter(p => search ? p.title?.toLowerCase().includes(search.toLowerCase()) : true);
   const sortedUsers = getSortedUsers(filteredUsers);
   const sortedPapers = getSortedPapers(filteredResearch);
 
-  const paginatedPendingUsers = useMemo(() => { const s = (pendingUsersPage - 1) * pendingUsersPerPage; return pendingUsers.slice(s, s + pendingUsersPerPage); }, [pendingUsers, pendingUsersPage, pendingUsersPerPage]);
-  const paginatedPendingResearch = useMemo(() => { const s = (pendingResearchPage - 1) * pendingResearchPerPage; return pendingResearch.slice(s, s + pendingResearchPerPage); }, [pendingResearch, pendingResearchPage, pendingResearchPerPage]);
-  const paginatedUsers = useMemo(() => { const s = (usersPage - 1) * usersPerPage; return sortedUsers.slice(s, s + usersPerPage); }, [sortedUsers, usersPage, usersPerPage]);
-  const paginatedPapers = useMemo(() => { const s = (papersPage - 1) * papersPerPage; return sortedPapers.slice(s, s + papersPerPage); }, [sortedPapers, papersPage, papersPerPage]);
+  // Paginated data
+  const paginatedPendingUsers = useMemo(() => {
+    const start = (pendingUsersPage - 1) * pendingUsersPerPage;
+    return pendingUsers.slice(start, start + pendingUsersPerPage);
+  }, [pendingUsers, pendingUsersPage, pendingUsersPerPage]);
 
-  if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-4 border-navy border-t-transparent"></div></div>;
+  const paginatedPendingResearch = useMemo(() => {
+    const start = (pendingResearchPage - 1) * pendingResearchPerPage;
+    return pendingResearch.slice(start, start + pendingResearchPerPage);
+  }, [pendingResearch, pendingResearchPage, pendingResearchPerPage]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (usersPage - 1) * usersPerPage;
+    return sortedUsers.slice(start, start + usersPerPage);
+  }, [sortedUsers, usersPage, usersPerPage]);
+
+  const paginatedPapers = useMemo(() => {
+    const start = (papersPage - 1) * papersPerPage;
+    return sortedPapers.slice(start, start + papersPerPage);
+  }, [sortedPapers, papersPage, papersPerPage]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-navy border-t-transparent"></div>
+      </div>
+    );
+  }
 
   const adminStats = [
     { icon: Users, label: 'Total Users', value: stats.users.totalUsers, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
@@ -418,12 +625,10 @@ const AdminDashboard = () => {
     { icon: Activity, label: 'Active Users', value: stats.users.activeUsers, color: 'bg-gradient-to-br from-purple-500 to-purple-600' }
   ];
 
-  // CHANGED: Added 'deleted' tab
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'users', label: 'Users' },
     { id: 'research', label: 'Papers' },
-    { id: 'deleted', label: 'Recently Deleted' }, // NEW
     { id: 'bookmarks', label: 'Bookmarks', badge: bookmarks.length },
     { id: 'analytics', label: 'Analytics' },
     { id: 'valid-ids', label: 'Valid IDs' },
@@ -434,42 +639,76 @@ const AdminDashboard = () => {
 
   return (
     <>
-      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} duration={3000} />}
-
+      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} duration={3000} />}
+      
       {confirmModal.type === 'deleteUser' && confirmModal.user ? (
-        <DeleteUserModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, type: '', user: null })} onConfirm={confirmModal.onConfirm} user={confirmModal.user} />
+        <DeleteUserModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ isOpen: false, type: '', user: null })}
+          onConfirm={confirmModal.onConfirm}
+          user={confirmModal.user}
+        />
       ) : (
-        <ConfirmModal isOpen={confirmModal.isOpen && confirmModal.type !== 'deleteUser'} onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })} onConfirm={confirmDelete} title={`Delete ${confirmModal.ids?.length} ${confirmModal.type}(s)?`} message={`This will permanently delete ${confirmModal.ids?.length} ${confirmModal.type}(s). This cannot be undone.`} confirmText="Delete" type="danger" />
+        <ConfirmModal
+          isOpen={confirmModal.isOpen && confirmModal.type !== 'deleteUser'}
+          onClose={() => setConfirmModal({ isOpen: false, type: '', ids: [] })}
+          onConfirm={confirmDelete}
+          title={`Delete ${confirmModal.ids?.length} ${confirmModal.type}(s)?`}
+          message={`This will permanently delete ${confirmModal.ids?.length} ${confirmModal.type}(s). This cannot be undone.`}
+          confirmText="Delete"
+          type="danger"
+        />
       )}
-
-      {/* NEW: Password Delete Modal */}
-      <PasswordDeleteModal
-        isOpen={passwordDeleteModal.isOpen}
-        onClose={() => setPasswordDeleteModal({ isOpen: false, paper: null })}
-        onConfirm={confirmPasswordDelete}
-        itemName={passwordDeleteModal.paper?.title}
-        message="This will move the paper to Recently Deleted. You can restore it within 30 days."
-      />
 
       {selectedUsers.length > 0 && <BulkActionsBar count={selectedUsers.length} onDelete={handleBulkDeleteUsers} onCancel={() => setSelectedUsers([])} />}
       {selectedPapers.length > 0 && <BulkActionsBar count={selectedPapers.length} onDelete={handleBulkDeletePapers} onCancel={() => setSelectedPapers([])} />}
-
+      
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
-        {/* Header */}
         <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10"><div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400 rounded-full blur-3xl"></div></div>
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+          </div>
+
           <div className="relative flex items-center gap-3 sm:gap-6">
-            <div className="hidden xs:block flex-shrink-0"><div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20"><Shield size={24} className="sm:w-8 sm:h-8 text-white" /></div></div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5">Admin Dashboard</h1>
-              <p className="text-xs sm:text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
-              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap mt-2">
-                <div className="flex items-center gap-1.5 text-blue-100"><FileText size={14} className="text-blue-300 flex-shrink-0" /><span className="font-semibold text-white">{stats?.research?.total || 0}</span><span className="text-blue-200">Papers</span></div>
-                <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
-                <div className="flex items-center gap-1.5 text-blue-100"><Activity size={14} className="text-green-300 flex-shrink-0" /><span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span><span className="text-blue-200">Active</span></div>
-                <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
-                <div className="flex items-center gap-1.5 text-blue-100"><Clock size={14} className="text-yellow-300 flex-shrink-0" /><span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span><span className="text-blue-200">Pending</span></div>
+            <div className="hidden xs:block flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+                <Shield size={24} className="sm:w-8 sm:h-8 text-white" />
               </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="mb-1 sm:mb-2">
+                <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">Admin Dashboard</h1>
+                <p className="text-xs sm:text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
+              </div>
+
+              <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3"></div>
+
+              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+                  <FileText size={14} className="text-blue-300 flex-shrink-0" />
+                  <span className="font-semibold text-white">{stats?.research?.total || 0}</span>
+                  <span className="text-blue-200">Papers</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+                  <Activity size={14} className="text-green-300 flex-shrink-0" />
+                  <span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span>
+                  <span className="text-blue-200">Active</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
+                  <Clock size={14} className="text-yellow-300 flex-shrink-0" />
+                  <span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span>
+                  <span className="text-blue-200">Pending</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
+              <Shield size={16} className="text-orange-300" />
+              <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
             </div>
           </div>
         </div>
@@ -477,9 +716,21 @@ const AdminDashboard = () => {
         <div className="px-4 mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {tabs.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap text-sm transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-navy text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
+                }`}
+              >
                 {tab.label}
-                {tab.badge > 0 && <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">{tab.badge}</span>}
+                {tab.badge > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -488,23 +739,53 @@ const AdminDashboard = () => {
         <div className="px-4 space-y-6">
           {activeTab === 'overview' && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">{adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {adminStats.map((stat, i) => <StatCard key={i} {...stat} />)}
+              </div>
+
               <div className="space-y-6">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})</h2>
-                  {pendingUsers.length === 0 ? <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div> : (
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />Pending Users ({pendingUsers.length})
+                  </h2>
+                  {pendingUsers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending users</div>
+                  ) : (
                     <>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">{paginatedPendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}</div>
-                      <Pagination currentPage={pendingUsersPage} totalPages={Math.ceil(pendingUsers.length / pendingUsersPerPage)} onPageChange={setPendingUsersPage} itemsPerPage={pendingUsersPerPage} onItemsPerPageChange={(v) => { setPendingUsersPerPage(v); setPendingUsersPage(1); }} totalItems={pendingUsers.length} />
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {paginatedPendingUsers.map(u => <PendingUserCard key={u._id} user={u} onApprove={handleApproveUser} onReject={handleRejectUser} />)}
+                      </div>
+                      <Pagination
+                        currentPage={pendingUsersPage}
+                        totalPages={Math.ceil(pendingUsers.length / pendingUsersPerPage)}
+                        onPageChange={setPendingUsersPage}
+                        itemsPerPage={pendingUsersPerPage}
+                        onItemsPerPageChange={(val) => { setPendingUsersPerPage(val); setPendingUsersPage(1); }}
+                        totalItems={pendingUsers.length}
+                      />
                     </>
                   )}
                 </div>
+
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})</h2>
-                  {pendingResearch.length === 0 ? <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div> : (
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />Pending Research ({pendingResearch.length})
+                  </h2>
+                  {pendingResearch.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending research</div>
+                  ) : (
                     <>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">{paginatedPendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}</div>
-                      <Pagination currentPage={pendingResearchPage} totalPages={Math.ceil(pendingResearch.length / pendingResearchPerPage)} onPageChange={setPendingResearchPage} itemsPerPage={pendingResearchPerPage} onItemsPerPageChange={(v) => { setPendingResearchPerPage(v); setPendingResearchPage(1); }} totalItems={pendingResearch.length} />
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {paginatedPendingResearch.map(paper => <PendingResearchCard key={paper._id} paper={paper} onReview={handleReviewPaper} />)}
+                      </div>
+                      <Pagination
+                        currentPage={pendingResearchPage}
+                        totalPages={Math.ceil(pendingResearch.length / pendingResearchPerPage)}
+                        onPageChange={setPendingResearchPage}
+                        itemsPerPage={pendingResearchPerPage}
+                        onItemsPerPageChange={(val) => { setPendingResearchPerPage(val); setPendingResearchPage(1); }}
+                        totalItems={pendingResearch.length}
+                      />
                     </>
                   )}
                 </div>
@@ -515,43 +796,106 @@ const AdminDashboard = () => {
           {activeTab === 'users' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})</h2><ViewToggle mode={userViewMode} onChange={setUserViewMode} /></div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Users size={20} className="text-blue-600" />All Users ({sortedUsers.length})
+                  </h2>
+                  <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
+                </div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl" />{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X size={18} /></button>}</div>
-                  {/* CHANGED: Added 'ret' to role filter */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X size={18} /></button>}
+                  </div>
                   <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl">
                     <option value="all">All Roles</option>
                     <option value="student">Students</option>
                     <option value="faculty">Faculty</option>
-                    <option value="ret">RET</option>
                   </select>
                 </div>
-                <div className="flex items-center gap-2"><input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} /><span>Select All</span></div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedUsers.length === allUsers.filter(u => u._id !== user._id).length && allUsers.length > 0} onChange={handleSelectAllUsers} />
+                  <span>Select All</span>
+                </div>
               </div>
+
               {userViewMode === 'grid' ? (
-                <div className="p-4">{paginatedUsers.length === 0 ? <div className="text-center py-12">No users found</div> : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{paginatedUsers.map(u => <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}</div>}</div>
+                <div className="p-4">
+                  {paginatedUsers.length === 0 ? (
+                    <div className="text-center py-12">No users found</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {paginatedUsers.map(u => (
+                        <UserGridCard key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="relative overflow-auto max-h-[600px]"><table className="w-full"><tbody>{paginatedUsers.map(u => <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />)}</tbody></table></div>
+                <div className="relative overflow-auto max-h-[600px]">
+                  <table className="w-full">
+                    <tbody>
+                      {paginatedUsers.map(u => (
+                        <UserListRow key={u._id} user={u} selected={selectedUsers.includes(u._id)} onSelect={handleSelectUser} onDelete={handleDeleteUser} currentUserId={user._id} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-              <div className="p-4"><Pagination currentPage={usersPage} totalPages={Math.ceil(sortedUsers.length / usersPerPage)} onPageChange={setUsersPage} itemsPerPage={usersPerPage} onItemsPerPageChange={(v) => { setUsersPerPage(v); setUsersPage(1); }} totalItems={sortedUsers.length} /></div>
+
+              <div className="p-4">
+                <Pagination
+                  currentPage={usersPage}
+                  totalPages={Math.ceil(sortedUsers.length / usersPerPage)}
+                  onPageChange={setUsersPage}
+                  itemsPerPage={usersPerPage}
+                  onItemsPerPageChange={(val) => { setUsersPerPage(val); setUsersPage(1); }}
+                  totalItems={sortedUsers.length}
+                />
+              </div>
             </div>
           )}
 
           {activeTab === 'research' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><FileText size={20} className="text-green-600" />All Papers ({sortedPapers.length})</h2><ViewToggle mode={paperViewMode} onChange={setPaperViewMode} /></div>
-                <div className="flex items-center gap-3 mb-3"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}</div></div>
-                <div className="flex items-center gap-2"><input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" /><span className="text-sm text-gray-600 dark:text-gray-400">Select All</span></div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />All Papers ({sortedPapers.length})
+                  </h2>
+                  <ViewToggle mode={paperViewMode} onChange={setPaperViewMode} />
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
+                    {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={18} /></button>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+                </div>
               </div>
               {paperViewMode === 'grid' ? (
-                <div className="p-4">{paginatedPapers.length === 0 ? <div className="text-center py-12 text-gray-500">No papers found</div> : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{paginatedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}</div>}</div>
+                <div className="p-4">
+                  {paginatedPapers.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">No papers found</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {paginatedPapers.map(p => <PaperGridCard key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="relative overflow-auto max-h-[600px]">
                   <table className="w-full">
                     <thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-sm">
                       <tr>
-                        <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900"><input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" /></th>
+                        <th className="px-4 py-3 text-left bg-gray-50 dark:bg-gray-900">
+                          <input type="checkbox" checked={selectedPapers.length === allResearch.length && allResearch.length > 0} onChange={handleSelectAllPapers} className="w-4 h-4 rounded accent-navy" />
+                        </th>
                         <SortableHeader label="Title" sortKey="title" currentSort={paperSortConfig} onSort={handlePaperSort} />
                         <SortableHeader label="Date" sortKey="date" currentSort={paperSortConfig} onSort={handlePaperSort} />
                         <SortableHeader label="Views" sortKey="views" currentSort={paperSortConfig} onSort={handlePaperSort} />
@@ -560,34 +904,53 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {paginatedPapers.length === 0 ? <tr><td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td></tr> : paginatedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)}
+                      {paginatedPapers.length === 0 ? (
+                        <tr><td colSpan="6" className="text-center py-12 text-gray-500">No papers found</td></tr>
+                      ) : (
+                        paginatedPapers.map(p => <PaperListRow key={p._id} paper={p} selected={selectedPapers.includes(p._id)} onSelect={handleSelectPaper} onDelete={handleDeletePaper} onReview={handleReviewPaper} onManageAwards={handleManageAwards} />)
+                      )}
                     </tbody>
                   </table>
                 </div>
               )}
-              <div className="p-4"><Pagination currentPage={papersPage} totalPages={Math.ceil(sortedPapers.length / papersPerPage)} onPageChange={setPapersPage} itemsPerPage={papersPerPage} onItemsPerPageChange={(v) => { setPapersPerPage(v); setPapersPage(1); }} totalItems={sortedPapers.length} /></div>
-            </div>
-          )}
-
-          {/* NEW: Recently Deleted tab */}
-          {activeTab === 'deleted' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
-              <RecentlyDeleted />
+              <div className="p-4">
+                <Pagination
+                  currentPage={papersPage}
+                  totalPages={Math.ceil(sortedPapers.length / papersPerPage)}
+                  onPageChange={setPapersPage}
+                  itemsPerPage={papersPerPage}
+                  onItemsPerPageChange={(val) => { setPapersPerPage(val); setPapersPage(1); }}
+                  totalItems={sortedPapers.length}
+                />
+              </div>
             </div>
           )}
 
           {activeTab === 'bookmarks' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-5 border-b border-gray-200 dark:border-gray-700"><h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})</h2></div>
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Bookmark size={20} className="text-purple-600" />My Bookmarks ({bookmarks.length})
+                </h2>
+              </div>
               <div className="p-4">
-                {bookmarks.length === 0 ? <div className="text-center py-12"><div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4"><Bookmark size={32} className="text-gray-400" /></div><p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p></div> : (
-                  <div className="space-y-3">{bookmarks.map(b => (
-                    <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                      <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
-                      <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold">Remove</button>
+                {bookmarks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Bookmark size={32} className="text-gray-400" />
                     </div>
-                  ))}</div>
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">No bookmarks yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {bookmarks.map(b => (
+                      <div key={b._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2 cursor-pointer active:text-navy" onClick={() => navigate(`/research/${b.research._id}`)}>{b.research.title}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{b.research.abstract}</p>
+                        <button onClick={() => handleRemoveBookmark(b._id, b.research._id)} className="text-red-600 hover:text-red-700 text-xs font-bold active:scale-95 transition">Remove</button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -602,13 +965,23 @@ const AdminDashboard = () => {
       </div>
 
       {showReviewModal && selectedPaper && (
-        <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('Review submitted'); }} />
+        <AdminReviewModal paper={selectedPaper} onClose={() => { setShowReviewModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowReviewModal(false); setSelectedPaper(null); showToast('✅ Review submitted'); }} />
       )}
       {showAwardsModal && selectedPaper && (
-        <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('Awards updated'); }} />
+        <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchData(); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
       )}
     </>
   );
 };
 
+StatCard.displayName = 'StatCard';
+ViewToggle.displayName = 'ViewToggle';
+SortableHeader.displayName = 'SortableHeader';
+BulkActionsBar.displayName = 'BulkActionsBar';
+UserGridCard.displayName = 'UserGridCard';
+UserListRow.displayName = 'UserListRow';
+PaperGridCard.displayName = 'PaperGridCard';
+PaperListRow.displayName = 'PaperListRow';
+PendingUserCard.displayName = 'PendingUserCard';
+PendingResearchCard.displayName = 'PendingResearchCard';
 export default AdminDashboard;
