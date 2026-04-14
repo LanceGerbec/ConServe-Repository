@@ -1,3 +1,5 @@
+// server/src/controllers/authController.js
+// CHANGE: Added ret role registration support using ValidRetId
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
@@ -5,11 +7,11 @@ import AuditLog from '../models/AuditLog.js';
 import BlacklistedToken from '../models/BlacklistedToken.js';
 import ValidStudentId from '../models/ValidStudentId.js';
 import ValidFacultyId from '../models/ValidFacultyId.js';
+import ValidRetId from '../models/ValidRetId.js';
 import { sendWelcomeEmail, sendAdminNewUserNotification } from '../utils/emailService.js';
 import { notifyNewUserRegistered } from '../utils/notificationService.js';
 import Notification from '../models/Notification.js';
 
-// Each token gets a unique ID (jti) so it can be individually revoked on logout.
 const generateToken = (id) => {
   const jti = randomBytes(16).toString('hex');
   return jwt.sign({ id, jti }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
@@ -37,9 +39,23 @@ export const register = async (req, res) => {
     });
     if (existingUser) {
       return res.status(400).json({
-        error: existingUser.email === email.toLowerCase()
-          ? 'Email already registered.' : 'Student/Faculty ID already in use'
+        error: existingUser.email === email.toLowerCase() ? 'Email already registered.' : 'Student/Faculty ID already in use'
       });
+    }
+
+    // RET role registration
+    if (role === 'ret') {
+      const validRetId = await ValidRetId.findOne({ retId: studentId.toUpperCase(), status: 'active' });
+      if (!validRetId) return res.status(400).json({ error: 'Invalid RET ID' });
+      if (validRetId.isUsed) return res.status(400).json({ error: 'RET ID already registered' });
+      const user = await User.create({ firstName, lastName, email: email.toLowerCase(), studentId, password, role: 'ret', isApproved: false, isDeleted: false });
+      validRetId.isUsed = true; validRetId.registeredUser = user._id;
+      await validRetId.save();
+      await AuditLog.create({ user: user._id, action: 'RET_REGISTERED', ipAddress: req.ip, userAgent: req.get('user-agent'), details: { email, retId: studentId } });
+      try { await sendWelcomeEmail(user); await sendAdminNewUserNotification(user); } catch {}
+      await Notification.create({ recipient: user._id, type: 'ACCOUNT_APPROVED', title: 'Account Created', message: 'Your RET account has been created. Please wait for admin approval.', priority: 'high' });
+      await notifyNewUserRegistered(user);
+      return res.status(201).json({ message: 'Registration successful. Await admin approval.', user: safeUser(user) });
     }
 
     if (role === 'faculty') {
@@ -50,7 +66,7 @@ export const register = async (req, res) => {
       validFacultyId.isUsed = true; validFacultyId.registeredUser = user._id;
       await validFacultyId.save();
       await AuditLog.create({ user: user._id, action: 'FACULTY_REGISTERED', ipAddress: req.ip, userAgent: req.get('user-agent'), details: { email, facultyId: studentId } });
-      try { await sendWelcomeEmail(user); await sendAdminNewUserNotification(user); } catch (e) { console.error('Email error:', e); }
+      try { await sendWelcomeEmail(user); await sendAdminNewUserNotification(user); } catch {}
       await Notification.create({ recipient: user._id, type: 'ACCOUNT_APPROVED', title: 'Account Created', message: 'Your account has been created. Please wait for admin approval.', priority: 'high' });
       await notifyNewUserRegistered(user);
       return res.status(201).json({ message: 'Registration successful. Await admin approval.', user: safeUser(user) });
@@ -63,7 +79,7 @@ export const register = async (req, res) => {
     validStudentId.isUsed = true; validStudentId.registeredUser = user._id;
     await validStudentId.save();
     await AuditLog.create({ user: user._id, action: 'USER_REGISTERED', ipAddress: req.ip, userAgent: req.get('user-agent'), details: { email, studentId } });
-    try { await sendWelcomeEmail(user); await sendAdminNewUserNotification(user); } catch (e) { console.error('Email error:', e); }
+    try { await sendWelcomeEmail(user); await sendAdminNewUserNotification(user); } catch {}
     await Notification.create({ recipient: user._id, type: 'ACCOUNT_APPROVED', title: 'Account Created', message: 'Your account has been created. Please wait for admin approval.', priority: 'high' });
     await notifyNewUserRegistered(user);
     res.status(201).json({ message: 'Registration successful. Await admin approval.', user: safeUser(user) });
@@ -82,18 +98,12 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
     const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false });
-
-    // ── Account Enumeration Prevention ────────────────────────────────────
-    // Both "user not found" and "wrong password" return the same message.
-    // This prevents attackers from using your API to discover valid emails.
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (user.isLocked()) return res.status(423).json({ error: 'Account locked. Try again later.' });
     if (!user.isApproved) return res.status(403).json({ error: 'Account pending admin approval' });
     if (!user.isActive) return res.status(403).json({ error: 'Account inactive. Contact administrator.' });
-
     const isMatch = await user.comparePassword(password);
     if (!isMatch) { await user.incLoginAttempts(); return res.status(401).json({ error: 'Invalid credentials' }); }
-
     await User.findByIdAndUpdate(user._id, { $set: { loginAttempts: 0, lastLogin: new Date() }, $unset: { lockoutUntil: 1 } });
     const token = generateToken(user._id);
     await AuditLog.create({ user: user._id, action: 'USER_LOGIN', ipAddress: req.ip, userAgent: req.get('user-agent') });
@@ -107,14 +117,8 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const decoded = req.tokenDecoded;
-    // ── Blacklist this token's unique ID ──────────────────────────────────
-    // Even if someone captures this JWT, it becomes useless immediately.
     if (decoded?.jti && decoded?.exp) {
-      await BlacklistedToken.create({
-        jti: decoded.jti,
-        userId: req.user._id,
-        expiresAt: new Date(decoded.exp * 1000)
-      }).catch(() => {}); // ignore duplicate key errors
+      await BlacklistedToken.create({ jti: decoded.jti, userId: req.user._id, expiresAt: new Date(decoded.exp * 1000) }).catch(() => {});
     }
     await AuditLog.create({ user: req.user._id, action: 'USER_LOGOUT', ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'Logged out successfully' });
@@ -127,7 +131,6 @@ export const getCurrentUser = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ user: { ...safeUser(user), twoFactorEnabled: user.twoFactorEnabled, lastLogin: user.lastLogin, createdAt: user.createdAt } });
   } catch (error) {
-    console.error('Get current user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 };
@@ -137,7 +140,6 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
     const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false });
-    // Always return same message — prevents email enumeration
     if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' });
     const resetToken = jwt.sign({ id: user._id, email: user.email, type: 'password-reset' }, process.env.JWT_SECRET, { expiresIn: '1h' });
     user.passwordResetToken = resetToken;
@@ -148,7 +150,6 @@ export const forgotPassword = async (req, res) => {
     await AuditLog.create({ user: user._id, action: 'PASSWORD_RESET_REQUESTED', ipAddress: req.ip, userAgent: req.get('user-agent') });
     res.json({ message: 'If that email exists, a reset link has been sent.' });
   } catch (error) {
-    console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Failed to process request' });
   }
 };
@@ -164,7 +165,6 @@ export const verifyResetToken = async (req, res) => {
     if (!user) return res.status(400).json({ valid: false, error: 'Token expired or already used' });
     res.json({ valid: true, email: user.email });
   } catch (error) {
-    console.error('Verify token error:', error);
     res.status(500).json({ valid: false, error: 'Verification failed' });
   }
 };
@@ -192,7 +192,6 @@ export const resetPassword = async (req, res) => {
     await sendPasswordResetConfirmation(user);
     res.json({ message: 'Password reset successful' });
   } catch (error) {
-    console.error('Reset password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });
   }
 };

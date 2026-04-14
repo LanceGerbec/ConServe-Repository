@@ -1,4 +1,5 @@
 // server/src/models/User.js
+// CHANGE: Added 'ret' to role enum
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -8,22 +9,15 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, lowercase: true, trim: true },
   studentId: { type: String, required: true },
   password: { type: String, required: true, minlength: 12 },
-  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
+  role: { type: String, enum: ['student', 'faculty', 'admin', 'ret'], default: 'student' },
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
-
-  // Avatar
   avatar: { type: String, default: null },
   avatarCloudinaryId: { type: String, default: null },
-
-  // SUPER ADMIN FIELD
   isSuperAdmin: { type: Boolean, default: false },
-
-  // SOFT DELETE FIELDS
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-
   canUploadOnBehalf: { type: Boolean, default: false },
   twoFactorSecret: String,
   twoFactorEnabled: { type: Boolean, default: false },
@@ -59,10 +53,8 @@ userSchema.methods.incLoginAttempts = function() {
     return this.updateOne({ $set: { loginAttempts: 1 }, $unset: { lockoutUntil: 1 } });
   }
   const updates = { $inc: { loginAttempts: 1 } };
-  const maxAttempts = 5;
-  const lockTime = 30 * 60 * 1000;
-  if (this.loginAttempts + 1 >= maxAttempts && !this.isLocked()) {
-    updates.$set = { lockoutUntil: Date.now() + lockTime };
+  if (this.loginAttempts + 1 >= 5 && !this.isLocked()) {
+    updates.$set = { lockoutUntil: Date.now() + 30 * 60 * 1000 };
   }
   return this.updateOne(updates);
 };
@@ -83,10 +75,7 @@ userSchema.methods.restore = async function() {
   return await this.save();
 };
 
-userSchema.index({ email: 1, isDeleted: 1 }, {
-  unique: true,
-  partialFilterExpression: { isDeleted: false }
-});
+userSchema.index({ email: 1, isDeleted: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 userSchema.index({ role: 1, isApproved: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 
