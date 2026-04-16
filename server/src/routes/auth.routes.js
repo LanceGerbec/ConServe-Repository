@@ -1,18 +1,36 @@
+// server/src/routes/auth.routes.js
 import express from 'express';
 import { register, login, logout, getCurrentUser, forgotPassword, verifyResetToken, resetPassword } from '../controllers/authController.js';
 import { auth, authorize } from '../middleware/auth.js';
 import { sendEmail, testEmailConnection } from '../utils/emailService.js';
 import { passwordResetLimiter, registerLimiter } from '../middleware/rateLimiter.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
-router.post('/register', registerLimiter, register);   // 3 registrations/hour per IP
-router.post('/login', login);                          // loginLimiter applied in server.js
+router.post('/register', registerLimiter, register);
+router.post('/login', login);
 router.post('/logout', auth, logout);
 router.get('/me', auth, getCurrentUser);
 router.post('/forgot-password', passwordResetLimiter, forgotPassword);
 router.get('/verify-reset-token', verifyResetToken);
 router.post('/reset-password', resetPassword);
+
+// ── Password verification for sensitive admin actions ──
+router.post('/verify-password', auth, authorize('admin'), async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'Password is required' });
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) return res.status(401).json({ error: 'Incorrect password' });
+    res.json({ success: true, message: 'Password verified' });
+  } catch (error) {
+    console.error('Verify password error:', error);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
 
 router.get('/test-email-connection', auth, authorize('admin'), async (req, res) => {
   try {
