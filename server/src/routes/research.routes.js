@@ -207,6 +207,40 @@ router.get('/', auth, async (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to fetch research' }); }
 });
 
+// ── TRACK CITATION (increment counter when user copies) ──
+router.post('/:id/track-citation', auth, async (req, res) => {
+  try {
+    const { style } = req.body; // optional: 'APA' | 'MLA' | 'Chicago' | 'Harvard'
+    const paper = await Research.findById(req.params.id);
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
+    if (paper.status !== 'approved') return res.status(403).json({ error: 'Paper not approved' });
+ 
+    // Increment total citations
+    await Research.findByIdAndUpdate(req.params.id, {
+      $inc: {
+        citations: 1,
+        citationClicks: 1,
+        ...(style && { [`analytics.citationsByStyle.${style}`]: 1 })
+      }
+    });
+ 
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'CITATION_COPIED',
+      resource: 'Research',
+      resourceId: req.params.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      details: { style: style || 'APA' }
+    });
+ 
+    res.json({ success: true, message: 'Citation tracked' });
+  } catch (error) {
+    console.error('Track citation error:', error);
+    res.status(500).json({ error: 'Failed to track citation' });
+  }
+});
+
 // ── SUBMIT RESEARCH ──
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
