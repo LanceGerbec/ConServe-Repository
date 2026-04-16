@@ -23,6 +23,7 @@ import bulkUploadRoutes from './src/routes/bulkUpload.routes.js';
 import searchRoutes from './src/routes/search.routes.js';
 import awardsRoutes from './src/routes/awards.routes.js';
 import reportRoutes from './src/routes/report.routes.js';
+import deletedUsersRoutes from './src/routes/deletedUsers.routes.js';
 import adminManagementRoutes from './src/routes/adminManagement.routes.js';
 
 import { noSqlSanitize, xssSanitizer, paramPollution, securityHeaders, suspiciousPatternLogger } from './src/middleware/security.js';
@@ -138,6 +139,7 @@ app.use('/api/auth',              authRoutes);
 app.use('/api/auth/login',        loginLimiter);
 app.use('/api/research',          researchRoutes);
 app.use('/api/research',          uploadLimiter);
+app.use('/api/deleted-users', deletedUsersRoutes);
 app.use('/api/users',             userRoutes);
 app.use('/api/bookmarks',         bookmarkRoutes);
 app.use('/api/reviews',           reviewRoutes);

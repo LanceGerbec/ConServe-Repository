@@ -15,6 +15,7 @@ import DeleteUserModal from '../admin/DeleteUserModal';
 import AdminManagement from '../admin/AdminManagement';
 import PasswordConfirmDeleteModal from '../admin/PasswordConfirmDeleteModal';
 import RecentlyDeletedModal from '../admin/RecentlyDeletedModal';
+import RecentlyDeletedUsersModal from '../admin/RecentlyDeletedUsersModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -242,7 +243,8 @@ const AdminDashboard = () => {
 
   // User delete modal
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', ids: [], user: null, onConfirm: null });
-
+const [showDeleteConfirm, setShowDeleteConfirm] = useState({ open: false, user: null });
+const [deleteLoading, setDeleteLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
@@ -407,21 +409,54 @@ const AdminDashboard = () => {
   }, [selectedPapers]);
 
   // ── User delete (existing flow with DeleteUserModal) ──
-  const handleDeleteUser = useCallback(userId => {
-    const u = allUsers.find(x => x._id === userId);
-    if (!u) return;
-    setConfirmModal({
-      isOpen: true, type: 'deleteUser', user: u,
-      onConfirm: async () => {
-        try {
-          const token = localStorage.getItem('token');
-          await fetch(`${API_URL}/users/${userId}/reject`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-          showToast('✅ User deleted'); setSelectedUsers([]); fetchData(); fetchTabData('users');
-        } catch { showToast('Delete failed', 'error'); }
-        finally { setConfirmModal({ isOpen: false, type: '', user: null }); }
+const handleDeleteUser = useCallback((userId) => {
+  const userToDelete = allUsers.find(u => u._id === userId);
+  if (!userToDelete) return;
+
+  setShowDeleteConfirm({
+    open: true,
+    user: userToDelete
+  });
+}, [allUsers]);
+
+const confirmDeleteWithPassword = async (password, reason) => {
+  const { user: userToDelete } = showDeleteConfirm;
+  if (!userToDelete) return;
+
+  setDeleteLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(
+      `${API_URL}/deleted-users/confirm-delete/${userToDelete._id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password, reason })
       }
-    });
-  }, [allUsers, showToast, fetchData, fetchTabData]);
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setDeleteLoading(false);
+      return { error: data.error };
+    }
+
+    showToast('User moved to recycle bin');
+    setShowDeleteConfirm({ open: false, user: null });
+
+    fetchData();
+    fetchTabData('users');
+  } catch {
+    return { error: 'Connection error' };
+  } finally {
+    setDeleteLoading(false);
+  }
+};
 
   const handleRejectUser = async userId => {
     const u = pendingUsers.find(x => x._id === userId);
@@ -619,6 +654,12 @@ const AdminDashboard = () => {
                   <ViewToggle mode={userViewMode} onChange={setUserViewMode} />
                 </div>
                 <div className="flex items-center gap-3 mb-3">
+                  <button
+  onClick={() => setShowRecentlyDeleted(true)}
+  className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition"
+>
+  <RotateCcw size={16} /> Recently Deleted
+</button>
                   <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users..." className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-900 dark:text-white focus:border-navy focus:outline-none" />{search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X size={18} /></button>}</div>
                   <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-900 dark:text-white focus:outline-none"><option value="all">All Roles</option><option value="student">Students</option><option value="faculty">Faculty</option></select>
                 </div>
@@ -713,6 +754,25 @@ const AdminDashboard = () => {
       {showAwardsModal && selectedPaper && (
         <AwardsModal paper={selectedPaper} onClose={() => { setShowAwardsModal(false); setSelectedPaper(null); }} onSuccess={() => { fetchTabData('research'); setShowAwardsModal(false); setSelectedPaper(null); showToast('✅ Awards updated'); }} />
       )}
+
+      <PasswordConfirmDeleteModal
+  isOpen={showDeleteConfirm.open}
+  onClose={() => setShowDeleteConfirm({ open: false, user: null })}
+  onConfirm={confirmDeleteWithPassword}
+  title={`Delete ${showDeleteConfirm.user?.firstName} ${showDeleteConfirm.user?.lastName}?`}
+  description={`User: ${showDeleteConfirm.user?.email} (${showDeleteConfirm.user?.role})`}
+  loading={deleteLoading}
+/>
+
+<RecentlyDeletedUsersModal
+  isOpen={showRecentlyDeleted}
+  onClose={() => setShowRecentlyDeleted(false)}
+  onRestored={() => {
+    fetchData();
+    fetchTabData('users');
+    showToast('User restored successfully');
+  }}
+/>
     </>
   );
 };
