@@ -1,6 +1,6 @@
 // client/src/components/dashboard/RETDashboard.jsx
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, Clock, CheckCircle, XCircle, Eye, Award, Trash2, RefreshCw, Upload, BarChart3, Search, X, Lock, EyeOff, Loader2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Eye, Award, Trash2, RefreshCw, Upload, BarChart3, Search, X, Lock, EyeOff, Loader2, AlertTriangle, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnalyticsHub from '../analytics/AnalyticsHub';
 import AdminReviewModal from '../admin/AdminReviewModal';
@@ -11,7 +11,7 @@ import Toast from '../common/Toast';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// ── Password-confirm delete modal (inline, no extra file needed) ──
+// ── Password-confirm delete modal ──
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, paperTitle, loading }) => {
   const [pwd, setPwd] = useState('');
   const [show, setShow] = useState(false);
@@ -35,9 +35,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, paperTitle, loading })
           <button onClick={close} disabled={loading} className="p-1.5 hover:bg-white/20 rounded-lg transition"><X size={18} className="text-white" /></button>
         </div>
         <div className="p-5 space-y-4">
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 rounded-lg text-sm text-red-800 dark:text-red-300 line-clamp-2">
-            "{paperTitle}"
-          </div>
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 rounded-lg text-sm text-red-800 dark:text-red-300 line-clamp-2">"{paperTitle}"</div>
           <p className="text-xs text-gray-500 dark:text-gray-400">Paper will be moved to Recycle Bin and auto-purged after 30 days.</p>
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1"><Lock size={11} />Your Password <span className="text-red-500">*</span></label>
@@ -78,46 +76,23 @@ const StatusBadge = ({ status }) => {
 const PaperCard = ({ paper, onReview, onAwards, onDelete, onNavigate }) => {
   const isPending = paper.status === 'pending' || paper.status === 'revision';
   const isApproved = paper.status === 'approved';
-
-  const handleCardClick = () => {
-    if (isApproved) onNavigate(paper._id);
-    else if (isPending) onReview(paper);
-  };
-
+  const handleCardClick = () => { if (isApproved) onNavigate(paper._id); else if (isPending) onReview(paper); };
   return (
-    <div className={`group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 transition-all hover:shadow-md ${(isPending || isApproved) ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
-      onClick={handleCardClick}>
+    <div className={`group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 transition-all hover:shadow-md ${(isPending || isApproved) ? 'cursor-pointer hover:-translate-y-0.5' : ''}`} onClick={handleCardClick}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className={`font-semibold text-sm mb-1 leading-snug line-clamp-2 ${(isPending || isApproved) ? 'group-hover:text-navy dark:group-hover:text-accent' : ''} text-gray-900 dark:text-white transition-colors`}>
-            {paper.title}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            {paper.submittedBy?.firstName} {paper.submittedBy?.lastName} • {paper.category} • {paper.yearCompleted} • <Eye size={10} className="inline" /> {paper.views || 0}
-          </p>
+          <h3 className={`font-semibold text-sm mb-1 leading-snug line-clamp-2 ${(isPending || isApproved) ? 'group-hover:text-navy dark:group-hover:text-accent' : ''} text-gray-900 dark:text-white transition-colors`}>{paper.title}</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{paper.submittedBy?.firstName} {paper.submittedBy?.lastName} • {paper.category} • {paper.yearCompleted} • <Eye size={10} className="inline" /> {paper.views || 0}</p>
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={paper.status} />
-            {paper.awards?.length > 0 && (
-              <span className="flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-full font-semibold border border-yellow-200">
-                <Award size={10} /> {paper.awards.length} Award{paper.awards.length > 1 ? 's' : ''}
-              </span>
-            )}
+            {paper.awards?.length > 0 && <span className="flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-full font-semibold border border-yellow-200"><Award size={10} /> {paper.awards.length} Award{paper.awards.length > 1 ? 's' : ''}</span>}
             {isPending && <span className="text-xs text-navy dark:text-accent font-semibold">Click to review →</span>}
             {isApproved && <span className="text-xs text-green-600 dark:text-green-400 font-semibold">Click to view →</span>}
           </div>
         </div>
-        {/* Action buttons — stop propagation so clicks don't bubble */}
         <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          {isApproved && (
-            <button title="Manage Awards" onClick={e => { e.stopPropagation(); onAwards(paper); }}
-              className="p-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition text-yellow-600">
-              <Award size={15} />
-            </button>
-          )}
-          <button title="Delete" onClick={e => { e.stopPropagation(); onDelete(paper); }}
-            className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-500">
-            <Trash2 size={15} />
-          </button>
+          {isApproved && <button title="Manage Awards" onClick={e => { e.stopPropagation(); onAwards(paper); }} className="p-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition text-yellow-600"><Award size={15} /></button>}
+          <button title="Delete" onClick={e => { e.stopPropagation(); onDelete(paper); }} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition text-red-500"><Trash2 size={15} /></button>
         </div>
       </div>
     </div>
@@ -150,7 +125,6 @@ const RETDashboard = () => {
   const [page, setPage] = useState(1);
   const PER_PAGE = 8;
 
-  // Modals
   const [reviewPaper, setReviewPaper] = useState(null);
   const [awardsPaper, setAwardsPaper] = useState(null);
   const [deletePaper, setDeletePaper] = useState(null);
@@ -173,7 +147,6 @@ const RETDashboard = () => {
 
   useEffect(() => { fetchPapers(); }, [fetchPapers]);
 
-  // Stats
   const counts = {
     total: papers.length,
     pending: papers.filter(p => p.status === 'pending').length,
@@ -182,7 +155,6 @@ const RETDashboard = () => {
     revision: papers.filter(p => p.status === 'revision').length,
   };
 
-  // Filtered + searched
   const filtered = papers.filter(p => {
     const matchStatus = filter === 'all' ? true : p.status === filter;
     const matchSearch = search ? p.title?.toLowerCase().includes(search.toLowerCase()) || `${p.submittedBy?.firstName} ${p.submittedBy?.lastName}`.toLowerCase().includes(search.toLowerCase()) : true;
@@ -190,27 +162,19 @@ const RETDashboard = () => {
   });
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  // Delete with password
   const handleDelete = async (password) => {
     if (!deletePaper) return;
     setDeleteLoading(true);
     try {
       const token = localStorage.getItem('token');
-      // Verify password
       const vRes = await fetch(`${API_URL}/auth/verify-password`, {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
       if (!vRes.ok) { setDeleteLoading(false); return { error: 'Incorrect password' }; }
-      // Soft delete
-      const dRes = await fetch(`${API_URL}/research/${deletePaper._id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
-      });
-      if (dRes.ok) {
-        showToast('Paper moved to Recycle Bin');
-        setDeletePaper(null);
-        fetchPapers();
-      } else { return { error: 'Delete failed' }; }
+      const dRes = await fetch(`${API_URL}/research/${deletePaper._id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (dRes.ok) { showToast('Paper moved to Recycle Bin'); setDeletePaper(null); fetchPapers(); }
+      else { return { error: 'Delete failed' }; }
     } catch { return { error: 'Connection error' }; }
     finally { setDeleteLoading(false); }
   };
@@ -233,52 +197,27 @@ const RETDashboard = () => {
   return (
     <>
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
-
-      {/* Modals */}
-      {reviewPaper && (
-        <AdminReviewModal paper={reviewPaper} onClose={() => setReviewPaper(null)}
-          onSuccess={() => { setReviewPaper(null); fetchPapers(); showToast('Review submitted'); }} />
-      )}
-      {awardsPaper && (
-        <AwardsModal paper={awardsPaper} onClose={() => setAwardsPaper(null)}
-          onSuccess={() => { fetchPapers(); showToast('Awards updated'); }} />
-      )}
-      <DeleteConfirmModal isOpen={!!deletePaper} paperTitle={deletePaper?.title || ''} loading={deleteLoading}
-        onClose={() => setDeletePaper(null)} onConfirm={handleDelete} />
-      <RecentlyDeletedModal isOpen={showRecycleBin} onClose={() => setShowRecycleBin(false)}
-        onRestored={() => { fetchPapers(); showToast('Paper restored'); }} />
-      {showSubmit && (
-        <SubmitResearch onClose={() => setShowSubmit(false)} onSuccess={() => { setShowSubmit(false); fetchPapers(); showToast('Paper submitted'); }} />
-      )}
+      {reviewPaper && <AdminReviewModal paper={reviewPaper} onClose={() => setReviewPaper(null)} onSuccess={() => { setReviewPaper(null); fetchPapers(); showToast('Review submitted'); }} />}
+      {awardsPaper && <AwardsModal paper={awardsPaper} onClose={() => setAwardsPaper(null)} onSuccess={() => { fetchPapers(); showToast('Awards updated'); }} />}
+      <DeleteConfirmModal isOpen={!!deletePaper} paperTitle={deletePaper?.title || ''} loading={deleteLoading} onClose={() => setDeletePaper(null)} onConfirm={handleDelete} />
+      <RecentlyDeletedModal isOpen={showRecycleBin} onClose={() => setShowRecycleBin(false)} onRestored={() => { fetchPapers(); showToast('Paper restored'); }} />
+      {showSubmit && <SubmitResearch onClose={() => setShowSubmit(false)} onSuccess={() => { setShowSubmit(false); fetchPapers(); showToast('Paper submitted'); }} />}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-16">
-        {/* Header */}
         <div className="bg-gradient-to-r from-teal-700 via-teal-600 to-blue-700 px-4 sm:px-6 py-5 mb-6 shadow-xl">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText size={22} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">RET Department</h1>
-                <p className="text-teal-100 text-xs">Research, Extension &amp; Training • RET Department</p>
-              </div>
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0"><FileText size={22} className="text-white" /></div>
+              <div><h1 className="text-lg font-bold text-white">RET Department</h1><p className="text-teal-100 text-xs">Research, Extension &amp; Training • RET Department</p></div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowRecycleBin(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white rounded-xl text-sm font-semibold transition">
-                <Trash2 size={15} /> Recycle Bin
-              </button>
-              <button onClick={() => setShowSubmit(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white text-teal-700 rounded-xl text-sm font-bold hover:bg-teal-50 transition shadow-md">
-                <Upload size={15} /> Submit Paper
-              </button>
+              <button onClick={() => setShowRecycleBin(true)} className="flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white rounded-xl text-sm font-semibold transition"><Trash2 size={15} /> Recycle Bin</button>
+              <button onClick={() => setShowSubmit(true)} className="flex items-center gap-1.5 px-4 py-2 bg-white text-teal-700 rounded-xl text-sm font-bold hover:bg-teal-50 transition shadow-md"><Upload size={15} /> Submit Paper</button>
             </div>
           </div>
         </div>
 
         <div className="px-4 sm:px-6 space-y-6">
-          {/* Stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {STATS.map(({ icon: Icon, label, value, color }) => (
               <div key={label} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -290,73 +229,45 @@ const RETDashboard = () => {
             ))}
           </div>
 
-          {/* Tab bar */}
           <div className="flex gap-2">
             {[{ id: 'papers', label: 'Paper Management', icon: FileText }, { id: 'analytics', label: 'Analytics', icon: BarChart3 }].map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition ${tab === t.id ? 'bg-navy text-white shadow-md' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'}`}>
+              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition ${tab === t.id ? 'bg-navy text-white shadow-md' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'}`}>
                 <t.icon size={15} /> {t.label}
               </button>
             ))}
           </div>
 
-          {/* Analytics tab */}
           {tab === 'analytics' && <AnalyticsHub />}
 
-          {/* Papers tab */}
           {tab === 'papers' && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
-              {/* Panel header */}
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FileText size={17} className="text-teal-600" />
-                    All Papers ({filtered.length})
-                  </h2>
-                  <button onClick={fetchPapers} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="Refresh">
-                    <RefreshCw size={15} className="text-gray-500" />
-                  </button>
+                  <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><FileText size={17} className="text-teal-600" />All Papers ({filtered.length})</h2>
+                  <button onClick={fetchPapers} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="Refresh"><RefreshCw size={15} className="text-gray-500" /></button>
                 </div>
-
-                {/* Filter tabs */}
                 <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 scrollbar-hide">
                   {FILTERS.map(f => (
-                    <button key={f.key} onClick={() => { setFilter(f.key); setPage(1); }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap text-xs transition ${filter === f.key ? 'bg-navy text-white shadow' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                      {f.label}
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${filter === f.key ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-600'}`}>{f.count}</span>
+                    <button key={f.key} onClick={() => { setFilter(f.key); setPage(1); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap text-xs transition ${filter === f.key ? 'bg-navy text-white shadow' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                      {f.label}<span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${filter === f.key ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-600'}`}>{f.count}</span>
                     </button>
                   ))}
                 </div>
-
-                {/* Search */}
                 <div className="relative">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search by title or author..."
-                    className="w-full pl-9 pr-8 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-700 dark:text-white focus:border-navy focus:outline-none" />
+                  <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search by title or author..." className="w-full pl-9 pr-8 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-700 dark:text-white focus:border-navy focus:outline-none" />
                   {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2"><X size={14} className="text-gray-400" /></button>}
                 </div>
               </div>
 
-              {/* Paper list */}
               <div className="p-4">
                 {loading ? (
                   <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" /></div>
                 ) : paginated.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText size={36} className="mx-auto text-gray-300 mb-2" />
-                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No papers found</p>
-                    {filter === 'pending' && <p className="text-xs text-gray-400 mt-1">No papers pending review</p>}
-                  </div>
+                  <div className="text-center py-12"><FileText size={36} className="mx-auto text-gray-300 mb-2" /><p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No papers found</p>{filter === 'pending' && <p className="text-xs text-gray-400 mt-1">No papers pending review</p>}</div>
                 ) : (
                   <div className="space-y-3">
-                    {paginated.map(p => (
-                      <PaperCard key={p._id} paper={p}
-                        onReview={setReviewPaper}
-                        onAwards={setAwardsPaper}
-                        onDelete={setDeletePaper}
-                        onNavigate={id => navigate(`/research/${id}`)} />
-                    ))}
+                    {paginated.map(p => <PaperCard key={p._id} paper={p} onReview={setReviewPaper} onAwards={setAwardsPaper} onDelete={setDeletePaper} onNavigate={id => navigate(`/research/${id}`)} />)}
                   </div>
                 )}
                 <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onPage={setPage} />

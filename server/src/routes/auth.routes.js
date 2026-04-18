@@ -16,8 +16,8 @@ router.post('/forgot-password', passwordResetLimiter, forgotPassword);
 router.get('/verify-reset-token', verifyResetToken);
 router.post('/reset-password', resetPassword);
 
-// ── Password verification for sensitive admin actions ──
-router.post('/verify-password', auth, authorize('admin'), async (req, res) => {
+// ── Password verification — allow admin AND ret ──
+router.post('/verify-password', auth, authorize('admin', 'ret'), async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) return res.status(400).json({ error: 'Password is required' });
