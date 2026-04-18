@@ -1,7 +1,6 @@
 // client/src/pages/UserSettings.jsx
-// Universal settings page for ALL roles (student, faculty, admin)
 import { useState, useRef, useEffect } from 'react';
-import { Camera, User, Save, Loader2, AlertCircle, CheckCircle, X, Eye, EyeOff, Lock, Trash2 } from 'lucide-react';
+import { Camera, User, Save, Loader2, AlertCircle, CheckCircle, X, Lock, Trash2, BookOpen, Globe, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -32,18 +31,35 @@ const UserSettings = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [savingName, setSavingName] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
+  const [savingExtended, setSavingExtended] = useState(false);
   const [toast, setToast] = useState(null);
   const avatarInputRef = useRef();
+
+  const [extended, setExtended] = useState({
+    bio: user?.bio || '',
+    department: user?.department || '',
+    position: user?.position || '',
+    institution: user?.institution || '',
+    researchInterests: user?.researchInterests || '',
+    website: user?.website || '',
+    orcid: user?.orcid || '',
+  });
 
   useEffect(() => {
     setName({ firstName: user?.firstName || '', lastName: user?.lastName || '' });
     setAvatarPreview(user?.avatar || null);
+    setExtended({
+      bio: user?.bio || '',
+      department: user?.department || '',
+      position: user?.position || '',
+      institution: user?.institution || '',
+      researchInterests: user?.researchInterests || '',
+      website: user?.website || '',
+      orcid: user?.orcid || '',
+    });
   }, [user]);
 
-  const showToast = (msg, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -81,11 +97,7 @@ const UserSettings = () => {
       const token = localStorage.getItem('token');
       const fd = new FormData();
       fd.append('avatar', avatarFile);
-      const res = await fetch(`${API_URL}/settings/avatar`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd
-      });
+      const res = await fetch(`${API_URL}/settings/avatar`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
       const data = await res.json();
       if (!res.ok) return showToast(data.error || 'Upload failed', 'error');
       updateUser({ avatar: data.avatar });
@@ -95,120 +107,125 @@ const UserSettings = () => {
     finally { setSavingAvatar(false); }
   };
 
+  const handleSaveExtended = async () => {
+    setSavingExtended(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/author-profiles/me/extended`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(extended)
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.error || 'Failed to update', 'error');
+      updateUser(extended);
+      showToast('Academic profile saved!');
+    } catch { showToast('Connection error', 'error'); }
+    finally { setSavingExtended(false); }
+  };
+
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
 
   return (
     <div className="max-w-2xl mx-auto pb-16 animate-fade-in">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-1">Account Settings</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Manage your profile and preferences</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Manage your profile and public information</p>
       </div>
 
       {/* Profile Picture */}
       <Section title="Profile Picture" icon={Camera}>
         <div className="flex flex-col sm:flex-row items-center gap-6">
-          {/* Avatar Preview */}
           <div className="relative flex-shrink-0">
             <div className="w-28 h-28 rounded-2xl overflow-hidden border-4 border-gray-200 dark:border-gray-600 shadow-lg">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-navy to-accent flex items-center justify-center">
-                  <span className="text-3xl font-black text-white">{initials}</span>
-                </div>
-              )}
+              {avatarPreview ? <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-gradient-to-br from-navy to-accent flex items-center justify-center"><span className="text-3xl font-black text-white">{initials}</span></div>}
             </div>
-            <button
-              onClick={() => avatarInputRef.current?.click()}
-              className="absolute -bottom-2 -right-2 w-9 h-9 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition border-2 border-white dark:border-gray-800"
-              title="Change picture"
-            >
+            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-9 h-9 bg-navy dark:bg-blue-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition border-2 border-white dark:border-gray-800" title="Change picture">
               <Camera size={16} className="text-white" />
             </button>
           </div>
-
           <div className="flex-1 text-center sm:text-left">
             <p className="font-bold text-gray-900 dark:text-white mb-1 text-lg">{user?.firstName} {user?.lastName}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 capitalize">{user?.role} · {user?.studentId}</p>
             <p className="text-xs text-gray-400 mb-4">{user?.email}</p>
-
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
-
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             <div className="flex gap-2 justify-center sm:justify-start flex-wrap">
-              <button
-                onClick={() => avatarInputRef.current?.click()}
-                className="px-4 py-2 border-2 border-navy dark:border-blue-500 text-navy dark:text-blue-400 rounded-xl text-sm font-semibold hover:bg-navy/5 transition"
-              >
-                Choose Photo
-              </button>
+              <button onClick={() => avatarInputRef.current?.click()} className="px-4 py-2 border-2 border-navy dark:border-blue-500 text-navy dark:text-blue-400 rounded-xl text-sm font-semibold hover:bg-navy/5 transition">Choose Photo</button>
               {avatarFile && (
-                <button
-                  onClick={handleSaveAvatar}
-                  disabled={savingAvatar}
-                  className="px-4 py-2 bg-navy dark:bg-blue-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
-                >
-                  {savingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  {savingAvatar ? 'Uploading...' : 'Save Photo'}
+                <button onClick={handleSaveAvatar} disabled={savingAvatar} className="px-4 py-2 bg-navy dark:bg-blue-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2">
+                  {savingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}{savingAvatar ? 'Uploading...' : 'Save Photo'}
                 </button>
               )}
               {avatarPreview && !avatarFile && (
-                <button
-                  onClick={() => { setAvatarPreview(null); setAvatarFile(null); }}
-                  className="px-4 py-2 text-red-600 border-2 border-red-200 dark:border-red-800 rounded-xl text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center gap-2"
-                >
+                <button onClick={() => { setAvatarPreview(null); setAvatarFile(null); }} className="px-4 py-2 text-red-600 border-2 border-red-200 dark:border-red-800 rounded-xl text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center gap-2">
                   <Trash2 size={14} />Remove
                 </button>
               )}
             </div>
-            {avatarFile && (
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">New photo selected — click Save Photo to apply</p>
-            )}
+            {avatarFile && <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Photo selected — click Save Photo to apply</p>}
           </div>
         </div>
       </Section>
 
       {/* Display Name */}
       <Section title="Display Name" icon={User}>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Update your first and last name as it appears across the platform.
-        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Update your name as it appears across the platform.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">First Name</label>
-            <input
-              value={name.firstName}
-              onChange={e => setName({ ...name, firstName: e.target.value })}
-              placeholder="First name"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Last Name</label>
-            <input
-              value={name.lastName}
-              onChange={e => setName({ ...name, lastName: e.target.value })}
-              placeholder="Last name"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
-          </div>
+          {['firstName', 'lastName'].map(field => (
+            <div key={field}>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{field === 'firstName' ? 'First Name' : 'Last Name'}</label>
+              <input value={name[field]} onChange={e => setName({ ...name, [field]: e.target.value })} placeholder={field === 'firstName' ? 'First name' : 'Last name'}
+                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" />
+            </div>
+          ))}
         </div>
-        <button
-          onClick={handleSaveName}
-          disabled={savingName}
-          className="flex items-center gap-2 px-6 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition disabled:opacity-50"
-        >
-          {savingName ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-          {savingName ? 'Saving...' : 'Save Name'}
+        <button onClick={handleSaveName} disabled={savingName} className="flex items-center gap-2 px-6 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition disabled:opacity-50">
+          {savingName ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{savingName ? 'Saving...' : 'Save Name'}
         </button>
+      </Section>
+
+      {/* Academic Profile */}
+      <Section title="Academic Profile" icon={BookOpen}>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">This information appears on your public author profile page.</p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Bio <span className="text-xs text-gray-400 font-normal">({extended.bio.length}/500)</span></label>
+            <textarea value={extended.bio} onChange={e => setExtended({ ...extended, bio: e.target.value.slice(0, 500) })} rows={3} placeholder="Brief description about yourself and your research focus…"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { key: 'position', label: 'Position / Title', placeholder: 'e.g. Clinical Instructor' },
+              { key: 'department', label: 'Department', placeholder: 'e.g. Department of Nursing' },
+              { key: 'institution', label: 'Institution', placeholder: 'e.g. NEUST College of Nursing' },
+              { key: 'website', label: 'Website / LinkedIn', placeholder: 'https://…' },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
+                <input value={extended[key]} onChange={e => setExtended({ ...extended, [key]: e.target.value })} placeholder={placeholder}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" />
+              </div>
+            ))}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">ORCID ID</label>
+            <input value={extended.orcid} onChange={e => setExtended({ ...extended, orcid: e.target.value })} placeholder="0000-0000-0000-0000"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              Research Interests <span className="text-xs text-gray-400 font-normal">comma-separated</span>
+            </label>
+            <input value={extended.researchInterests} onChange={e => setExtended({ ...extended, researchInterests: e.target.value })} placeholder="e.g. Community Health, Pediatric Nursing, Evidence-Based Practice"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" />
+          </div>
+          <button onClick={handleSaveExtended} disabled={savingExtended} className="flex items-center gap-2 px-6 py-2.5 bg-navy dark:bg-blue-600 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition disabled:opacity-50">
+            {savingExtended ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{savingExtended ? 'Saving...' : 'Save Academic Profile'}
+          </button>
+        </div>
       </Section>
 
       {/* Account Info (read-only) */}

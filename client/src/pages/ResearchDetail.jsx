@@ -15,6 +15,7 @@ import ReviewsModal from '../components/review/ReviewsModal';
 import SimilarPapers from '../components/research/SimilarPapers';
 import AwardsModal from '../components/admin/AwardsModal';
 import Tooltip from '../components/common/Tooltip';
+import AuthorLink from '../components/research/AuthorLink';
 
 // ── Subject color map ──
 const SUBJECT_COLORS = {
@@ -450,16 +451,25 @@ const ResearchDetail = () => {
                   </div>
 
                   {/* Authors */}
-                  <div className="space-y-1.5 mb-6 text-sm">
-                    <div className="flex items-start gap-2 text-gray-700 dark:text-gray-200">
-                      <User size={14} className="flex-shrink-0 mt-0.5 text-gray-400" />
-                      <span className="break-words font-medium">{authorNames}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      <User size={12} className="text-gray-300 flex-shrink-0" />
-                      <span>Submitted by <span className="font-semibold">{submitterName}</span></span>
-                    </div>
-                  </div>
+               //   <div className="flex items-start gap-2 text-gray-700 dark:text-gray-200">
+     <User size={14} className="flex-shrink-0 mt-0.5 text-gray-400" />
+     <div className="flex flex-wrap gap-x-1 gap-y-0.5 font-medium text-sm md:text-base">
+       {paper.authors?.map((author, i) => (
+         <span key={i}>
+           <AuthorLink authorName={author} submittedBy={paper.submittedBy} />
+           {i < paper.authors.length - 1 && <span className="text-gray-400">,</span>}
+         </span>
+       ))}
+     </div>
+   </div>
+   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+     <User size={12} className="text-gray-300 flex-shrink-0" />
+     <span>Submitted by{' '}
+       {paper.submittedBy?._id
+         ? <AuthorLink authorName={submitterName} submittedBy={paper.submittedBy} className="font-semibold text-xs" />
+         : <span className="font-semibold">{submitterName}</span>}
+     </span>
+  </div>
 
                   {/* Stats */}
                   {paper.status === 'approved' && (
@@ -543,7 +553,14 @@ const ResearchDetail = () => {
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                 <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Paper Details</h2>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                  <div><p className="text-xs text-gray-400 font-semibold mb-1">Authors</p><p className="text-gray-800 dark:text-gray-200 font-medium">{authorNames}</p></div>
+        //   <div className="flex flex-wrap gap-x-1 gap-y-0.5">
+    {paper.authors?.map((author, i) => (
+     <span key={i} className="text-gray-800 dark:text-gray-200 font-medium">
+      <AuthorLink authorName={author} submittedBy={paper.submittedBy} />
+      {i < paper.authors.length - 1 && <span className="text-gray-400">,</span>}
+   </span>
+))}
+</div>
                   {paper.subjectArea && (
                     <div>
                       <p className="text-xs text-gray-400 font-semibold mb-1">Subject Area</p>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, LayoutDashboard, Menu, X, Moon, Sun, LogOut, Settings, Shield, BookOpen, Info, HelpCircle, ChevronDown, Mail, MapPin } from 'lucide-react';
+import { Home, Search, LayoutDashboard, Menu, X, Moon, Sun, LogOut, Settings, Shield, BookOpen, Info, HelpCircle, ChevronDown, Mail, MapPin, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import NotificationBell from './NotificationBell';
@@ -35,6 +35,7 @@ const Layout = ({ children }) => {
   const navLinks = [
     { to: '/', label: 'Home', icon: Home, public: true },
     { to: '/explore', label: 'Explore', icon: Search, public: false },
+    { to: '/researchers', label: 'Researchers', icon: Users, public: false },
     { to: '/about', label: 'About', icon: Info, public: true },
     { to: '/help', label: 'Help', icon: HelpCircle, public: true },
   ];

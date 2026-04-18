@@ -25,6 +25,7 @@ import awardsRoutes from './src/routes/awards.routes.js';
 import reportRoutes from './src/routes/report.routes.js';
 import deletedUsersRoutes from './src/routes/deletedUsers.routes.js';
 import adminManagementRoutes from './src/routes/adminManagement.routes.js';
+import authorProfileRoutes from './src/routes/authorProfile.routes.js';
 
 import { noSqlSanitize, xssSanitizer, paramPollution, securityHeaders, suspiciousPatternLogger } from './src/middleware/security.js';
 import { apiLimiter, loginLimiter, searchLimiter, uploadLimiter } from './src/middleware/rateLimiter.js';
@@ -64,11 +65,10 @@ mongoose.connection.once('open', async () => {
   console.log(r.success ? '✅ Email service ready' : `❌ Email error: ${r.error}`);
 })();
 
-// ── CORS — FIX: Added both Vercel URL variants ────────────────────────────────
 const ALLOWED_ORIGINS = [
   'https://conserve-repository.onrender.com',
   'https://conserve-repository.vercel.app',
-  'https://con-serve-repository.vercel.app',   // ← FIXED: was missing this
+  'https://con-serve-repository.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   process.env.CLIENT_URL
@@ -124,7 +124,6 @@ app.use(suspiciousPatternLogger);
 app.use(noSqlSanitize);
 app.use(xssSanitizer);
 app.use(paramPollution);
-
 app.use(compression());
 app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
@@ -139,7 +138,7 @@ app.use('/api/auth',              authRoutes);
 app.use('/api/auth/login',        loginLimiter);
 app.use('/api/research',          researchRoutes);
 app.use('/api/research',          uploadLimiter);
-app.use('/api/deleted-users', deletedUsersRoutes);
+app.use('/api/deleted-users',     deletedUsersRoutes);
 app.use('/api/users',             userRoutes);
 app.use('/api/bookmarks',         bookmarkRoutes);
 app.use('/api/reviews',           reviewRoutes);
@@ -154,24 +153,19 @@ app.use('/api/search',            searchLimiter, searchRoutes);
 app.use('/api/research',          awardsRoutes);
 app.use('/api/reports',           reportRoutes);
 app.use('/api/admin-management',  adminManagementRoutes);
+app.use('/api/author-profiles',   authorProfileRoutes);
+app.use('/api/likes',             likeRoutes);
 app.use('/api',                   apiLimiter);
-app.use('/api/likes', likeRoutes);
 
 console.log('✅ All routes registered');
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found', path: req.originalUrl });
-});
+app.use((req, res) => res.status(404).json({ error: 'Route not found', path: req.originalUrl }));
 
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.message);
-  if (err.message?.includes('CORS') || err.message?.includes('Origin')) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
+  if (err.message?.includes('CORS') || err.message?.includes('Origin')) return res.status(403).json({ error: 'Access denied' });
   const status = err.status || 500;
-  const response = { error: isProd ? 'An error occurred' : err.message, timestamp: new Date().toISOString() };
-  if (!isProd) response.stack = err.stack;
-  res.status(status).json(response);
+  res.status(status).json({ error: isProd ? 'An error occurred' : err.message, timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
@@ -183,8 +177,8 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 process.on('SIGTERM', () => { console.log('👋 Shutting down...'); process.exit(0); });
-process.on('SIGINT',  () => { console.log('\n👋 Shutting down...'); process.exit(0); });
+process.on('SIGINT', () => { console.log('\n👋 Shutting down...'); process.exit(0); });
 process.on('unhandledRejection', (reason) => console.error('❌ Unhandled Rejection:', reason));
-process.on('uncaughtException',  (error)  => { console.error('❌ Uncaught Exception:', error); process.exit(1); });
+process.on('uncaughtException', (error) => { console.error('❌ Uncaught Exception:', error); process.exit(1); });
 
 export default app;
