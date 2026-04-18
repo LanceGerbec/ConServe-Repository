@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import StudentDashboard from '../components/dashboard/StudentDashboard';
 import FacultyDashboard from '../components/dashboard/FacultyDashboard';
 import AdminDashboard from '../components/dashboard/AdminDashboard';
+import RETDashboard from '../components/dashboard/RETDashboard';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -15,6 +16,9 @@ const Dashboard = () => {
       return <FacultyDashboard />;
     default:
       return <StudentDashboard />;
+    case 'ret':
+      return <RETDashboard />;
+      
   }
 };
 

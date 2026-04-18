@@ -9,6 +9,7 @@ const RoleSelect = lazy(() => import('./pages/RoleSelect'));
 const StudentLogin = lazy(() => import('./components/auth/StudentLogin'));
 const FacultyLogin = lazy(() => import('./components/auth/FacultyLogin'));
 const AdminPortal = lazy(() => import('./pages/AdminPortal'));
+const RETPortal = lazy(() => import('./pages/RETPortal'));
 const Register = lazy(() => import('./components/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -46,6 +47,7 @@ function App() {
               <Route path="/login/student" element={<StudentLogin />} />
               <Route path="/login/faculty" element={<FacultyLogin />} />
               <Route path="/portal/admin" element={<AdminPortal />} />
+              <Route path="/portal/ret" element={<RETPortal />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -59,6 +61,7 @@ function App() {
               <Route path="/browse" element={<Navigate to="/explore" replace />} />
               <Route path="/search" element={<Navigate to="/explore" replace />} />
               <Route path="/login/admin" element={<Navigate to="/portal/admin" replace />} />
+              <Route path="/login/ret" element={<Navigate to="/portal/ret" replace />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

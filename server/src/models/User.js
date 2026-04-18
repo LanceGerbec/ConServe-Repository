@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, lowercase: true, trim: true },
   studentId: { type: String, required: true },
   password: { type: String, required: true, minlength: 12 },
-  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
+ role: { type: String, enum: ['student', 'faculty', 'admin', 'ret'], default: 'student' },
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
 

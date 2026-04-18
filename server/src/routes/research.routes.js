@@ -32,7 +32,7 @@ router.post('/log-violation', auth, async (req, res) => {
 });
 
 // ── RECENTLY DELETED (admin only) ──
-router.get('/recently-deleted', auth, authorize('admin'), async (req, res) => {
+router.get('/recently-deleted', auth, authorize('admin', 'ret'), async (req, res) => {
   try {
     const papers = await DeletedResearch.find().populate('deletedBy', 'firstName lastName').sort({ deletedAt: -1 });
     res.json({ papers: papers.map(p => ({ ...p.toObject(), deletedByName: p.deletedBy ? `${p.deletedBy.firstName} ${p.deletedBy.lastName}` : 'Unknown' })), count: papers.length });
@@ -42,7 +42,7 @@ router.get('/recently-deleted', auth, authorize('admin'), async (req, res) => {
 });
 
 // ── RESTORE deleted paper ──
-router.patch('/:id/restore', auth, authorize('admin'), async (req, res) => {
+router.patch('/:id/restore', auth, authorize('admin', 'ret'), async (req, res) => {
   try {
     const deleted = await DeletedResearch.findById(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Deleted paper not found' });
@@ -60,7 +60,7 @@ router.patch('/:id/restore', auth, authorize('admin'), async (req, res) => {
 });
 
 // ── PURGE (permanently delete from trash) ──
-router.delete('/:id/purge', auth, authorize('admin'), async (req, res) => {
+router.delete('/:id/purge', auth, authorize('admin', 'ret'), async (req, res) => {
   try {
     const deleted = await DeletedResearch.findById(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Not found in trash' });
@@ -121,7 +121,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
     const paper = await Research.findById(req.params.id).populate('submittedBy');
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'ret';
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) return res.status(403).json({ error: 'Access denied' });
     if (!paper.gridfsId) return res.status(404).json({ error: 'PDF not available' });
     if (paper.status === 'approved' && !isAuthor) await Research.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
@@ -138,7 +138,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
 // ── STATS ──
 router.get('/stats', auth, async (req, res) => {
   try {
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'ret';
     const base = isAdmin ? {} : { status: 'approved' };
     const [total, pending, approved, rejected] = await Promise.all([
       Research.countDocuments(base), Research.countDocuments({ ...base, status: 'pending' }),
@@ -180,7 +180,7 @@ router.get('/:id', auth, async (req, res) => {
     const paper = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName email');
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
     const isAuthor = paper.submittedBy._id.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'ret';
     if (paper.status !== 'approved' && !isAuthor && !isAdmin) return res.status(403).json({ error: 'Access denied' });
     const paperObj = paper.toObject();
     paperObj.pdfUrl = `/research/${paper._id}/pdf`;
@@ -192,7 +192,7 @@ router.get('/:id', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     const { status, category, yearCompleted, subjectArea, author, search, page = 1, limit = 20 } = req.query;
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'ret';
     let query = isAdmin ? {} : { status: 'approved' };
     if (status && isAdmin) query.status = status;
     if (category) query.category = category;
@@ -275,7 +275,7 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
 });
 
 // ── UPDATE STATUS ──
-router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
+router.patch('/:id/status', auth, authorize('admin', 'ret'), async (req, res) => {
   try {
     const { status, revisionNotes } = req.body;
     const research = await Research.findById(req.params.id).populate('submittedBy');
@@ -301,7 +301,7 @@ router.patch('/:id/status', auth, authorize('admin'), async (req, res) => {
 });
 
 // ── SOFT DELETE (moves to DeletedResearch) ──
-router.delete('/:id', auth, authorize('admin'), async (req, res) => {
+router.delete('/:id', auth, authorize('admin', 'ret'), async (req, res) => {
   try {
     const research = await Research.findById(req.params.id).populate('submittedBy', 'firstName lastName');
     if (!research) return res.status(404).json({ error: 'Not found' });
