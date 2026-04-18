@@ -1,10 +1,11 @@
 // client/src/pages/ResearchDetail.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Quote,
-  Check, AlertTriangle, XCircle, Lock, MessageSquare, Award,
-  CheckCircle, Clock, Heart, Info, BookOpen
+  ArrowLeft, Eye, Calendar, User, Tag, FileText, Bookmark, Quote, Check,
+  AlertTriangle, XCircle, Lock, MessageSquare, Award, CheckCircle, Clock,
+  Heart, Info, BookOpen, Search, ChevronRight, ChevronLeft, Hash,
+  Sparkles, TrendingUp, X, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CitationModal from '../components/research/CitationModal';
@@ -15,12 +16,216 @@ import SimilarPapers from '../components/research/SimilarPapers';
 import AwardsModal from '../components/admin/AwardsModal';
 import Tooltip from '../components/common/Tooltip';
 
+// ── Subject color map ──
+const SUBJECT_COLORS = {
+  'Community Health Nursing': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-300',
+  'Medical-Surgical Nursing': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300',
+  'Pediatric Nursing': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300 border-pink-300',
+  'Psychiatric Nursing': 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 border-violet-300',
+  'Obstetric Nursing': 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300 border-rose-300',
+  'Geriatric Nursing': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300',
+  'Critical Care Nursing': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-300',
+  'Nursing Education': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-300',
+  'Nursing Research': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 border-cyan-300',
+  'Public Health': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300 border-teal-300',
+};
+const getSubjectColor = s => SUBJECT_COLORS[s] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+const StatCard = ({ icon: Icon, value, label, color }) => {
+  const map = {
+    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800',
+    red: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border-red-100 dark:border-red-800',
+    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-800',
+    green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800',
+  };
+  return (
+    <div className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 flex-1 hover:scale-105 transition-all cursor-default ${map[color]}`}>
+      <Icon size={18} className="mb-1 opacity-80" />
+      <span className="text-2xl font-black leading-none tabular-nums">{value ?? 0}</span>
+      <span className="text-[10px] font-bold mt-1 uppercase tracking-widest opacity-60">{label}</span>
+    </div>
+  );
+};
+
+const ActionBtn = ({ icon: Icon, label, active, activeClass, onClick, className = '' }) => (
+  <button onClick={onClick}
+    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${active ? activeClass : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500 ${className}`}`}>
+    <Icon size={15} />{label}
+  </button>
+);
+
+// ── Left Sidebar ──
+const ResearchSidebar = ({ paper, sidebarOpen, setSidebarOpen, onSubjectClick, allPapers, navigate }) => {
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef(null);
+
+  const SUBJECTS = [
+    'Community Health Nursing', 'Medical-Surgical Nursing', 'Pediatric Nursing',
+    'Psychiatric Nursing', 'Obstetric Nursing', 'Geriatric Nursing',
+    'Critical Care Nursing', 'Nursing Education', 'Nursing Research', 'Public Health',
+  ];
+
+  useEffect(() => {
+    if (!search.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/research?search=${encodeURIComponent(search)}&status=approved&limit=8`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        setSearchResults(d.papers || []);
+      } catch {}
+      finally { setSearching(false); }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  return (
+    <>
+      {/* Toggle button — always visible */}
+      <button
+        onClick={() => setSidebarOpen(o => !o)}
+        className={`fixed top-1/2 -translate-y-1/2 z-40 bg-navy dark:bg-blue-600 text-white rounded-r-xl p-2 shadow-lg hover:bg-navy-800 transition-all duration-300 ${sidebarOpen ? 'left-72' : 'left-0'}`}
+        title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+      </button>
+
+      {/* Backdrop on mobile */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/30 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed top-16 left-0 h-[calc(100vh-4rem)] z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-xl transition-all duration-300 flex flex-col overflow-hidden ${sidebarOpen ? 'w-72' : 'w-0'}`}>
+        {sidebarOpen && (
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-navy/5 to-blue-50 dark:from-navy/20 dark:to-gray-900">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen size={16} className="text-navy dark:text-accent" />
+                <span className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-widest">Quick Access</span>
+              </div>
+              {/* Search */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  ref={searchRef}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search papers..."
+                  className="w-full pl-8 pr-8 py-2 text-xs border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-navy dark:focus:border-accent focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+                {search && (
+                  <button onClick={() => { setSearch(''); setSearchResults([]); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {/* Search results */}
+              {(search || searching) && (
+                <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Results</p>
+                  {searching ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-400 p-2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-navy" />Searching...
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <p className="text-xs text-gray-400 p-2">No results found</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {searchResults.map(p => (
+                        <button key={p._id} onClick={() => { navigate(`/research/${p._id}`); setSearch(''); }}
+                          className="w-full text-left p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition group">
+                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 line-clamp-2 group-hover:text-navy dark:group-hover:text-accent">{p.title}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1"><Eye size={9} />{p.views || 0} views</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Current paper info */}
+              {paper && !search && (
+                <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Current Paper</p>
+                  <div className="p-2.5 bg-navy/5 dark:bg-navy/20 rounded-xl border border-navy/20 dark:border-navy/30">
+                    <p className="text-xs font-bold text-navy dark:text-accent line-clamp-3 leading-tight">{paper.title}</p>
+                    <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-500 flex-wrap">
+                      <span className="flex items-center gap-0.5"><Eye size={9} />{paper.views}</span>
+                      <span className="flex items-center gap-0.5"><Heart size={9} />{paper.likes || 0}</span>
+                      <span className="flex items-center gap-0.5"><Quote size={9} />{paper.citations || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subject Areas */}
+              {!search && (
+                <div className="p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Hash size={12} className="text-gray-400" />
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Subject Areas</p>
+                  </div>
+                  <div className="space-y-1">
+                    {SUBJECTS.map(s => {
+                      const isActive = paper?.subjectArea === s;
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => onSubjectClick(s)}
+                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${isActive ? `${getSubjectColor(s)} border-2 shadow-sm` : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />}
+                            {s}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Trending shortcut */}
+              {!search && (
+                <div className="p-3 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1"><TrendingUp size={11} />Quick Links</p>
+                  <div className="space-y-1">
+                    <button onClick={() => navigate('/explore')}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-navy dark:hover:text-accent transition flex items-center gap-1.5">
+                      <Sparkles size={11} />Explore All Papers
+                    </button>
+                    <button onClick={() => navigate('/dashboard')}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-navy dark:hover:text-accent transition flex items-center gap-1.5">
+                      <BookOpen size={11} />My Dashboard
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </aside>
+    </>
+  );
+};
+
+// ── Main Component ──
 const ResearchDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const API_URL = import.meta.env.VITE_API_URL;
-
   const [paper, setPaper] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +240,16 @@ const ResearchDetail = () => {
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => { fetchPaper(); fetchReviews(); }, [id]);
+  // Auto-open sidebar on desktop
+  useEffect(() => {
+    const handleResize = () => { if (window.innerWidth >= 1024) setSidebarOpen(true); };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const showMsg = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -83,7 +296,7 @@ const ResearchDetail = () => {
   };
 
   const toggleBookmark = async () => {
-    if (paper?.status !== 'approved') { showMsg('Only approved papers can be bookmarked', 'error'); return; }
+    if (paper.status !== 'approved') { showMsg('Only approved papers can be bookmarked', 'error'); return; }
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/bookmarks/toggle/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
@@ -95,7 +308,7 @@ const ResearchDetail = () => {
   };
 
   const toggleLike = async () => {
-    if (paper?.status !== 'approved') return;
+    if (paper.status !== 'approved') return;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/likes/toggle/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
@@ -116,6 +329,10 @@ const ResearchDetail = () => {
     } catch {}
   };
 
+  const handleSubjectClick = (subject) => {
+    navigate(`/explore?subject=${encodeURIComponent(subject)}`);
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy dark:border-blue-500" />
@@ -128,14 +345,14 @@ const ResearchDetail = () => {
   const canAccess = paper?.status === 'approved' || isAuthor || isAdmin;
   const canSeeReviews = isAuthor || isAdmin || isFaculty;
 
-  if (error || !paper || !canAccess) {
+  if (error || !canAccess) {
     const cfg = {
       rejected: { icon: XCircle, title: 'Paper Not Available', cls: 'border-red-400', icls: 'text-red-500' },
       pending: { icon: Clock, title: 'Under Review', cls: 'border-yellow-400', icls: 'text-yellow-500' },
     }[paper?.status] || { icon: Lock, title: 'Access Denied', cls: 'border-gray-400', icls: 'text-gray-500' };
     const I = cfg.icon;
     return (
-      <div className="px-4 py-10 min-h-screen flex items-center justify-center">
+      <div className="px-4 py-10 min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className={`w-full max-w-md bg-white dark:bg-gray-800 border-2 ${cfg.cls} rounded-2xl p-8 text-center shadow-xl`}>
           <I size={56} className={`mx-auto mb-4 ${cfg.icls}`} />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{cfg.title}</h2>
@@ -148,224 +365,291 @@ const ResearchDetail = () => {
     );
   }
 
-  const authorNames = paper.authors?.join(', ') || 'Unknown';
-  const submitterName = paper.submittedBy
+  const authorNames = paper?.authors?.join(', ') || 'Unknown';
+  const submitterName = paper?.submittedBy
     ? (paper.submittedBy.isDeleted ? '[Deleted User]' : `${paper.submittedBy.firstName || ''} ${paper.submittedBy.lastName || ''}`.trim() || 'Unknown')
     : 'Unknown';
 
-  const awardColorMap = {
-    gold: 'bg-yellow-100 text-yellow-800 border-yellow-400',
-    silver: 'bg-gray-100 text-gray-800 border-gray-400',
-    bronze: 'bg-orange-100 text-orange-800 border-orange-400',
-    blue: 'bg-blue-100 text-blue-800 border-blue-400',
-    green: 'bg-green-100 text-green-800 border-green-400',
-    purple: 'bg-purple-100 text-purple-800 border-purple-400',
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-12">
+      {/* Sidebar */}
+      <ResearchSidebar
+        paper={paper}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        onSubjectClick={handleSubjectClick}
+        navigate={navigate}
+      />
+
       {/* Toast */}
       {toast.show && (
-        <div className={`fixed top-20 right-4 left-4 md:left-auto md:w-72 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-white text-sm font-semibold animate-slide-up ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
-          <Check size={16} />{toast.message}
+        <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-white text-sm font-semibold animate-slide-up ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
+          <Check size={15} />{toast.message}
         </div>
       )}
 
-      {/* Back */}
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-navy dark:text-blue-400 hover:text-navy-700 px-4 md:px-6 py-3 font-semibold text-sm group">
-        <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" /> Back
-      </button>
-
-      <div className="px-4 md:px-6 lg:px-8 max-w-4xl mx-auto space-y-5">
-        {/* Status banner */}
-        {paper.status !== 'approved' && (
-          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400'}`}>
-            <AlertTriangle size={13} />{paper.status.toUpperCase()} — Not yet publicly visible
-          </div>
-        )}
-
-        {/* Awards */}
-        {paper.awards?.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {paper.awards.map((a, i) => (
-              <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-xs font-bold ${awardColorMap[a.color] || awardColorMap.gold}`}>
-                <Award size={11} />{a.name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Main card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8">
-          <h1 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white leading-tight mb-4">{paper.title}</h1>
-
-          {/* Meta pills */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy/10 dark:bg-blue-900/30 text-navy dark:text-blue-300 rounded-full text-xs font-bold">
-              <Tag size={11} />{paper.category}
-            </span>
-            {paper.yearCompleted && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-xs font-semibold">
-                <Calendar size={11} />{paper.yearCompleted}
-              </span>
-            )}
-            {paper.subjectArea && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold border border-purple-200 dark:border-purple-800">
-                {paper.subjectArea}
-              </span>
-            )}
-          </div>
-
-          {/* Authors */}
-          <div className="space-y-1 mb-6 text-sm">
-            <div className="flex items-start gap-2 text-gray-700 dark:text-gray-200">
-              <User size={14} className="flex-shrink-0 mt-0.5 text-gray-400" />
-              <span className="font-medium">{authorNames}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <User size={12} className="text-gray-300 flex-shrink-0" />
-              <span>Submitted by <span className="font-semibold">{submitterName}</span></span>
-            </div>
-          </div>
-
-          {/* Stats row — compact horizontal */}
-          {paper.status === 'approved' && (
-            <div className="grid grid-cols-4 gap-2 mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
-              {[
-                { icon: Eye, value: paper.views, label: 'Views', color: 'text-blue-500' },
-                { icon: Heart, value: likeCount, label: 'Likes', color: 'text-red-500' },
-                { icon: Bookmark, value: paper.bookmarks, label: 'Saved', color: 'text-purple-500' },
-                { icon: Quote, value: citationCount, label: 'Cited', color: 'text-green-600' },
-              ].map(({ icon: Icon, value, label, color }) => (
-                <div key={label} className="flex flex-col items-center">
-                  <Icon size={16} className={`${color} mb-1`} />
-                  <span className={`text-xl font-black ${color}`}>{value ?? 0}</span>
-                  <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          {paper.status === 'approved' && (
-            <div className="space-y-2 mb-6">
-              <div className={`grid gap-2 ${isFaculty ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                <button onClick={toggleLike}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${liked ? 'bg-red-500 border-red-500 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-red-300 hover:text-red-500'}`}>
-                  <Heart size={15} className={liked ? 'fill-current' : ''} />{liked ? 'Liked' : 'Like'}
-                </button>
-                <button onClick={toggleBookmark}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${bookmarked ? 'bg-navy border-navy text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-navy/50 hover:text-navy'}`}>
-                  <Bookmark size={15} className={bookmarked ? 'fill-current' : ''} />{bookmarked ? 'Saved' : 'Save'}
-                </button>
-                {isFaculty && (
-                  <button onClick={() => setShowReviewModal(true)}
-                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 transition-all">
-                    <MessageSquare size={15} /> Review
-                  </button>
-                )}
-              </div>
-              <button onClick={() => setShowCitation(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-green-400 hover:text-green-600 transition-all">
-                <Quote size={15} /> Cite this Paper
+      {/* Main content — shift right when sidebar open */}
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:pl-72' : 'pl-0'}`}>
+        {/* Back nav */}
+        <div className="flex items-center gap-3 px-4 md:px-6 py-3">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-navy dark:text-blue-400 hover:text-navy-700 font-semibold text-sm group">
+            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" /> Back
+          </button>
+          {/* Breadcrumb-ish subject pill */}
+          {paper?.subjectArea && (
+            <>
+              <span className="text-gray-300 dark:text-gray-600">/</span>
+              <button
+                onClick={() => handleSubjectClick(paper.subjectArea)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border transition hover:shadow-sm ${getSubjectColor(paper.subjectArea)}`}
+              >
+                <Hash size={10} />{paper.subjectArea}
               </button>
-            </div>
+            </>
           )}
-
-          {/* Admin: manage awards */}
-          {isAdmin && (
-            <button onClick={() => setShowAwardsModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-900 rounded-xl font-bold text-sm hover:opacity-90 transition shadow-sm mb-5">
-              <Award size={16} /> Manage Awards
-            </button>
-          )}
-
-          {/* Faculty reviews button */}
-          {canSeeReviews && reviews.length > 0 && (
-            <button onClick={() => setShowReviewsModal(true)}
-              className="w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition group mb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <MessageSquare size={15} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-sm text-gray-900 dark:text-white">Faculty Reviews ({reviews.length})</p>
-                  <p className="text-xs text-gray-500">Tap to view feedback</p>
-                </div>
-              </div>
-              <span className="text-blue-500 font-bold text-xl group-hover:translate-x-0.5 transition-transform">›</span>
-            </button>
-          )}
-
-          {/* Abstract */}
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-6 mb-5">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <BookOpen size={16} className="text-navy dark:text-accent" /> Abstract
-            </h2>
-            <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{paper.abstract}</p>
-          </div>
-
-          {/* Keywords */}
-          {paper.keywords?.length > 0 && (
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-5 mb-5">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Keywords</p>
-              <div className="flex flex-wrap gap-2">
-                {paper.keywords.map((k, i) => (
-                  <span key={i} className="px-3 py-1.5 bg-navy/8 dark:bg-blue-500/15 text-navy dark:text-blue-400 rounded-full text-xs font-semibold border border-navy/20 dark:border-blue-500/30">{k}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Paper details summary */}
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-5">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Details</p>
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              {paper.category && (
-                <div><dt className="text-xs text-gray-400 font-semibold mb-0.5">Category</dt><dd className="text-gray-800 dark:text-gray-200 font-medium">{paper.category}</dd></div>
-              )}
-              {paper.yearCompleted && (
-                <div><dt className="text-xs text-gray-400 font-semibold mb-0.5">Year</dt><dd className="text-gray-800 dark:text-gray-200 font-medium">{paper.yearCompleted}</dd></div>
-              )}
-              {paper.subjectArea && (
-                <div className="col-span-2"><dt className="text-xs text-gray-400 font-semibold mb-0.5">Subject Area</dt><dd className="text-gray-800 dark:text-gray-200">{paper.subjectArea}</dd></div>
-              )}
-              <div className="col-span-2"><dt className="text-xs text-gray-400 font-semibold mb-0.5">Authors</dt><dd className="text-gray-800 dark:text-gray-200">{authorNames}</dd></div>
-            </dl>
-          </div>
         </div>
 
-        {/* PDF Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Full Document</h2>
-            <Tooltip content={
-              <div className="text-left max-w-xs">
-                <p className="font-bold text-xs text-white mb-1">PROTECTED DOCUMENT</p>
-                <p className="text-xs text-gray-200">• Watermarked with your identity</p>
-                <p className="text-xs text-gray-200">• PrintScreen & copy disabled</p>
+        <div className="px-4 md:px-6 lg:px-8">
+          <div className="flex flex-col xl:flex-row gap-6 max-w-7xl mx-auto">
+
+            {/* ══ MAIN CONTENT ══ */}
+            <div className="flex-1 min-w-0 space-y-5">
+
+              {/* Header Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                {paper.status !== 'approved' && (
+                  <div className={`px-5 py-2.5 flex items-center gap-2 text-xs font-bold ${paper.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400'}`}>
+                    <AlertTriangle size={12} />{paper.status.toUpperCase()} — Not publicly visible
+                  </div>
+                )}
+
+                {paper.awards?.length > 0 && (
+                  <div className="px-5 py-3 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-b border-yellow-200 dark:border-yellow-800 flex flex-wrap gap-2">
+                    {paper.awards.map((a, i) => {
+                      const c = { gold: 'bg-yellow-100 text-yellow-800 border-yellow-400', silver: 'bg-gray-100 text-gray-800 border-gray-400', bronze: 'bg-orange-100 text-orange-800 border-orange-400', blue: 'bg-blue-100 text-blue-800 border-blue-400', green: 'bg-green-100 text-green-800 border-green-400', purple: 'bg-purple-100 text-purple-800 border-purple-400' };
+                      return <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-xs font-bold ${c[a.color] || c.gold}`}><Award size={11} />{a.name}</span>;
+                    })}
+                  </div>
+                )}
+
+                <div className="p-5 md:p-8">
+                  <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white leading-tight mb-5">{paper.title}</h1>
+
+                  {/* Meta pills */}
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy/10 dark:bg-blue-900/30 text-navy dark:text-blue-300 rounded-full text-xs font-bold"><Tag size={11} />{paper.category}</span>
+                    {paper.yearCompleted && <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-xs font-semibold"><Calendar size={11} />{paper.yearCompleted}</span>}
+                    {paper.subjectArea && (
+                      <button
+                        onClick={() => handleSubjectClick(paper.subjectArea)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition hover:shadow-sm hover:scale-105 ${getSubjectColor(paper.subjectArea)}`}
+                      >
+                        <Hash size={10} />{paper.subjectArea}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Authors */}
+                  <div className="space-y-1.5 mb-6 text-sm">
+                    <div className="flex items-start gap-2 text-gray-700 dark:text-gray-200">
+                      <User size={14} className="flex-shrink-0 mt-0.5 text-gray-400" />
+                      <span className="break-words font-medium">{authorNames}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <User size={12} className="text-gray-300 flex-shrink-0" />
+                      <span>Submitted by <span className="font-semibold">{submitterName}</span></span>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  {paper.status === 'approved' && (
+                    <div className="grid grid-cols-4 gap-2 md:gap-3 mb-6">
+                      <StatCard icon={Eye} value={paper.views} label="Views" color="blue" />
+                      <StatCard icon={Heart} value={likeCount} label="Likes" color="red" />
+                      <StatCard icon={Bookmark} value={paper.bookmarks} label="Saved" color="purple" />
+                      <StatCard icon={Quote} value={citationCount} label="Cited" color="green" />
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  {paper.status === 'approved' && (
+                    <div className="space-y-2 mb-6">
+                      <div className={`grid gap-2 ${isFaculty ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                        <ActionBtn icon={Heart} label={liked ? 'Liked' : 'Like'} active={liked}
+                          activeClass="bg-red-500 border-red-500 text-white shadow-md"
+                          onClick={toggleLike} className="hover:border-red-300 hover:text-red-500" />
+                        <ActionBtn icon={Bookmark} label={bookmarked ? 'Saved' : 'Save'} active={bookmarked}
+                          activeClass="bg-navy border-navy text-white shadow-md"
+                          onClick={toggleBookmark} className="hover:border-navy/50 hover:text-navy" />
+                        {isFaculty && (
+                          <ActionBtn icon={MessageSquare} label="Review" active={false} activeClass=""
+                            onClick={() => setShowReviewModal(true)} className="hover:border-blue-400 hover:text-blue-600" />
+                        )}
+                      </div>
+                      <ActionBtn icon={Quote} label="Cite this Paper" active={false} activeClass=""
+                        onClick={() => setShowCitation(true)} className="w-full hover:border-green-400 hover:text-green-600" />
+                    </div>
+                  )}
+
+                  {/* Admin awards */}
+                  {isAdmin && (
+                    <button onClick={() => setShowAwardsModal(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-900 rounded-xl font-bold text-sm hover:from-yellow-500 hover:to-amber-600 transition shadow-md mb-5">
+                      <Award size={15} /> Manage Awards
+                    </button>
+                  )}
+
+                  {/* Faculty reviews button */}
+                  {canSeeReviews && reviews.length > 0 && (
+                    <button onClick={() => setShowReviewsModal(true)}
+                      className="w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition group mb-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0"><MessageSquare size={15} className="text-white" /></div>
+                        <div className="text-left">
+                          <p className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5"><CheckCircle size={12} className="text-blue-500" />Faculty Reviews ({reviews.length})</p>
+                          <p className="text-xs text-gray-500">Tap to view feedback</p>
+                        </div>
+                      </div>
+                      <span className="text-blue-500 font-bold text-xl group-hover:translate-x-0.5 transition-transform">›</span>
+                    </button>
+                  )}
+
+                  {/* Abstract */}
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-6">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                      <BookOpen size={15} className="text-navy dark:text-accent" /> Abstract
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{paper.abstract}</p>
+                  </div>
+
+                  {/* Keywords */}
+                  {paper.keywords?.length > 0 && (
+                    <div className="border-t border-gray-100 dark:border-gray-700 pt-5 mt-5">
+                      <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-widest">Keywords</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {paper.keywords.map((k, i) => (
+                          <button key={i}
+                            onClick={() => navigate(`/explore?search=${encodeURIComponent(k)}`)}
+                            className="px-3 py-1.5 bg-navy/8 dark:bg-blue-500/15 text-navy dark:text-blue-400 rounded-full text-xs font-semibold border border-navy/20 dark:border-blue-500/30 hover:bg-navy/15 hover:scale-105 transition"
+                          >#{k}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            } position="right">
-              <Info size={15} className="text-blue-500 cursor-help" />
-            </Tooltip>
-          </div>
-          <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center bg-gray-50 dark:bg-gray-900/50">
-            <div className="w-14 h-14 bg-navy/10 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <FileText size={26} className="text-navy dark:text-accent" />
+
+              {/* Details Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Paper Details</h2>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                  <div><p className="text-xs text-gray-400 font-semibold mb-1">Authors</p><p className="text-gray-800 dark:text-gray-200 font-medium">{authorNames}</p></div>
+                  {paper.subjectArea && (
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Subject Area</p>
+                      <button onClick={() => handleSubjectClick(paper.subjectArea)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border hover:scale-105 transition ${getSubjectColor(paper.subjectArea)}`}>
+                        <Hash size={10} />{paper.subjectArea}
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex gap-6">
+                    {paper.category && <div><p className="text-xs text-gray-400 font-semibold mb-1">Category</p><p className="text-gray-800 dark:text-gray-200">{paper.category}</p></div>}
+                    {paper.yearCompleted && <div><p className="text-xs text-gray-400 font-semibold mb-1">Year</p><p className="text-gray-800 dark:text-gray-200">{paper.yearCompleted}</p></div>}
+                  </div>
+                  <div><p className="text-xs text-gray-400 font-semibold mb-1">Submitted by</p><p className="text-gray-800 dark:text-gray-200">{submitterName}</p></div>
+                </div>
+              </div>
+
+              {/* PDF Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 md:p-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Full Document</h2>
+                  <Tooltip content={<div className="text-left max-w-xs"><p className="font-bold text-xs text-white mb-1">PROTECTED DOCUMENT</p><p className="text-xs text-gray-200">• Watermarked with your identity</p><p className="text-xs text-gray-200">• PrintScreen & copy disabled</p><p className="text-xs text-gray-200">• All activity monitored</p></div>} position="right">
+                    <Info size={15} className="text-blue-500 cursor-help" />
+                  </Tooltip>
+                </div>
+                <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 md:p-12 text-center bg-gray-50 dark:bg-gray-900/50">
+                  <div className="w-16 h-16 bg-navy/10 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <FileText size={28} className="text-navy dark:text-accent" />
+                  </div>
+                  <p className="text-base font-bold text-gray-700 dark:text-gray-300 mb-1">View-Only Protected PDF</p>
+                  <p className="text-xs text-gray-400 mb-5">Secured under RA 10173 — no download allowed</p>
+                  <button onClick={() => {
+                    if (!paper?.pdfUrl && !paper?.fileUrl) { showMsg('PDF not available', 'error'); return; }
+                    setShowPDF(true);
+                  }} className="inline-flex items-center gap-2 px-8 py-3 bg-navy dark:bg-blue-600 hover:bg-navy-700 dark:hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-md">
+                    <FileText size={17} /> Open Viewer
+                  </button>
+                </div>
+              </div>
+
+              {/* Similar Papers */}
+              {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
             </div>
-            <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">View-Only Protected PDF</p>
-            <p className="text-xs text-gray-400 mb-4">Secured under RA 10173 — no download allowed</p>
-            <button onClick={() => {
-              if (!paper?.pdfUrl && !paper?.fileUrl) { showMsg('PDF not available', 'error'); return; }
-              setShowPDF(true);
-            }} className="inline-flex items-center gap-2 px-6 py-2.5 bg-navy dark:bg-blue-600 hover:bg-navy-700 dark:hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-md text-sm">
-              <FileText size={16} /> Open Viewer
-            </button>
+
+            {/* ══ RIGHT SIDEBAR (desktop xl+) ══ */}
+            <div className="hidden xl:flex flex-col gap-5 w-72 2xl:w-80 flex-shrink-0">
+
+              {/* Stats + actions sticky */}
+              {paper.status === 'approved' && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sticky top-4">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Statistics</h3>
+                  <div className="space-y-2 mb-5">
+                    {[
+                      { icon: Eye, val: paper.views, label: 'Total Views', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+                      { icon: Heart, val: likeCount, label: 'Likes', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' },
+                      { icon: Bookmark, val: paper.bookmarks, label: 'Bookmarks', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+                      { icon: Quote, val: citationCount, label: 'Times Cited', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
+                    ].map(({ icon: Icon, val, label, color, bg }) => (
+                      <div key={label} className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${bg}`}>
+                        <div className="flex items-center gap-2"><Icon size={14} className={color} /><span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</span></div>
+                        <span className={`text-xl font-black tabular-nums ${color}`}>{val ?? 0}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <button onClick={toggleLike} className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm border-2 transition-all ${liked ? 'bg-red-500 border-red-500 text-white' : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-red-300 hover:text-red-500'}`}>
+                      <Heart size={14} className={liked ? 'fill-current' : ''} />{liked ? 'Liked' : 'Like'}
+                    </button>
+                    <button onClick={toggleBookmark} className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm border-2 transition-all ${bookmarked ? 'bg-navy border-navy text-white' : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-navy/50 hover:text-navy'}`}>
+                      <Bookmark size={14} className={bookmarked ? 'fill-current' : ''} />{bookmarked ? 'Saved' : 'Save'}
+                    </button>
+                    <button onClick={() => setShowCitation(true)} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-green-400 hover:text-green-600 transition-all">
+                      <Quote size={14} /> Cite Paper
+                    </button>
+                    {isFaculty && (
+                      <button onClick={() => setShowReviewModal(true)} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm border-2 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
+                        <MessageSquare size={14} /> Write Review
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button onClick={() => setShowAwardsModal(true)} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-900 hover:from-yellow-500 hover:to-amber-600 transition shadow-sm">
+                        <Award size={14} /> Manage Awards
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews */}
+              {canSeeReviews && reviews.length > 0 && (
+                <button onClick={() => setShowReviewsModal(true)} className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 text-left hover:shadow-md transition group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center"><MessageSquare size={16} className="text-white" /></div>
+                      <div>
+                        <p className="font-bold text-sm text-gray-900 dark:text-white">Faculty Reviews</p>
+                        <p className="text-xs text-gray-500">{reviews.length} review{reviews.length > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <span className="text-blue-500 font-bold text-xl group-hover:translate-x-0.5 transition-transform">›</span>
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Similar Papers */}
-        {paper.status === 'approved' && <SimilarPapers paperId={paper._id} />}
       </div>
 
       {/* Modals */}
