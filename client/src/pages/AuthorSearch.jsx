@@ -1,10 +1,15 @@
 // client/src/pages/AuthorSearch.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, BookOpen, Eye, Quote, User, GraduationCap, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useDebounce } from '../hooks/useDebounce';
+import { Search, Users, BookOpen, Eye, Quote, User, GraduationCap, Briefcase, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const useDebounce = (value, delay) => {
+  const [d, setD] = useState(value);
+  useEffect(() => { const t = setTimeout(() => setD(value), delay); return () => clearTimeout(t); }, [value, delay]);
+  return d;
+};
 
 const AuthorCard = ({ author, onClick }) => {
   const initials = `${author.firstName?.[0] || ''}${author.lastName?.[0] || ''}`.toUpperCase();
@@ -39,6 +44,9 @@ const AuthorCard = ({ author, onClick }) => {
         <span className="flex items-center gap-1 text-xs font-bold text-navy dark:text-accent"><BookOpen size={11} />{author.paperCount}</span>
         <span className="flex items-center gap-1 text-xs text-gray-500"><Eye size={11} />{author.totalViews}</span>
         <span className="flex items-center gap-1 text-xs text-gray-500"><Quote size={11} />{author.totalCitations}</span>
+        {author.followers > 0 && (
+          <span className="flex items-center gap-1 text-xs text-gray-500 ml-auto"><UserPlus size={11} />{author.followers}</span>
+        )}
       </div>
     </div>
   );
@@ -76,18 +84,16 @@ const AuthorSearch = () => {
 
   return (
     <div className="max-w-6xl mx-auto pb-12 animate-fade-in">
-      {/* Header */}
       <div className="bg-gradient-to-r from-navy via-blue-700 to-accent rounded-2xl p-6 mb-6 shadow-xl text-white">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><Users size={20} /></div>
           <div>
             <h1 className="text-2xl font-black">Researchers</h1>
-            <p className="text-blue-100 text-sm">Browse and discover authors in our repository</p>
+            <p className="text-blue-100 text-sm">Browse authors who have contributed research papers</p>
           </div>
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-5">
         <div className="flex gap-3">
           <div className="relative flex-1">
@@ -102,18 +108,16 @@ const AuthorSearch = () => {
             <option value="student">Students</option>
           </select>
         </div>
-        <p className="text-xs text-gray-400 mt-2">{total} researcher{total !== 1 ? 's' : ''} found</p>
+        <p className="text-xs text-gray-400 mt-2">{total} researcher{total !== 1 ? 's' : ''} with published papers</p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy dark:border-accent" />
-        </div>
+        <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-4 border-navy dark:border-accent" /></div>
       ) : authors.length === 0 ? (
         <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
           <User size={48} className="mx-auto text-gray-300 mb-3" />
           <p className="font-bold text-gray-600 dark:text-gray-400 mb-1">No researchers found</p>
-          <p className="text-sm text-gray-400">Try different search terms</p>
+          <p className="text-sm text-gray-400">Only users with at least one published paper appear here</p>
         </div>
       ) : (
         <>
@@ -122,13 +126,9 @@ const AuthorSearch = () => {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
-              <button onClick={() => fetchAuthors(page - 1)} disabled={page === 1} className="p-2 rounded-xl border border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <ChevronLeft size={16} />
-              </button>
+              <button onClick={() => fetchAuthors(page - 1)} disabled={page === 1} className="p-2 rounded-xl border border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition"><ChevronLeft size={16} /></button>
               <span className="text-sm font-bold text-gray-700 dark:text-gray-300 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">Page {page} / {totalPages}</span>
-              <button onClick={() => fetchAuthors(page + 1)} disabled={page === totalPages} className="p-2 rounded-xl border border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <ChevronRight size={16} />
-              </button>
+              <button onClick={() => fetchAuthors(page + 1)} disabled={page === totalPages} className="p-2 rounded-xl border border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition"><ChevronRight size={16} /></button>
             </div>
           )}
         </>

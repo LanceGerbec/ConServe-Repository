@@ -1,9 +1,16 @@
+// server/src/models/Research.js
 import mongoose from 'mongoose';
 
 const researchSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   authors: [{ type: String, required: true }],
   coAuthors: [String],
+  // Linked user accounts for authors who have accounts
+  coAuthorLinks: [{
+    name: String,
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    ghostId: { type: mongoose.Schema.Types.ObjectId, ref: 'GhostAuthor', default: null }
+  }],
   abstract: { type: String, required: true },
   keywords: [String],
   category: { type: String, enum: ['Completed', 'Published'], required: true },
@@ -14,12 +21,9 @@ const researchSchema = new mongoose.Schema({
   fileName: String,
   gridfsId: mongoose.Schema.Types.ObjectId,
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'revision'], default: 'pending' },
-  
-  // 🆕 NEW FIELDS FOR "UPLOAD ON BEHALF"
-  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Account that uploaded
-  uploadedOnBehalf: { type: Boolean, default: false }, // True if uploaded for someone else
-  actualAuthors: [String], // Names of real authors (if they don't have accounts)
-  
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  uploadedOnBehalf: { type: Boolean, default: false },
+  actualAuthors: [String],
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   revisionNotes: String,
   awards: [{
@@ -33,35 +37,17 @@ const researchSchema = new mongoose.Schema({
   bookmarks: { type: Number, default: 0 },
   citations: { type: Number, default: 0 },
   likes: { type: Number, default: 0 },
-  versionHistory: [{
-    fileUrl: String,
-    uploadedAt: { type: Date, default: Date.now },
-    changes: String
-  }],
-  metadata: {
-    fileType: String,
-    uploadedAt: { type: Date, default: Date.now },
-    lastModified: Date
-  },
+  versionHistory: [{ fileUrl: String, uploadedAt: { type: Date, default: Date.now }, changes: String }],
+  metadata: { fileType: String, uploadedAt: { type: Date, default: Date.now }, lastModified: Date },
   citationClicks: { type: Number, default: 0 },
   analytics: {
     viewsByDate: [{ date: Date, count: Number }],
-    citationsByStyle: {
-      APA: { type: Number, default: 0 },
-      MLA: { type: Number, default: 0 },
-      Chicago: { type: Number, default: 0 },
-      Harvard: { type: Number, default: 0 }
-    }
+    citationsByStyle: { APA: { type: Number, default: 0 }, MLA: { type: Number, default: 0 }, Chicago: { type: Number, default: 0 }, Harvard: { type: Number, default: 0 } }
   },
-  recentViews: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    viewedAt: { type: Date, default: Date.now }
-  }],
+  recentViews: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, viewedAt: { type: Date, default: Date.now } }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
-
-
 
 researchSchema.index({ title: 'text', abstract: 'text', keywords: 'text' });
 researchSchema.index({ status: 1, submittedBy: 1 });
@@ -70,5 +56,6 @@ researchSchema.index({ subjectArea: 1 });
 researchSchema.index({ createdAt: -1 });
 researchSchema.index({ views: -1 });
 researchSchema.index({ authors: 1 });
+researchSchema.index({ 'coAuthorLinks.userId': 1 });
 
 export default mongoose.model('Research', researchSchema);

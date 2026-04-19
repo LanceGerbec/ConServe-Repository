@@ -24,6 +24,7 @@ const ResearchDetail = lazy(() => import('./pages/ResearchDetail'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const UserSettings = lazy(() => import('./pages/UserSettings'));
 const AuthorProfile = lazy(() => import('./pages/AuthorProfile'));
+const GhostAuthorProfile = lazy(() => import('./pages/GhostAuthorProfile'));
 const AuthorSearch = lazy(() => import('./pages/AuthorSearch'));
 
 const LoadingFallback = () => (
@@ -60,13 +61,13 @@ function App() {
               <Route path="/research/:id" element={<ProtectedRoute><Layout><ResearchDetail /></Layout></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Layout><UserSettings /></Layout></ProtectedRoute>} />
               <Route path="/author/:userId" element={<ProtectedRoute><Layout><AuthorProfile /></Layout></ProtectedRoute>} />
+              <Route path="/ghost-author/:ghostId" element={<ProtectedRoute><Layout><GhostAuthorProfile /></Layout></ProtectedRoute>} />
               <Route path="/researchers" element={<ProtectedRoute><Layout><AuthorSearch /></Layout></ProtectedRoute>} />
 
               <Route path="/browse" element={<Navigate to="/explore" replace />} />
               <Route path="/search" element={<Navigate to="/explore" replace />} />
               <Route path="/login/admin" element={<Navigate to="/portal/admin" replace />} />
               <Route path="/login/ret" element={<Navigate to="/portal/ret" replace />} />
-
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
