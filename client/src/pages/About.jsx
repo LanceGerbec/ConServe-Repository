@@ -28,23 +28,21 @@ const About = () => {
     { icon: Users, title: 'Collaboration', desc: 'Community of researchers' }
   ];
 
-  const isDean = (member) =>
-    member.role?.toLowerCase().includes('dean');
-
+  const isDean = (member) => member.role?.toLowerCase().includes('dean');
   const deanMember = teamMembers.find(isDean);
   const otherMembers = teamMembers.filter(m => !isDean(m));
 
-  const MemberCard = ({ member, big = false }) => (
-    <div className={`flex flex-col items-center group ${big ? 'h-full' : 'h-full'}`}>
-      <div className={`${big ? 'w-28 h-28 sm:w-32 sm:h-32' : 'w-20 h-20 sm:w-24 sm:h-24'} mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-md flex-shrink-0`}>
+  const MemberCard = ({ member }) => (
+    <div className="flex flex-col items-center group h-full">
+      <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-md flex-shrink-0">
         {member.imageUrl
           ? <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center text-white font-bold" style={{ fontSize: big ? '2rem' : '1.5rem' }}>{member.name.charAt(0)}</div>}
+          : <div className="w-full h-full flex items-center justify-center text-white font-bold text-2xl">{member.name.charAt(0)}</div>}
       </div>
       <div className="text-center flex flex-col items-center">
-        <h3 className={`font-bold text-gray-900 dark:text-white leading-tight mb-0.5 line-clamp-2 ${big ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>{member.name}</h3>
-        <p className={`text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1 ${big ? 'text-sm' : 'text-xs'}`}>{member.role}</p>
-        <p className={`text-blue-600 dark:text-blue-400 mt-0.5 line-clamp-1 ${big ? 'text-xs sm:text-sm' : 'text-[10px] sm:text-xs'}`}>{member.affiliation || 'NEUST College of Nursing'}</p>
+        <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight mb-0.5 line-clamp-2">{member.name}</h3>
+        <p className="text-gray-600 dark:text-gray-400 text-xs mb-0.5 line-clamp-2">{member.role}</p>
+        <p className="text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs mt-0.5 line-clamp-2">{member.affiliation || 'NEUST College of Nursing'}</p>
       </div>
     </div>
   );
@@ -119,19 +117,19 @@ const About = () => {
           <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No team members added yet</div>
         ) : (
           <>
-            {/* Dean — centered & bigger */}
+            {/* Dean — centered & bigger, no text truncation */}
             {deanMember && (
-              <div className="flex justify-center mb-6">
-                <div className="flex flex-col items-center group w-40">
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-lg flex-shrink-0 ring-4 ring-navy/20 dark:ring-blue-400/30">
+              <div className="flex justify-center mb-8">
+                <div className="flex flex-col items-center group w-48">
+                  <div className="w-32 h-32 sm:w-36 sm:h-36 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-lg flex-shrink-0 ring-4 ring-navy/20 dark:ring-blue-400/30">
                     {deanMember.imageUrl
                       ? <img src={deanMember.imageUrl} alt={deanMember.name} className="w-full h-full object-cover" />
                       : <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold">{deanMember.name.charAt(0)}</div>}
                   </div>
-                  <div className="text-center flex flex-col items-center">
-                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight mb-0.5 line-clamp-2">{deanMember.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1">{deanMember.role}</p>
-                    <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-0.5 line-clamp-1">{deanMember.affiliation || 'NEUST College of Nursing'}</p>
+                  <div className="text-center">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight mb-1">{deanMember.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{deanMember.role}</p>
+                    <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">{deanMember.affiliation || 'NEUST College of Nursing'}</p>
                   </div>
                 </div>
               </div>
