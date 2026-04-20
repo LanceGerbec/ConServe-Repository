@@ -7,9 +7,7 @@ const About = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTeam();
-  }, []);
+  useEffect(() => { fetchTeam(); }, []);
 
   const fetchTeam = async () => {
     try {
@@ -30,6 +28,27 @@ const About = () => {
     { icon: Users, title: 'Collaboration', desc: 'Community of researchers' }
   ];
 
+  const isDean = (member) =>
+    member.role?.toLowerCase().includes('dean');
+
+  const deanMember = teamMembers.find(isDean);
+  const otherMembers = teamMembers.filter(m => !isDean(m));
+
+  const MemberCard = ({ member, big = false }) => (
+    <div className={`flex flex-col items-center group ${big ? 'h-full' : 'h-full'}`}>
+      <div className={`${big ? 'w-28 h-28 sm:w-32 sm:h-32' : 'w-20 h-20 sm:w-24 sm:h-24'} mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-md flex-shrink-0`}>
+        {member.imageUrl
+          ? <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center text-white font-bold" style={{ fontSize: big ? '2rem' : '1.5rem' }}>{member.name.charAt(0)}</div>}
+      </div>
+      <div className="text-center flex flex-col items-center">
+        <h3 className={`font-bold text-gray-900 dark:text-white leading-tight mb-0.5 line-clamp-2 ${big ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>{member.name}</h3>
+        <p className={`text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1 ${big ? 'text-sm' : 'text-xs'}`}>{member.role}</p>
+        <p className={`text-blue-600 dark:text-blue-400 mt-0.5 line-clamp-1 ${big ? 'text-xs sm:text-sm' : 'text-[10px] sm:text-xs'}`}>{member.affiliation || 'NEUST College of Nursing'}</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="text-center mb-8">
@@ -48,29 +67,18 @@ const About = () => {
           CONserve is the official digital research repository of the Nueva Ecija University of Science and Technology (NEUST) College of Nursing. It serves as a centralized and secure archive for nursing research papers, theses, and scholarly publications produced by students and faculty.
         </p>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-          Designed to support academic integrity and knowledge sharing, CONserve provides a trusted platform where nursing research is preserved, organized, and made accessible to the academic community. By connecting students, faculty, and researchers, the system strengthens collaboration and promotes evidence-based nursing practice.
+          Designed to support academic integrity and knowledge sharing, CONserve provides a trusted platform where nursing research is preserved, organized, and made accessible to the academic community.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-navy dark:bg-blue-700 text-white rounded-xl p-6 shadow-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <Target size={28} />
-            <h2 className="text-xl font-bold">Our Mission</h2>
-          </div>
-          <p className="leading-relaxed text-sm">
-            To preserve and protect nursing research by providing a secure and accessible digital platform that supports collaboration, academic integrity, and the advancement of nursing science.
-          </p>
+          <div className="flex items-center gap-3 mb-3"><Target size={28} /><h2 className="text-xl font-bold">Our Mission</h2></div>
+          <p className="leading-relaxed text-sm">To preserve and protect nursing research by providing a secure and accessible digital platform that supports collaboration, academic integrity, and the advancement of nursing science.</p>
         </div>
-
         <div className="bg-accent dark:bg-blue-600 text-white rounded-xl p-6 shadow-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <Eye size={28} />
-            <h2 className="text-xl font-bold">Our Vision</h2>
-          </div>
-          <p className="leading-relaxed text-sm">
-            To become a leading digital repository for nursing research that empowers learning, collaboration, and evidence-based healthcare within and beyond NEUST.
-          </p>
+          <div className="flex items-center gap-3 mb-3"><Eye size={28} /><h2 className="text-xl font-bold">Our Vision</h2></div>
+          <p className="leading-relaxed text-sm">To become a leading digital repository for nursing research that empowers learning, collaboration, and evidence-based healthcare within and beyond NEUST.</p>
         </div>
       </div>
 
@@ -110,33 +118,36 @@ const About = () => {
         ) : teamMembers.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No team members added yet</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-5 items-start">
-            {teamMembers.map((member) => (
-              <div key={member._id} className="flex flex-col items-center group h-full">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-md flex-shrink-0">
-                  {member.imageUrl ? (
-                    <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
-                      {member.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className="text-center flex flex-col items-center min-h-[70px] sm:min-h-[65px]">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight mb-0.5 line-clamp-2">
-                    {member.name}
-                  </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1">
-                    {member.role}
-                  </p>
-                  {/* ✅ Now dynamic — set per card in TeamManagement */}
-                  <p className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 mt-0.5 line-clamp-1">
-                    {member.affiliation || 'NEUST College of Nursing'}
-                  </p>
+          <>
+            {/* Dean — centered & bigger */}
+            {deanMember && (
+              <div className="flex justify-center mb-6">
+                <div className="flex flex-col items-center group w-40">
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-lg flex-shrink-0 ring-4 ring-navy/20 dark:ring-blue-400/30">
+                    {deanMember.imageUrl
+                      ? <img src={deanMember.imageUrl} alt={deanMember.name} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold">{deanMember.name.charAt(0)}</div>}
+                  </div>
+                  <div className="text-center flex flex-col items-center">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight mb-0.5 line-clamp-2">{deanMember.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-0.5 line-clamp-1">{deanMember.role}</p>
+                    <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-0.5 line-clamp-1">{deanMember.affiliation || 'NEUST College of Nursing'}</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+
+            {/* Other members grid */}
+            {otherMembers.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-5 items-start">
+                {otherMembers.map((member) => (
+                  <div key={member._id}>
+                    <MemberCard member={member} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
