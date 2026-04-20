@@ -4,6 +4,7 @@ import { Home, Search, LayoutDashboard, Menu, X, Moon, Sun, LogOut, Settings, Sh
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import NotificationBell from './NotificationBell';
+import TourGuideButton from '../common/TourGuideButton';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -207,8 +208,10 @@ const Layout = ({ children }) => {
 
       {(userMenuOpen || menuOpen) && <div className="fixed inset-0 z-40" onClick={() => { setUserMenuOpen(false); setMenuOpen(false); }} />}
 
-      {/* Main Content */}
+     {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">{children}</main>
+
+      <TourGuideButton />
 
       {/* Footer */}
       <footer className="relative mt-auto">
