@@ -131,14 +131,19 @@ const About = () => {
             {/* Dean — centered at the bottom */}
             {deanMember && (
               <div className="flex justify-center mt-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                <div className="flex flex-col items-center group w-52">
+                <div className="flex flex-col items-center group">
                   <div className="w-32 h-32 sm:w-36 sm:h-36 mb-3 rounded-full overflow-hidden bg-gradient-to-br from-navy to-accent dark:from-blue-600 dark:to-blue-800 group-hover:scale-110 transition shadow-lg flex-shrink-0 ring-4 ring-navy/20 dark:ring-blue-400/30">
                     {deanMember.imageUrl
                       ? <img src={deanMember.imageUrl} alt={deanMember.name} className="w-full h-full object-cover" />
                       : <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold">{deanMember.name.charAt(0)}</div>}
                   </div>
                   <div className="text-center">
-                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight mb-1 whitespace-normal">{deanMember.name}</h3>
+                    <h3
+                      className="font-bold text-gray-900 dark:text-white text-sm sm:text-base mb-1"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {deanMember.name}
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{deanMember.role}</p>
                     <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">{deanMember.affiliation || 'NEUST College of Nursing'}</p>
                   </div>
