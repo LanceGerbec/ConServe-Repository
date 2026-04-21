@@ -63,24 +63,17 @@ export const AuthProvider = ({ children }) => {
     if (Date.now() - lastActivityRef.current > 1000) resetInactivityTimer();
   }, [resetInactivityTimer]);
 
-  // ✅ FIX: Always fetch from API to get fresh data including avatar
   const fetchCurrentUser = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
-
-    // Validate token expiry
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (Date.now() >= payload.exp * 1000) { localStorage.clear(); setUser(null); setLoading(false); return; }
     } catch { localStorage.clear(); setUser(null); setLoading(false); return; }
 
-    // ✅ Set user from localStorage immediately for fast UI render
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try { setUser(JSON.parse(savedUser)); } catch {}
-    }
+    if (savedUser) { try { setUser(JSON.parse(savedUser)); } catch {} }
 
-    // ✅ Always fetch fresh data from API (fixes avatar persistence)
     try {
       const res = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
@@ -91,7 +84,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.clear(); setUser(null);
       }
     } catch {
-      // If API fails but we have savedUser, keep it
       if (!savedUser) { localStorage.clear(); setUser(null); }
     } finally {
       setLoading(false);
@@ -123,8 +115,9 @@ export const AuthProvider = ({ children }) => {
         resetInactivityTimer();
         return { success: true };
       }
-      return { success: false, error: data.error };
-    } catch { return { success: false, error: 'Connection error' }; }
+      // Pass lockoutSeconds back to UI for countdown
+      return { success: false, error: data.error, lockoutSeconds: data.lockoutSeconds || 0 };
+    } catch { return { success: false, error: 'Connection error', lockoutSeconds: 0 }; }
   };
 
   const logout = async () => {

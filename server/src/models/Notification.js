@@ -1,4 +1,3 @@
-// server/src/models/Notification.js
 import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema({
@@ -9,7 +8,11 @@ const notificationSchema = new mongoose.Schema({
       'RESEARCH_APPROVED', 'RESEARCH_REJECTED', 'RESEARCH_REVISION',
       'NEW_RESEARCH_SUBMITTED', 'REVIEW_RECEIVED', 'ACCOUNT_APPROVED',
       'SYSTEM_UPDATE', 'NEW_USER_REGISTERED', 'RESEARCH_VIEWED',
-      'BOOKMARK_MILESTONE', 'NEW_FOLLOWER', 'CO_AUTHOR_TAGGED'
+      'BOOKMARK_MILESTONE', 'NEW_FOLLOWER', 'CO_AUTHOR_TAGGED',
+      // Security notifications
+      'LOGIN_ACTIVITY', 'SECURITY_ALERT',
+      // Approval notifications
+      'RESEARCH_APPROVED_FOR_REVIEW'
     ],
     required: true
   },
