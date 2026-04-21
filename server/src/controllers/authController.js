@@ -9,7 +9,8 @@ import Notification from '../models/Notification.js';
 import { sendWelcomeEmail, sendAdminNewUserNotification, sendEmail } from '../utils/emailService.js';
 import { notifyNewUserRegistered } from '../utils/notificationService.js';
 
-const LOCKOUT_STEPS = [1, 3, 5, 10, 30, 60];
+const LOCKOUT_STEPS = [0.5, 1, 3, 5, 10, 30, 60]; // minutes (0.5 = 30s)
+const ATTEMPTS_BEFORE_LOCK = 3;
 
 const generateToken = (id) => {
   const jti = randomBytes(16).toString('hex');
@@ -30,7 +31,13 @@ const safeUser = (user) => ({
   isActive: user.isActive,
 });
 
-// ── Send login alert email ──────────────────────────────────────────────────
+const formatLockDuration = (minutes) => {
+  if (minutes < 1) return `${Math.round(minutes * 60)} seconds`;
+  if (minutes >= 60) return `${minutes / 60} hour(s)`;
+  return `${minutes} minute(s)`;
+};
+
+// ── Login alert email ──────────────────────────────────────────────────────
 const sendLoginAlert = async (user, ip, userAgent, type = 'success') => {
   try {
     const time = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' });
@@ -39,48 +46,46 @@ const sendLoginAlert = async (user, ip, userAgent, type = 'success') => {
     if (type === 'success') {
       await sendEmail({
         to: user.email,
-        subject: '✅ New Login to Your CONserve Account',
-        html: `
-          <div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px">
-            <div style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:30px;border-radius:8px 8px 0 0;text-align:center">
-              <h2 style="margin:0">New Login Detected</h2>
-              <p style="margin:8px 0 0;opacity:.9;font-size:14px">Someone just signed in to your account</p>
+        subject: 'New Login to Your CONserve Account',
+        html: `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:30px;border-radius:8px 8px 0 0;text-align:center">
+            <h2 style="margin:0">New Login Detected</h2>
+            <p style="margin:8px 0 0;opacity:.9;font-size:14px">Someone just signed in to your account</p>
+          </div>
+          <div style="background:#fff;border:1px solid #e5e7eb;padding:25px;border-radius:0 0 8px 8px">
+            <p>Hello <strong>${user.firstName}</strong>,</p>
+            <p>A successful login was recorded for your CONserve account.</p>
+            <div style="background:#f0f9ff;border-left:4px solid #3b82f6;padding:15px;border-radius:4px;margin:15px 0">
+              <p style="margin:4px 0;font-size:14px"><strong>Time:</strong> ${time} (PHT)</p>
+              <p style="margin:4px 0;font-size:14px"><strong>IP Address:</strong> ${ip}</p>
+              <p style="margin:4px 0;font-size:14px"><strong>Device:</strong> ${device}</p>
             </div>
-            <div style="background:#fff;border:1px solid #e5e7eb;padding:25px;border-radius:0 0 8px 8px">
-              <p>Hello <strong>${user.firstName}</strong>,</p>
-              <p>A successful login was recorded for your CONserve account.</p>
-              <div style="background:#f0f9ff;border-left:4px solid #3b82f6;padding:15px;border-radius:4px;margin:15px 0">
-                <p style="margin:4px 0;font-size:14px">🕐 <strong>Time:</strong> ${time} (PHT)</p>
-                <p style="margin:4px 0;font-size:14px">🌐 <strong>IP Address:</strong> ${ip}</p>
-                <p style="margin:4px 0;font-size:14px">💻 <strong>Device:</strong> ${device}</p>
-              </div>
-              <p style="color:#dc2626;font-size:14px">⚠️ If this wasn't you, please <a href="${process.env.CLIENT_URL}/forgot-password" style="color:#1e3a8a">reset your password</a> immediately and contact support.</p>
-              <p style="color:#6b7280;font-size:12px;margin-top:20px">© ${new Date().getFullYear()} CONserve — NEUST College of Nursing</p>
-            </div>
-          </div>`
+            <p style="color:#dc2626;font-size:14px">If this was not you, please <a href="${process.env.CLIENT_URL}/forgot-password" style="color:#1e3a8a">reset your password</a> immediately.</p>
+            <p style="color:#6b7280;font-size:12px;margin-top:20px">© ${new Date().getFullYear()} CONserve — NEUST College of Nursing</p>
+          </div>
+        </div>`
       });
     } else if (type === 'failed') {
       await sendEmail({
         to: user.email,
-        subject: '⚠️ Failed Login Attempt on Your CONserve Account',
-        html: `
-          <div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px">
-            <div style="background:linear-gradient(135deg,#dc2626,#f97316);color:#fff;padding:30px;border-radius:8px 8px 0 0;text-align:center">
-              <h2 style="margin:0">⚠️ Failed Login Attempt</h2>
-              <p style="margin:8px 0 0;opacity:.9;font-size:14px">An unsuccessful login attempt was detected</p>
+        subject: 'Failed Login Attempt on Your CONserve Account',
+        html: `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#dc2626,#f97316);color:#fff;padding:30px;border-radius:8px 8px 0 0;text-align:center">
+            <h2 style="margin:0">Failed Login Attempt</h2>
+            <p style="margin:8px 0 0;opacity:.9;font-size:14px">An unsuccessful login attempt was detected</p>
+          </div>
+          <div style="background:#fff;border:1px solid #e5e7eb;padding:25px;border-radius:0 0 8px 8px">
+            <p>Hello <strong>${user.firstName}</strong>,</p>
+            <p>Someone tried to login to your CONserve account with an incorrect password.</p>
+            <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:15px;border-radius:4px;margin:15px 0">
+              <p style="margin:4px 0;font-size:14px"><strong>Time:</strong> ${time} (PHT)</p>
+              <p style="margin:4px 0;font-size:14px"><strong>IP Address:</strong> ${ip}</p>
+              <p style="margin:4px 0;font-size:14px"><strong>Device:</strong> ${device}</p>
             </div>
-            <div style="background:#fff;border:1px solid #e5e7eb;padding:25px;border-radius:0 0 8px 8px">
-              <p>Hello <strong>${user.firstName}</strong>,</p>
-              <p>Someone tried to login to your CONserve account with an incorrect password.</p>
-              <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:15px;border-radius:4px;margin:15px 0">
-                <p style="margin:4px 0;font-size:14px">🕐 <strong>Time:</strong> ${time} (PHT)</p>
-                <p style="margin:4px 0;font-size:14px">🌐 <strong>IP Address:</strong> ${ip}</p>
-                <p style="margin:4px 0;font-size:14px">💻 <strong>Device:</strong> ${device}</p>
-              </div>
-              <p style="font-size:14px">If this was you, you can safely ignore this email. If not, consider <a href="${process.env.CLIENT_URL}/forgot-password" style="color:#1e3a8a">resetting your password</a>.</p>
-              <p style="color:#6b7280;font-size:12px;margin-top:20px">© ${new Date().getFullYear()} CONserve — NEUST College of Nursing</p>
-            </div>
-          </div>`
+            <p style="font-size:14px">If this was you, you can safely ignore this email. If not, consider <a href="${process.env.CLIENT_URL}/forgot-password" style="color:#1e3a8a">resetting your password</a>.</p>
+            <p style="color:#6b7280;font-size:12px;margin-top:20px">© ${new Date().getFullYear()} CONserve — NEUST College of Nursing</p>
+          </div>
+        </div>`
       });
     }
   } catch (e) {
@@ -88,31 +93,30 @@ const sendLoginAlert = async (user, ip, userAgent, type = 'success') => {
   }
 };
 
-// ── Send lockout notification ───────────────────────────────────────────────
+// ── Lockout alert email ────────────────────────────────────────────────────
 const sendLockoutAlert = async (user, ip, lockMinutes) => {
   try {
     const time = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' });
     await sendEmail({
       to: user.email,
-      subject: '🔒 Your CONserve Account Has Been Temporarily Locked',
-      html: `
-        <div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px">
-          <div style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;padding:30px;border-radius:8px 8px 0 0;text-align:center">
-            <h2 style="margin:0">🔒 Account Temporarily Locked</h2>
-            <p style="margin:8px 0 0;opacity:.9;font-size:14px">Too many failed login attempts</p>
+      subject: 'Your CONserve Account Has Been Temporarily Locked',
+      html: `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px">
+        <div style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;padding:30px;border-radius:8px 8px 0 0;text-align:center">
+          <h2 style="margin:0">Account Temporarily Locked</h2>
+          <p style="margin:8px 0 0;opacity:.9;font-size:14px">Too many failed login attempts</p>
+        </div>
+        <div style="background:#fff;border:1px solid #e5e7eb;padding:25px;border-radius:0 0 8px 8px">
+          <p>Hello <strong>${user.firstName}</strong>,</p>
+          <p>Your account has been <strong>temporarily locked</strong> due to multiple failed login attempts.</p>
+          <div style="background:#fffbeb;border-left:4px solid #d97706;padding:15px;border-radius:4px;margin:15px 0">
+            <p style="margin:4px 0;font-size:14px"><strong>Time:</strong> ${time} (PHT)</p>
+            <p style="margin:4px 0;font-size:14px"><strong>IP Address:</strong> ${ip}</p>
+            <p style="margin:4px 0;font-size:14px"><strong>Locked for:</strong> ${formatLockDuration(lockMinutes)}</p>
           </div>
-          <div style="background:#fff;border:1px solid #e5e7eb;padding:25px;border-radius:0 0 8px 8px">
-            <p>Hello <strong>${user.firstName}</strong>,</p>
-            <p>Your account has been <strong>temporarily locked</strong> due to multiple failed login attempts.</p>
-            <div style="background:#fffbeb;border-left:4px solid #d97706;padding:15px;border-radius:4px;margin:15px 0">
-              <p style="margin:4px 0;font-size:14px">🕐 <strong>Time:</strong> ${time} (PHT)</p>
-              <p style="margin:4px 0;font-size:14px">🌐 <strong>IP Address:</strong> ${ip}</p>
-              <p style="margin:4px 0;font-size:14px">⏱️ <strong>Locked for:</strong> ${lockMinutes >= 60 ? `${lockMinutes / 60} hour(s)` : `${lockMinutes} minute(s)`}</p>
-            </div>
-            <p style="font-size:14px">If this was you, please wait and try again. If not, <a href="${process.env.CLIENT_URL}/forgot-password" style="color:#1e3a8a">reset your password immediately</a>.</p>
-            <p style="color:#6b7280;font-size:12px;margin-top:20px">© ${new Date().getFullYear()} CONserve — NEUST College of Nursing</p>
-          </div>
-        </div>`
+          <p style="font-size:14px">If this was you, please wait and try again. If not, <a href="${process.env.CLIENT_URL}/forgot-password" style="color:#1e3a8a">reset your password immediately</a>.</p>
+          <p style="color:#6b7280;font-size:12px;margin-top:20px">© ${new Date().getFullYear()} CONserve — NEUST College of Nursing</p>
+        </div>
+      </div>`
     });
   } catch (e) {
     console.error('Lockout alert email error:', e.message);
@@ -191,24 +195,26 @@ export const login = async (req, res) => {
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
-      // Determine current lockout step BEFORE incrementing
-      const currentStep = Math.min(user.lockoutStep || 0, LOCKOUT_STEPS.length - 1);
-      const lockMinutes = LOCKOUT_STEPS[currentStep];
+      const newAttempts = user.loginAttempts + 1;
+      const attemptsLeft = Math.max(0, ATTEMPTS_BEFORE_LOCK - newAttempts);
+
+      // Determine what lockout will be applied
+      const willLock = newAttempts >= ATTEMPTS_BEFORE_LOCK;
+      const step = Math.min(user.lockoutStep || 0, LOCKOUT_STEPS.length - 1);
+      const lockMinutes = LOCKOUT_STEPS[step];
 
       await user.incLoginAttempts();
 
-      // Send failed login notification (async, don't block)
+      // Send email alerts async (don't block response)
       sendLoginAlert(user, req.ip, req.get('user-agent'), 'failed').catch(() => {});
+      if (willLock) sendLockoutAlert(user, req.ip, lockMinutes).catch(() => {});
 
-      // Send lockout notification if this triggers a lock
-      sendLockoutAlert(user, req.ip, lockMinutes).catch(() => {});
-
-      // In-app notification
+      // In-app notification — no emojis
       Notification.create({
         recipient: user._id,
         type: 'SECURITY_ALERT',
-        title: '⚠️ Failed Login Attempt',
-        message: `Failed login attempt detected from IP ${req.ip}. Account locked for ${lockMinutes >= 60 ? `${lockMinutes / 60}h` : `${lockMinutes}min`}.`,
+        title: 'Failed Login Attempt',
+        message: `Failed login attempt detected from IP ${req.ip}.${willLock ? ` Account locked for ${formatLockDuration(lockMinutes)}.` : ` ${attemptsLeft} attempt(s) remaining before lockout.`}`,
         priority: 'urgent'
       }).catch(() => {});
 
@@ -217,12 +223,14 @@ export const login = async (req, res) => {
         action: 'LOGIN_FAILED',
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
-        details: { lockMinutes, lockoutStep: currentStep }
+        details: { willLock, lockMinutes: willLock ? lockMinutes : 0, lockoutStep: step, attemptsLeft }
       });
 
       return res.status(401).json({
-        error: 'Invalid credentials',
-        lockoutSeconds: lockMinutes * 60
+        error: attemptsLeft > 0
+          ? `Invalid credentials. ${attemptsLeft} attempt(s) remaining before lockout.`
+          : 'Invalid credentials',
+        lockoutSeconds: willLock ? Math.round(lockMinutes * 60) : 0
       });
     }
 
@@ -233,17 +241,16 @@ export const login = async (req, res) => {
     });
 
     const token = generateToken(user._id);
-
     await AuditLog.create({ user: user._id, action: 'USER_LOGIN', ipAddress: req.ip, userAgent: req.get('user-agent') });
 
-    // Send success login notification (async)
+    // Send success email alert async
     sendLoginAlert(user, req.ip, req.get('user-agent'), 'success').catch(() => {});
 
-    // In-app login notification
+    // In-app notification — no emojis
     Notification.create({
       recipient: user._id,
       type: 'LOGIN_ACTIVITY',
-      title: '✅ New Login to Your Account',
+      title: 'New Login to Your Account',
       message: `Successful login from IP ${req.ip} on ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT.`,
       priority: 'medium'
     }).catch(() => {});
@@ -287,14 +294,13 @@ export const forgotPassword = async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false });
     if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' });
 
-    // 5-minute expiry
     const resetToken = jwt.sign(
       { id: user._id, email: user.email, type: 'password-reset' },
       process.env.JWT_SECRET,
       { expiresIn: '5m' }
     );
     user.passwordResetToken = resetToken;
-    user.passwordResetExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    user.passwordResetExpires = new Date(Date.now() + 5 * 60 * 1000);
     await user.save();
 
     const { sendPasswordResetEmail } = await import('../utils/emailService.js');

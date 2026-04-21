@@ -1,8 +1,10 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-// Progressive lockout durations in minutes: [1, 3, 5, 10, 30, 60, ...]
-const LOCKOUT_STEPS = [1, 3, 5, 10, 30, 60];
+// Progressive lockout: triggers after 3 failures, then each subsequent failure escalates
+// [30s, 1min, 3min, 5min, 10min, 30min, 60min]
+const LOCKOUT_STEPS = [0.5, 1, 3, 5, 10, 30, 60]; // in minutes (0.5 = 30s)
+const ATTEMPTS_BEFORE_LOCK = 3;
 
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
@@ -36,7 +38,7 @@ const userSchema = new mongoose.Schema({
   lastLoginUserAgent: String,
   loginAttempts: { type: Number, default: 0 },
   lockoutUntil: Date,
-  lockoutStep: { type: Number, default: 0 }, // tracks progressive step
+  lockoutStep: { type: Number, default: 0 },
   passwordHistory: [String],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -65,9 +67,8 @@ userSchema.methods.getLockoutRemainingSeconds = function() {
 };
 
 userSchema.methods.incLoginAttempts = async function() {
-  // If previous lockout has expired, reset step but keep it as a warning
+  // If previous lockout has expired, reset attempts but escalate step
   if (this.lockoutUntil && this.lockoutUntil < Date.now()) {
-    // After serving lockout, increment step for next failure
     const nextStep = Math.min((this.lockoutStep || 0) + 1, LOCKOUT_STEPS.length - 1);
     return this.updateOne({
       $set: { loginAttempts: 1, lockoutStep: nextStep },
@@ -75,14 +76,14 @@ userSchema.methods.incLoginAttempts = async function() {
     });
   }
 
-  const updates = { $inc: { loginAttempts: 1 } };
   const newAttempts = this.loginAttempts + 1;
+  const updates = { $inc: { loginAttempts: 1 } };
 
-  // Lock after first wrong attempt
-  if (newAttempts >= 1) {
+  // Only lock after reaching ATTEMPTS_BEFORE_LOCK threshold
+  if (newAttempts >= ATTEMPTS_BEFORE_LOCK) {
     const step = Math.min(this.lockoutStep || 0, LOCKOUT_STEPS.length - 1);
     const lockMinutes = LOCKOUT_STEPS[step];
-    const lockMs = lockMinutes * 60 * 1000;
+    const lockMs = Math.round(lockMinutes * 60 * 1000);
     updates.$set = {
       lockoutUntil: new Date(Date.now() + lockMs),
       lockoutStep: Math.min(step + 1, LOCKOUT_STEPS.length - 1)
