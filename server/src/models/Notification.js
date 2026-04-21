@@ -9,10 +9,9 @@ const notificationSchema = new mongoose.Schema({
       'NEW_RESEARCH_SUBMITTED', 'REVIEW_RECEIVED', 'ACCOUNT_APPROVED',
       'SYSTEM_UPDATE', 'NEW_USER_REGISTERED', 'RESEARCH_VIEWED',
       'BOOKMARK_MILESTONE', 'NEW_FOLLOWER', 'CO_AUTHOR_TAGGED',
-      // Security notifications
-      'LOGIN_ACTIVITY', 'SECURITY_ALERT',
-      // Approval notifications
-      'RESEARCH_APPROVED_FOR_REVIEW'
+      'RESEARCH_APPROVED_FOR_REVIEW',
+      // Login / security notifications
+      'LOGIN_SUCCESS', 'LOGIN_FAILED'
     ],
     required: true
   },
