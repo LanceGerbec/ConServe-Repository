@@ -15,16 +15,13 @@ const Register = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [fieldErrors, setFieldErrors] = useState({});
   const [fieldValid, setFieldValid] = useState({});
-  const [studentIdStatus, setStudentIdStatus] = useState(null); // null | 'valid' | 'invalid' | 'used'
+  const [studentIdStatus, setStudentIdStatus] = useState(null);
   const [checkingId, setCheckingId] = useState(false);
-
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false, uppercase: false, lowercase: false, number: false, special: false
   });
-
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessages, setErrorMessages] = useState([]);
@@ -41,13 +38,11 @@ const Register = () => {
       .catch(() => {});
   }, []);
 
-  // Re-check ID when role changes
   useEffect(() => {
     if (formData.studentId.length >= 3) checkStudentId(formData.studentId);
     else { setStudentIdStatus(null); setFieldErrors(p => ({ ...p, studentId: '' })); }
   }, [formData.role]);
 
-  // Password requirements – min 8
   useEffect(() => {
     const pwd = formData.password;
     setPasswordRequirements({
@@ -63,21 +58,13 @@ const Register = () => {
     let error = '', valid = false;
     switch (name) {
       case 'firstName': case 'lastName':
-        valid = value.trim().length >= 2;
-        error = valid ? '' : 'Min 2 characters';
-        break;
+        valid = value.trim().length >= 2; error = valid ? '' : 'Min 2 characters'; break;
       case 'email':
-        valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-        error = valid ? '' : 'Invalid email format';
-        break;
+        valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); error = valid ? '' : 'Invalid email format'; break;
       case 'password':
-        valid = Object.values(passwordRequirements).every(Boolean);
-        error = valid ? '' : 'Must meet all requirements';
-        break;
+        valid = Object.values(passwordRequirements).every(Boolean); error = valid ? '' : 'Must meet all requirements'; break;
       case 'confirmPassword':
-        valid = value === formData.password && value.length > 0;
-        error = valid ? '' : 'Passwords must match';
-        break;
+        valid = value === formData.password && value.length > 0; error = valid ? '' : 'Passwords must match'; break;
     }
     setFieldErrors(p => ({ ...p, [name]: error }));
     setFieldValid(p => ({ ...p, [name]: valid }));
@@ -90,21 +77,13 @@ const Register = () => {
   };
 
   const checkStudentId = async (id) => {
-    if (!id || id.length < 3) {
-      setStudentIdStatus(null);
-      setFieldErrors(p => ({ ...p, studentId: '' }));
-      return;
-    }
+    if (!id || id.length < 3) { setStudentIdStatus(null); setFieldErrors(p => ({ ...p, studentId: '' })); return; }
     setCheckingId(true);
     try {
-      const endpoint = formData.role === 'faculty'
-        ? `valid-faculty-ids/check/${id}`
-        : `valid-student-ids/check/${id}`;
+      const endpoint = formData.role === 'faculty' ? `valid-faculty-ids/check/${id}` : `valid-student-ids/check/${id}`;
       const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`);
       const data = await res.json();
-
       if (data.valid) {
-        // ✅ PRIVACY FIX: Do NOT show the name — just confirm the ID is valid
         setStudentIdStatus('valid');
         setFieldErrors(p => ({ ...p, studentId: '' }));
         setFieldValid(p => ({ ...p, studentId: true }));
@@ -121,9 +100,7 @@ const Register = () => {
       setStudentIdStatus('invalid');
       setFieldErrors(p => ({ ...p, studentId: 'Could not verify ID — check your connection' }));
       setFieldValid(p => ({ ...p, studentId: false }));
-    } finally {
-      setCheckingId(false);
-    }
+    } finally { setCheckingId(false); }
   };
 
   const handleSubmit = async (e) => {
@@ -135,7 +112,6 @@ const Register = () => {
     if (!Object.values(passwordRequirements).every(Boolean)) errors.push('Password must meet all requirements');
     if (!fieldValid.email) errors.push('Invalid email address');
     if (errors.length > 0) { setErrorMessages(errors); setShowErrorModal(true); return; }
-
     setLoading(true);
     const result = await register(formData);
     if (result.success) {
@@ -178,9 +154,23 @@ const Register = () => {
           <div className="w-12 h-12 sm:w-14 sm:h-14 bg-navy dark:bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
             {logo ? <img src={logo} alt="ConServe" className="w-full h-full object-cover" /> : <span className="text-white font-bold text-xl sm:text-2xl">C</span>}
           </div>
-          <div className="flex space-x-2">
-            <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"><Home size={18} className="text-gray-600 dark:text-gray-400" /></Link>
-            <Link to="/" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"><X size={18} className="text-gray-600 dark:text-gray-400" /></Link>
+
+          {/* Top-right: Home button with label + X */}
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-navy hover:text-white dark:hover:bg-blue-600 text-gray-600 dark:text-gray-400 transition-all duration-200 text-sm font-semibold group"
+            >
+              <Home size={15} className="group-hover:scale-110 transition-transform" />
+              <span>Home</span>
+            </Link>
+            <Link
+              to="/"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+              title="Close"
+            >
+              <X size={18} />
+            </Link>
           </div>
         </div>
 
@@ -197,7 +187,6 @@ const Register = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-
           {/* Name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {['firstName', 'lastName'].map((field) => (
@@ -243,7 +232,7 @@ const Register = () => {
             </select>
           </div>
 
-          {/* Student / Faculty ID — PRIVACY: no name shown */}
+          {/* Student / Faculty ID */}
           <div>
             <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {formData.role === 'faculty' ? 'Faculty ID' : 'Student ID'} <span className="text-red-500">*</span>
@@ -265,22 +254,15 @@ const Register = () => {
                 {!checkingId && studentIdStatus && studentIdStatus !== 'valid' && <X className="text-red-500" size={18} />}
               </div>
             </div>
-
-            {/* Status messages — NO name displayed */}
             {studentIdStatus === 'valid' && (
               <p className="text-green-600 dark:text-green-400 text-xs mt-1 flex items-center gap-1">
                 <CheckCircle size={12} /> ID verified successfully
               </p>
             )}
             {fieldErrors.studentId && (
-              <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={10} />{fieldErrors.studentId}
-              </p>
+              <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={10} />{fieldErrors.studentId}</p>
             )}
-            {/* Privacy note */}
-            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-              ID details will be verified by the admin during account approval.
-            </p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">ID details will be verified by the admin during account approval.</p>
           </div>
 
           {/* Password */}
@@ -298,8 +280,6 @@ const Register = () => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-
-            {/* Requirements */}
             {formData.password && (
               <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 space-y-1">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Password Requirements:</p>
@@ -364,10 +344,24 @@ const Register = () => {
           </button>
         </form>
 
-        <p className="text-center text-gray-600 dark:text-gray-400 mt-4 text-xs sm:text-sm">
-          Have an account?{' '}
-          <Link to="/login" className="text-navy dark:text-blue-400 hover:text-navy-700 dark:hover:text-blue-300 font-semibold">Sign in</Link>
-        </p>
+        {/* Bottom links */}
+        <div className="mt-5 space-y-3">
+          <p className="text-center text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+            Have an account?{' '}
+            <Link to="/login" className="text-navy dark:text-blue-400 hover:text-navy-700 dark:hover:text-blue-300 font-semibold">Sign in</Link>
+          </p>
+
+          {/* Back to Home — prominent bottom link */}
+          <div className="flex justify-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-navy hover:text-navy dark:hover:border-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 text-sm font-semibold group"
+            >
+              <Home size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+              Back to Home
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
