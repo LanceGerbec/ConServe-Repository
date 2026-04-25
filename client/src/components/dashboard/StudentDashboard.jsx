@@ -296,15 +296,23 @@ const StudentDashboard = () => {
             <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
           </div>
 
-          <div className="relative flex items-center gap-3 sm:gap-6">
-            <div className="hidden xs:block flex-shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
-                <span className="text-lg sm:text-2xl font-bold text-white tracking-tight">
-                  {user?.firstName?.charAt(0)}
-                  {user?.lastName?.charAt(0)}
-                </span>
-              </div>
-            </div>
+            <div className="relative flex items-center gap-3 sm:gap-6">
+             <div className="hidden xs:block flex-shrink-0">
+  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+    {user?.avatar ? (
+      <img
+        src={user.avatar}
+        alt={`${user?.firstName || 'User'} ${user?.lastName || ''}`}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <span className="text-lg sm:text-2xl font-bold text-white tracking-tight">
+        {user?.firstName?.charAt(0)}
+        {user?.lastName?.charAt(0)}
+      </span>
+    )}
+  </div>
+</div>
 
             <div className="flex-1 min-w-0">
               <div className="mb-1 sm:mb-2">

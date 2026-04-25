@@ -408,13 +408,21 @@ const FacultyDashboard = () => {
 
           <div className="relative flex items-center gap-3 sm:gap-6">
             <div className="hidden xs:block flex-shrink-0">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
-                <span className="text-base sm:text-lg md:text-2xl font-bold text-white tracking-tight">
-                  {user?.firstName?.charAt(0)}
-                  {user?.lastName?.charAt(0)}
-                </span>
-              </div>
-            </div>
+  <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+    {user?.avatar ? (
+      <img
+        src={user.avatar}
+        alt={`${user?.firstName || 'User'} ${user?.lastName || ''}`}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <span className="text-base sm:text-lg md:text-2xl font-bold text-white tracking-tight">
+        {user?.firstName?.charAt(0)}
+        {user?.lastName?.charAt(0)}
+      </span>
+    )}
+  </div>
+</div>
 
             <div className="flex-1 min-w-0">
               <div className="mb-1 sm:mb-2">
