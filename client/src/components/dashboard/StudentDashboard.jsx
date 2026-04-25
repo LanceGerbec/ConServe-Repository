@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BookOpen, Upload, Calendar, Eye, Activity, Bookmark, Search, X, ChevronRight, FileText, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SubmitResearch from '../research/SubmitResearch';
@@ -9,6 +10,8 @@ import IMRaDReminderModal from '../common/IMRaDReminderModal';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -21,27 +24,60 @@ const StudentDashboard = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [showIMRaDModal, setShowIMRaDModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ show: false, paperId: null, title: '' });
-  
+
   const submissionsRef = useRef(null);
   const bookmarksRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    if (activeTab === 'overview' || activeTab === 'submissions' || activeTab === 'bookmarks') fetchData();
+    const tab = searchParams.get('tab');
+    const allowedTabs = ['overview', 'submissions', 'bookmarks', 'activity'];
+
+    if (tab && allowedTabs.includes(tab)) {
+      setActiveTab(tab);
+
+      setTimeout(() => {
+        if (tab === 'submissions') {
+          submissionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        if (tab === 'bookmarks') {
+          bookmarksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    }
+
+    if (!tab) {
+      setActiveTab('overview');
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (activeTab === 'overview' || activeTab === 'submissions' || activeTab === 'bookmarks') {
+      fetchData();
+    }
   }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
+
     try {
       const token = localStorage.getItem('token');
-      const headers = { 'Authorization': `Bearer ${token}` };
+      const headers = { Authorization: `Bearer ${token}` };
+
       const [submissionsRes, bookmarksRes] = await Promise.all([
         fetch(`${API_URL}/research/my-submissions`, { headers }),
         fetch(`${API_URL}/bookmarks/my-bookmarks`, { headers })
       ]);
-      const [submissionsData, bookmarksData] = await Promise.all([submissionsRes.json(), bookmarksRes.json()]);
+
+      const [submissionsData, bookmarksData] = await Promise.all([
+        submissionsRes.json(),
+        bookmarksRes.json()
+      ]);
+
       setSubmissions(submissionsData.papers || []);
       setBookmarks(bookmarksData.bookmarks || []);
+
       const totalViews = (submissionsData.papers || []).reduce((sum, p) => sum + (p.views || 0), 0);
       setStats({ submissions: submissionsData.count || 0, views: totalViews });
     } catch (error) {
@@ -54,10 +90,12 @@ const StudentDashboard = () => {
   const handleRemoveBookmark = async (bookmarkId, researchId) => {
     try {
       const token = localStorage.getItem('token');
+
       await fetch(`${API_URL}/bookmarks/toggle/${researchId}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       setBookmarks(prev => prev.filter(b => b._id !== bookmarkId));
       showToast('Bookmark removed', 'success');
     } catch (error) {
@@ -77,19 +115,20 @@ const StudentDashboard = () => {
   const confirmDelete = async () => {
     const { paperId } = deleteModal;
     setDeleteModal({ show: false, paperId: null, title: '' });
-    
+
     try {
       const token = localStorage.getItem('token');
+
       const res = await fetch(`${API_URL}/research/${paperId}/author-delete`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to delete');
       }
-      
+
       setSubmissions(prev => prev.filter(p => p._id !== paperId));
       setStats(prev => ({ ...prev, submissions: prev.submissions - 1 }));
       showToast('Paper deleted successfully', 'success');
@@ -100,10 +139,35 @@ const StudentDashboard = () => {
 
   const scrollToSection = (ref, tab) => {
     setActiveTab(tab);
-    setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
-  const showToast = (msg, type) => setToast({ show: true, message: msg, type });
+  const handleTabChange = (tabId) => {
+    setSearch('');
+
+    if (tabId === 'overview') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: tabId });
+    }
+
+    setActiveTab(tabId);
+
+    if (tabId === 'submissions') {
+      scrollToSection(submissionsRef, 'submissions');
+    }
+
+    if (tabId === 'bookmarks') {
+      scrollToSection(bookmarksRef, 'bookmarks');
+    }
+  };
+
+  const showToast = (msg, type) => {
+    setToast({ show: true, message: msg, type });
+  };
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -112,37 +176,32 @@ const StudentDashboard = () => {
       rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
       revision: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
     };
+
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
 
   const canEdit = (status) => status === 'pending' || status === 'revision';
   const canDelete = (status) => status === 'rejected';
 
-  const filteredSubmissions = submissions.filter(p => p.title?.toLowerCase().includes(search.toLowerCase()));
-  const filteredBookmarks = bookmarks.filter(b => b.research?.title?.toLowerCase().includes(search.toLowerCase()));
+  const filteredSubmissions = submissions.filter(p =>
+    p.title?.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const StatCard = ({ icon: Icon, label, value, color, onClick }) => (
-    <div onClick={onClick} className={`bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 shadow-md border-2 border-gray-100 dark:border-gray-700 transition-all ${onClick ? 'active:scale-95 cursor-pointer hover:shadow-lg' : ''}`}>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${color} rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
-          <Icon className="text-white" size={18} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-xl sm:text-2xl font-bold text-navy dark:text-accent">{value}</div>
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{label}</p>
-        </div>
-        {onClick && <ChevronRight className="text-gray-400 flex-shrink-0" size={16} />}
-      </div>
-    </div>
+  const filteredBookmarks = bookmarks.filter(b =>
+    b.research?.title?.toLowerCase().includes(search.toLowerCase())
   );
 
   const PaperCard = ({ paper, onRemove, isBookmark = false, isSubmission = false }) => (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-md border border-gray-200 dark:border-gray-700 active:scale-98 transition-all">
       <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 mb-3">
         <div className="flex-1 min-w-0 w-full sm:w-auto">
-          <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white line-clamp-2 mb-2 active:text-navy cursor-pointer" onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}>
+          <h3
+            className="font-bold text-sm sm:text-base text-gray-900 dark:text-white line-clamp-2 mb-2 active:text-navy cursor-pointer"
+            onClick={() => window.location.href = `/research/${isBookmark ? paper.research._id : paper._id}`}
+          >
             {isBookmark ? paper.research.title : paper.title}
           </h3>
+
           <div className="mb-2 flex items-start gap-2">
             <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">BY:</span>
             <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
@@ -150,24 +209,30 @@ const StudentDashboard = () => {
             </p>
           </div>
         </div>
+
         {isSubmission && (
           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold whitespace-nowrap self-start ${getStatusBadge(paper.status)}`}>
             {paper.status?.toUpperCase()}
           </span>
         )}
       </div>
-      
+
       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
         {isBookmark ? paper.research.abstract : paper.abstract}
       </p>
-      
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
         <div className="flex flex-wrap gap-2 sm:gap-3 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1.5">
             <Calendar size={14} />
-            <span className="hidden sm:inline">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-            <span className="sm:hidden">{new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+            <span className="hidden sm:inline">
+              {new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+            <span className="sm:hidden">
+              {new Date(paper.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+            </span>
           </span>
+
           {isSubmission && paper.status === 'approved' && (
             <span className="flex items-center gap-1.5">
               <Eye size={14} />
@@ -175,26 +240,30 @@ const StudentDashboard = () => {
             </span>
           )}
         </div>
-        
+
         <div className="w-full sm:w-auto flex gap-2">
           {isBookmark ? (
-            <button onClick={() => onRemove(paper._id, paper.research._id)} className="w-full sm:w-auto px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95">
+            <button
+              onClick={() => onRemove(paper._id, paper.research._id)}
+              className="w-full sm:w-auto px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95"
+            >
               Remove
             </button>
           ) : isSubmission && (
             <>
               {canEdit(paper.status) && (
-                <button 
-                  onClick={() => handleEdit(paper)} 
+                <button
+                  onClick={() => handleEdit(paper)}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-xs font-bold transition active:scale-95"
                 >
                   <Edit2 size={14} />
                   Edit
                 </button>
               )}
+
               {canDelete(paper.status) && (
-                <button 
-                  onClick={() => handleDeleteRejected(paper._id, paper.title)} 
+                <button
+                  onClick={() => handleDeleteRejected(paper._id, paper.title)}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-xs font-bold transition active:scale-95"
                 >
                   <Trash2 size={14} />
@@ -231,16 +300,23 @@ const StudentDashboard = () => {
             <div className="hidden xs:block flex-shrink-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
                 <span className="text-lg sm:text-2xl font-bold text-white tracking-tight">
-                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                  {user?.firstName?.charAt(0)}
+                  {user?.lastName?.charAt(0)}
                 </span>
               </div>
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="mb-1 sm:mb-2">
-                <p className="text-xs sm:text-sm font-medium text-blue-100 mb-0.5 sm:mb-1">Welcome back,</p>
-                <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">{user?.firstName} {user?.lastName}</h1>
-                <p className="text-xs sm:text-sm text-blue-200 font-medium">Student Dashboard</p>
+                <p className="text-xs sm:text-sm font-medium text-blue-100 mb-0.5 sm:mb-1">
+                  Welcome back,
+                </p>
+                <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">
+                  {user?.firstName} {user?.lastName}
+                </h1>
+                <p className="text-xs sm:text-sm text-blue-200 font-medium">
+                  Student Dashboard
+                </p>
               </div>
 
               <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3"></div>
@@ -249,10 +325,16 @@ const StudentDashboard = () => {
                 <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
                   <Upload size={14} className="text-blue-300 flex-shrink-0" />
                   <span className="font-semibold text-white">{stats.submissions}</span>
-                  <span className="text-blue-200 hidden sm:inline">Submission{stats.submissions !== 1 ? 's' : ''}</span>
-                  <span className="text-blue-200 sm:hidden">Paper{stats.submissions !== 1 ? 's' : ''}</span>
+                  <span className="text-blue-200 hidden sm:inline">
+                    Submission{stats.submissions !== 1 ? 's' : ''}
+                  </span>
+                  <span className="text-blue-200 sm:hidden">
+                    Paper{stats.submissions !== 1 ? 's' : ''}
+                  </span>
                 </div>
+
                 <div className="w-px h-3 sm:h-4 bg-blue-400/30"></div>
+
                 <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100">
                   <Eye size={14} className="text-blue-300 flex-shrink-0" />
                   <span className="font-semibold text-white">{stats.views}</span>
@@ -276,13 +358,18 @@ const StudentDashboard = () => {
               { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', badge: bookmarks.length },
               { id: 'activity', icon: Activity, label: 'Activity' }
             ].map(tab => (
-              <button key={tab.id} onClick={() => {
-                setActiveTab(tab.id);
-                if (tab.id === 'submissions') scrollToSection(submissionsRef, 'submissions');
-                if (tab.id === 'bookmarks') scrollToSection(bookmarksRef, 'bookmarks');
-              }} className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-semibold whitespace-nowrap transition-all text-xs sm:text-sm ${activeTab === tab.id ? 'bg-navy text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'}`}>
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-semibold whitespace-nowrap transition-all text-xs sm:text-sm ${
+                  activeTab === tab.id
+                    ? 'bg-navy text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md active:scale-95'
+                }`}
+              >
                 <tab.icon size={16} />
                 <span>{tab.label}</span>
+
                 {tab.badge > 0 && (
                   <span className="ml-0.5 sm:ml-1 px-1.5 sm:px-2 py-0.5 bg-[#FFB27F] text-white text-xs font-bold rounded-full">
                     {tab.badge}
@@ -296,28 +383,46 @@ const StudentDashboard = () => {
         <div className="px-3 sm:px-4 space-y-4 sm:space-y-6">
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
-              <button onClick={() => setShowIMRaDModal(true)} className="bg-gradient-to-br from-navy to-blue-700 text-white p-4 sm:p-6 rounded-2xl shadow-lg active:scale-95 transition-all">
+              <button
+                onClick={() => setShowIMRaDModal(true)}
+                className="bg-gradient-to-br from-navy to-blue-700 text-white p-4 sm:p-6 rounded-2xl shadow-lg active:scale-95 transition-all"
+              >
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-xl flex items-center justify-center">
                     <Upload size={20} />
                   </div>
+
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-base sm:text-lg mb-0.5 sm:mb-1">Submit Research</h3>
-                    <p className="text-xs sm:text-sm text-blue-100 opacity-90">Upload your paper</p>
+                    <h3 className="font-bold text-base sm:text-lg mb-0.5 sm:mb-1">
+                      Submit Research
+                    </h3>
+                    <p className="text-xs sm:text-sm text-blue-100 opacity-90">
+                      Upload your paper
+                    </p>
                   </div>
+
                   <ChevronRight size={18} className="opacity-70 flex-shrink-0" />
                 </div>
               </button>
 
-              <button onClick={() => window.location.href = '/explore'} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-lg border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition-all">
+              <button
+                onClick={() => window.location.href = '/explore'}
+                className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-lg border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition-all"
+              >
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                     <BookOpen className="text-blue-600" size={20} />
                   </div>
+
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white mb-0.5 sm:mb-1">Browse Papers</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Explore repository</p>
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white mb-0.5 sm:mb-1">
+                      Browse Papers
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Explore repository
+                    </p>
                   </div>
+
                   <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
                 </div>
               </button>
@@ -325,58 +430,129 @@ const StudentDashboard = () => {
           )}
 
           {activeTab === 'submissions' && (
-            <div ref={submissionsRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
+            <div
+              ref={submissionsRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4"
+            >
               <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
                   <Upload size={18} className="text-blue-600" />
                   My Submissions ({filteredSubmissions.length})
                 </h2>
+
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search submissions..." className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={16} /></button>}
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search submissions..."
+                    className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900"
+                  />
+                  {search && (
+                    <button
+                      onClick={() => setSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
+
               <div className="p-3 sm:p-4">
                 {filteredSubmissions.length === 0 ? (
                   <div className="text-center py-8 sm:py-12">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                       <Upload size={28} className="text-gray-400" />
                     </div>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">{search ? 'No submissions found' : 'No submissions yet'}</p>
-                    {!search && <button onClick={() => setShowSubmitModal(true)} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Submit Your First Paper</button>}
+
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">
+                      {search ? 'No submissions found' : 'No submissions yet'}
+                    </p>
+
+                    {!search && (
+                      <button
+                        onClick={() => setShowSubmitModal(true)}
+                        className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline"
+                      >
+                        Submit Your First Paper
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4">{filteredSubmissions.map(p => <PaperCard key={p._id} paper={p} isSubmission />)}</div>
+                  <div className="space-y-3 sm:space-y-4">
+                    {filteredSubmissions.map(p => (
+                      <PaperCard key={p._id} paper={p} isSubmission />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           )}
 
           {activeTab === 'bookmarks' && (
-            <div ref={bookmarksRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4">
+            <div
+              ref={bookmarksRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden scroll-mt-4"
+            >
               <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
                   <Bookmark size={18} className="text-purple-600" />
                   Bookmarked Papers ({filteredBookmarks.length})
                 </h2>
+
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bookmarks..." className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900" />
-                  {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={16} /></button>}
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search bookmarks..."
+                    className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-navy focus:ring-4 focus:ring-navy/10 focus:outline-none dark:bg-gray-900"
+                  />
+                  {search && (
+                    <button
+                      onClick={() => setSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
+
               <div className="p-3 sm:p-4">
                 {filteredBookmarks.length === 0 ? (
                   <div className="text-center py-8 sm:py-12">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                       <Bookmark size={28} className="text-gray-400" />
                     </div>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">{search ? 'No bookmarks found' : 'No bookmarks yet'}</p>
-                    {!search && <button onClick={() => window.location.href = '/explore'} className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline">Browse Papers</button>}
+
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 font-medium">
+                      {search ? 'No bookmarks found' : 'No bookmarks yet'}
+                    </p>
+
+                    {!search && (
+                      <button
+                        onClick={() => window.location.href = '/explore'}
+                        className="text-sm sm:text-base text-navy dark:text-accent font-semibold hover:underline"
+                      >
+                        Browse Papers
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4">{filteredBookmarks.map(b => <PaperCard key={b._id} paper={b} isBookmark onRemove={handleRemoveBookmark} />)}</div>
+                  <div className="space-y-3 sm:space-y-4">
+                    {filteredBookmarks.map(b => (
+                      <PaperCard
+                        key={b._id}
+                        paper={b}
+                        isBookmark
+                        onRemove={handleRemoveBookmark}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -386,10 +562,18 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      {showSubmitModal && <SubmitResearch onClose={() => setShowSubmitModal(false)} onSuccess={() => { setShowSubmitModal(false); fetchData(); }} />}
-      
+      {showSubmitModal && (
+        <SubmitResearch
+          onClose={() => setShowSubmitModal(false)}
+          onSuccess={() => {
+            setShowSubmitModal(false);
+            fetchData();
+          }}
+        />
+      )}
+
       {showEditModal && editingPaper && (
-        <EditResearch 
+        <EditResearch
           research={editingPaper}
           onClose={() => {
             setShowEditModal(false);
@@ -411,35 +595,67 @@ const StudentDashboard = () => {
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/20">
                   <Trash2 size={24} className="text-red-600 dark:text-red-400" />
                 </div>
+
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Delete Rejected Paper?</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">This action cannot be undone. The paper and its PDF will be permanently deleted.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                    Delete Rejected Paper?
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    This action cannot be undone. The paper and its PDF will be permanently deleted.
+                  </p>
                 </div>
-                <button onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+
+                <button
+                  onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
                   <X size={20} className="text-gray-500" />
                 </button>
               </div>
             </div>
 
             <div className="p-6 bg-gray-50 dark:bg-gray-900/50">
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Paper to delete:</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Paper to delete:
+              </p>
+
               <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
-                <p className="text-sm text-gray-900 dark:text-white font-medium line-clamp-2">{deleteModal.title}</p>
+                <p className="text-sm text-gray-900 dark:text-white font-medium line-clamp-2">
+                  {deleteModal.title}
+                </p>
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })} className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200">
+                <button
+                  onClick={() => setDeleteModal({ show: false, paperId: null, title: '' })}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                >
                   Cancel
                 </button>
-                <button onClick={confirmDelete} className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center gap-2">
-                  <Trash2 size={18} />Delete
+
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={18} />
+                  Delete
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-      {showIMRaDModal && <IMRaDReminderModal isOpen={showIMRaDModal} onClose={() => setShowIMRaDModal(false)} onConfirm={() => { setShowIMRaDModal(false); setShowSubmitModal(true); }} />}
+
+      {showIMRaDModal && (
+        <IMRaDReminderModal
+          isOpen={showIMRaDModal}
+          onClose={() => setShowIMRaDModal(false)}
+          onConfirm={() => {
+            setShowIMRaDModal(false);
+            setShowSubmitModal(true);
+          }}
+        />
+      )}
     </>
   );
 };
