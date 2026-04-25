@@ -721,35 +721,77 @@ const confirmDeleteWithPassword = async (password, reason) => {
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl" />
-          </div>
-          <div className="relative flex items-center gap-3 sm:gap-6">
-            <div className="hidden xs:block flex-shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform hover:scale-105 transition-transform">
-                <Shield size={24} className="sm:w-8 sm:h-8 text-white" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 truncate">Admin Dashboard</h1>
-              <p className="text-xs sm:text-sm text-blue-200 font-medium">Welcome, {user?.firstName} {user?.lastName}</p>
-              <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2 sm:my-3" />
-              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
-                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100"><FileText size={14} className="text-blue-300 flex-shrink-0" /><span className="font-semibold text-white">{stats?.research?.total || 0}</span><span className="text-blue-200">Papers</span></div>
-                <div className="w-px h-3 sm:h-4 bg-blue-400/30" />
-                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100"><Activity size={14} className="text-green-300 flex-shrink-0" /><span className="font-semibold text-white">{stats?.users?.activeUsers || 0}</span><span className="text-blue-200">Active</span></div>
-                <div className="w-px h-3 sm:h-4 bg-blue-400/30" />
-                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-100"><Clock size={14} className="text-yellow-300 flex-shrink-0" /><span className="font-semibold text-white">{(stats?.users?.pendingApproval || 0) + (stats?.research?.pending || 0)}</span><span className="text-blue-200">Pending</span></div>
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-400/20 backdrop-blur-sm rounded-xl border border-orange-400/30">
-              <Shield size={16} className="text-orange-300" />
-              <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
-            </div>
-          </div>
+       <div className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xl relative overflow-hidden">
+  <div className="absolute inset-0 opacity-10">
+    <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+  </div>
+
+  <div className="relative flex items-center gap-4 sm:gap-6">
+    <div className="flex-shrink-0">
+      <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-slate-500 via-blue-600 to-navy flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt={`${user?.firstName || 'Admin'} ${user?.lastName || ''}`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-base sm:text-lg md:text-2xl font-bold text-white tracking-tight">
+            {`${user?.firstName?.[0] || 'A'}${user?.lastName?.[0] || ''}`.toUpperCase()}
+          </span>
+        )}
+      </div>
+    </div>
+
+    <div className="flex-1 min-w-0">
+      <div className="mb-1 sm:mb-2">
+        <p className="text-xs sm:text-sm font-medium text-blue-100 mb-0.5">
+          Welcome,
+        </p>
+
+        <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white mb-0.5 truncate">
+          {user?.firstName} {user?.lastName}
+        </h1>
+
+        <p className="text-xs sm:text-sm text-blue-200 font-medium">
+          Admin Dashboard
+        </p>
+      </div>
+
+      <div className="w-full max-w-md h-px bg-gradient-to-r from-blue-400/50 via-blue-300/30 to-transparent my-2"></div>
+
+      <div className="flex items-center gap-2 sm:gap-4 text-xs flex-wrap">
+        <div className="flex items-center gap-1.5 text-blue-100">
+          <FileText size={12} className="text-blue-300 flex-shrink-0" />
+          <span className="font-semibold text-white">{stats.research.total}</span>
+          <span className="text-blue-200">Papers</span>
         </div>
+
+        <div className="w-px h-3 bg-blue-400/30"></div>
+
+        <div className="flex items-center gap-1.5 text-blue-100">
+          <Activity size={12} className="text-green-300 flex-shrink-0" />
+          <span className="font-semibold text-white">{stats.users.activeUsers}</span>
+          <span className="text-blue-200">Active</span>
+        </div>
+
+        <div className="w-px h-3 bg-blue-400/30"></div>
+
+        <div className="flex items-center gap-1.5 text-blue-100">
+          <Clock size={12} className="text-yellow-300 flex-shrink-0" />
+          <span className="font-semibold text-white">{stats.research.pending}</span>
+          <span className="text-blue-200">Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <div className="hidden lg:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+      <Shield size={16} className="text-orange-300" />
+      <span className="text-xs sm:text-sm font-semibold text-white">Admin</span>
+    </div>
+  </div>
+</div>
 
         {/* Tabs */}
         <div className="px-4 mb-6">
