@@ -20,7 +20,8 @@ import {
   Users,
   User,
   FileText,
-  Bookmark
+  Bookmark,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -46,7 +47,7 @@ const Layout = ({ children }) => {
   useEffect(() => {
     setMenuOpen(false);
     setUserMenuOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   const fetchLogos = async () => {
     try {
@@ -88,10 +89,8 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
-      {/* Navbar */}
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          {/* Brand */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <a
               href="https://neust.edu.ph/"
@@ -136,7 +135,6 @@ const Layout = ({ children }) => {
             </Link>
           </div>
 
-          {/* Desktop links */}
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {navLinks.map(link => (link.public || user) && (
               <Link
@@ -168,7 +166,6 @@ const Layout = ({ children }) => {
             )}
           </div>
 
-          {/* Right actions */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={toggleTheme}
@@ -215,7 +212,6 @@ const Layout = ({ children }) => {
 
                   {userMenuOpen && (
                     <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden animate-fade-in">
-                      {/* User summary */}
                       <div className="p-3 bg-gradient-to-r from-navy/5 to-accent/5 dark:from-navy/20 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
                         <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border-2 border-gray-200 dark:border-gray-600">
                           {user?.avatar ? (
@@ -237,10 +233,9 @@ const Layout = ({ children }) => {
                         </div>
                       </div>
 
-                      {/* Menu actions */}
                       <div className="p-1.5">
                         <button
-                          onClick={() => goTo('/profile')}
+                          onClick={() => goTo('/dashboard')}
                           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition text-left"
                         >
                           <User size={15} />
@@ -314,7 +309,6 @@ const Layout = ({ children }) => {
           </div>
         </div>
 
-        {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 space-y-1 animate-fade-in">
             {user && (
@@ -368,7 +362,7 @@ const Layout = ({ children }) => {
                 </Link>
 
                 <button
-                  onClick={() => goTo('/profile')}
+                  onClick={() => goTo('/dashboard')}
                   className="w-full text-left flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                 >
                   <User size={16} />
@@ -411,7 +405,7 @@ const Layout = ({ children }) => {
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
-                  <BellIcon />
+                  <Bell size={16} />
                   Notifications
                 </Link>
 
@@ -474,14 +468,12 @@ const Layout = ({ children }) => {
         />
       )}
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
         {children}
       </main>
 
       <TourGuideButton />
 
-      {/* Footer */}
       <footer className="relative mt-auto">
         <div className="overflow-hidden relative">
           <svg
@@ -640,21 +632,5 @@ const Layout = ({ children }) => {
     </div>
   );
 };
-
-const BellIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
-    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8a6 6 0 0 0-12 0c0 4.499-1.411 5.956-2.738 7.326" />
-  </svg>
-);
 
 export default Layout;
