@@ -135,7 +135,7 @@ const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-navy to-accent flex items-center justify-center flex-shrink-0 shadow-md">
+        <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-navy to-accent flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white dark:ring-gray-800">
           {user?.avatar ? (
             <img
               src={user.avatar}
@@ -149,12 +149,12 @@ const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }
           )}
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-bold text-gray-900 dark:text-white truncate">
             {user.firstName} {user.lastName}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-            {user.role}
+            {user.role || 'user'}
           </p>
         </div>
       </div>
@@ -164,7 +164,10 @@ const UserGridCard = memo(({ user, selected, onSelect, onDelete, currentUserId }
       </p>
 
       <div className="flex items-center justify-between mt-3">
-        <span className="text-xs text-gray-500">{user.studentId}</span>
+        <span className="text-xs text-gray-500 truncate">
+          {user.studentId || 'No ID'}
+        </span>
+
         <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
           {user.isApproved ? 'APPROVED' : 'PENDING'}
         </span>
@@ -192,7 +195,7 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
 
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-navy to-accent flex items-center justify-center flex-shrink-0 shadow-sm">
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-navy to-accent flex items-center justify-center flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-gray-800">
             {user?.avatar ? (
               <img
                 src={user.avatar}
@@ -218,7 +221,7 @@ const UserListRow = memo(({ user, selected, onSelect, onDelete, currentUserId })
       </td>
 
       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
-        {user.studentId}
+        {user.studentId || 'No ID'}
       </td>
 
       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
@@ -285,7 +288,7 @@ const PendingUserCard = memo(({ user, onApprove, onReject }) => {
   return (
     <div className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 transition-all">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-navy to-accent flex items-center justify-center flex-shrink-0 shadow-md">
+        <div className="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-navy to-accent flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white dark:ring-gray-800">
           {user?.avatar ? (
             <img
               src={user.avatar}
@@ -310,7 +313,7 @@ const PendingUserCard = memo(({ user, onApprove, onReject }) => {
       </div>
 
       <p className="text-xs text-gray-500 mb-3">
-        ID: {user.studentId} • {user.role}
+        ID: {user.studentId || 'No ID'} • {user.role}
       </p>
 
       <div className="flex gap-2">
