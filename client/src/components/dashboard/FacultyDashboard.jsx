@@ -36,6 +36,8 @@ const FacultyDashboard = () => {
   const bookmarksRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL;
 
+  const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
+
   useEffect(() => {
     const tab = searchParams.get('tab');
     const allowedTabs = ['overview', 'reviews', 'submissions', 'bookmarks', 'activity'];
@@ -295,7 +297,9 @@ const FacultyDashboard = () => {
 
       {!isBookmark && !isSubmission && !isReview && (
         <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-semibold">SUBMITTED BY:</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-semibold">
+            SUBMITTED BY:
+          </p>
           <p className="text-sm text-gray-700 dark:text-gray-300 font-medium line-clamp-1">
             {paper.submittedBy?.firstName} {paper.submittedBy?.lastName}
           </p>
@@ -304,8 +308,12 @@ const FacultyDashboard = () => {
 
       {isReview && (
         <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-          <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">YOUR REVIEW</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{paper.comments}</p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">
+            YOUR REVIEW
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+            {paper.comments}
+          </p>
         </div>
       )}
 
@@ -406,23 +414,22 @@ const FacultyDashboard = () => {
             <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-400 rounded-full blur-3xl"></div>
           </div>
 
-          <div className="relative flex items-center gap-3 sm:gap-6">
-            <div className="hidden xs:block flex-shrink-0">
-  <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
-    {user?.avatar ? (
-      <img
-        src={user.avatar}
-        alt={`${user?.firstName || 'User'} ${user?.lastName || ''}`}
-        className="w-full h-full object-cover"
-      />
-    ) : (
-      <span className="text-base sm:text-lg md:text-2xl font-bold text-white tracking-tight">
-        {user?.firstName?.charAt(0)}
-        {user?.lastName?.charAt(0)}
-      </span>
-    )}
-  </div>
-</div>
+          <div className="relative flex items-center gap-4 sm:gap-6">
+            <div className="flex-shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/20 transform transition-transform hover:scale-105">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={`${user?.firstName || 'User'} ${user?.lastName || ''}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-base sm:text-lg md:text-2xl font-bold text-white tracking-tight">
+                    {initials || 'U'}
+                  </span>
+                )}
+              </div>
+            </div>
 
             <div className="flex-1 min-w-0">
               <div className="mb-1 sm:mb-2">
