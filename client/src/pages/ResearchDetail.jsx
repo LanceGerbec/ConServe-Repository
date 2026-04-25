@@ -588,20 +588,14 @@ const ResearchDetail = () => {
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-wrap items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-3">
-                        {paper.awards?.length > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 text-xs font-bold border border-yellow-300">
-                            <Award size={12} />
-                            Awarded
-                          </span>
-                        )}
-                        {paper.status && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-xs font-bold border border-slate-300">
-                            <CheckCircle size={12} />
-                            {paper.status}
-                          </span>
-                        )}
-                      </div>
+                     <div className="flex items-center gap-2 mb-3">
+  {paper.awards?.length > 0 && (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 text-xs font-bold border border-yellow-300">
+      <Award size={12} />
+      Awarded
+    </span>
+  )}
+</div>
 
                       <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-tight mb-4">
                         {paper.title}
