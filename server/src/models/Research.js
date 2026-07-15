@@ -5,7 +5,6 @@ const researchSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   authors: [{ type: String, required: true }],
   coAuthors: [String],
-  // Linked user accounts for authors who have accounts
   coAuthorLinks: [{
     name: String,
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
@@ -26,6 +25,11 @@ const researchSchema = new mongoose.Schema({
   actualAuthors: [String],
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   revisionNotes: String,
+
+  // ── NEW: similarity-triggered workflow (auto-flag near-duplicate submissions) ──
+  similarityScore: { type: Number, default: 0 },
+  similarityFlag: { type: Boolean, default: false },
+
   awards: [{
     name: { type: String, required: true },
     color: { type: String, default: 'gold' },

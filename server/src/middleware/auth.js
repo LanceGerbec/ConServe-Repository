@@ -1,3 +1,4 @@
+// server/src/middleware/auth.js
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import BlacklistedToken from '../models/BlacklistedToken.js';
@@ -9,8 +10,6 @@ export const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ── Check token blacklist (protects against reuse after logout) ──────
-    // Even if an attacker intercepts a valid JWT, it can't be used after logout.
     if (decoded.jti) {
       const revoked = await BlacklistedToken.findOne({ jti: decoded.jti }).lean();
       if (revoked) return res.status(401).json({ error: 'Session expired. Please login again.' });
@@ -21,12 +20,23 @@ export const auth = async (req, res, next) => {
     if (!user.isApproved) return res.status(403).json({ error: 'Account pending approval' });
     if (!user.isActive)   return res.status(403).json({ error: 'Account inactive' });
 
+    // ── NEW: violation-triggered viewing restriction ──
+    // Blocks PDF access routes while a temporary lock is active; everything else
+    // (browsing, dashboard, etc.) still works normally.
+    if (user.viewingRestrictedUntil && user.viewingRestrictedUntil > new Date()) {
+      if (req.path.includes('/pdf')) {
+        return res.status(403).json({
+          error: 'Viewing access temporarily restricted due to repeated violations.',
+          restrictedUntil: user.viewingRestrictedUntil
+        });
+      }
+    }
+
     req.user = user;
     req.token = token;
-    req.tokenDecoded = decoded; // needed by logout to blacklist the jti
+    req.tokenDecoded = decoded;
     next();
   } catch (error) {
-    // Generic message — don't reveal WHY it failed (expired vs invalid)
     res.status(401).json({ error: 'Authentication failed' });
   }
 };

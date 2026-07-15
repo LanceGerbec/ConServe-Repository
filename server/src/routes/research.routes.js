@@ -3,6 +3,7 @@ import express from 'express';
 import { auth, authorize } from '../middleware/auth.js';
 import multer from 'multer';
 import Research from '../models/Research.js';
+import User from '../models/User.js';
 import DeletedResearch from '../models/DeletedResearch.js';
 import AuditLog from '../models/AuditLog.js';
 import { getGridFSBucket } from '../config/gridfs.js';
@@ -12,9 +13,18 @@ import { notifyNewResearchSubmitted, notifyResearchStatusChange, notifyFacultyOf
 import { sendResearchSubmissionNotification, sendResearchApprovedNotification, sendResearchRevisionNotification, sendResearchRejectedNotification, sendFacultyApprovedPaperNotification } from '../utils/emailService.js';
 import { resolveAuthorLinks } from '../controllers/authorProfileController.js';
 import Notification from '../models/Notification.js';
+import { calculateSimilarity } from '../utils/searchService.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// ── NEW: threshold + window config for violation-triggered restriction ──
+const VIOLATION_LIMIT = 3;
+const VIOLATION_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const RESTRICTION_DURATION_MS = 60 * 60 * 1000;  // 1h lock
+
+// ── NEW: threshold for similarity-triggered auto-revision ──
+const SIMILARITY_THRESHOLD = 0.75;
 
 // ── VIOLATION LOGGING (must be before /:id) ──
 router.post('/log-violation', auth, async (req, res) => {
@@ -37,7 +47,31 @@ router.post('/log-violation', auth, async (req, res) => {
         timestamp: new Date()
       }
     });
-    res.json({ success: true, message: 'Violation logged', logId: log._id });
+
+    // ── NEW: count recent violations and auto-restrict viewing access ──
+    const recentCount = await AuditLog.countDocuments({
+      user: req.user._id,
+      action: 'PDF_PROTECTION_VIOLATION',
+      timestamp: { $gte: new Date(Date.now() - VIOLATION_WINDOW_MS) }
+    });
+
+    let restricted = false;
+    if (recentCount >= VIOLATION_LIMIT) {
+      const until = new Date(Date.now() + RESTRICTION_DURATION_MS);
+      await User.findByIdAndUpdate(req.user._id, { viewingRestrictedUntil: until });
+      restricted = true;
+      await AuditLog.create({
+        user: req.user._id,
+        action: 'VIEWING_ACCESS_RESTRICTED',
+        resource: 'User',
+        resourceId: req.user._id,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        details: { recentViolationCount: recentCount, restrictedUntil: until }
+      });
+    }
+
+    res.json({ success: true, message: 'Violation logged', logId: log._id, restricted });
   } catch (error) {
     res.status(500).json({ error: 'Failed to log violation' });
   }
@@ -211,7 +245,7 @@ router.patch('/:id', auth, upload.single('file'), async (req, res) => {
   }
 });
 
-// ── NEW ROUTE: RESOLVE CO-AUTHORS ──
+// ── RESOLVE CO-AUTHORS ──
 router.post('/:id/resolve-coauthors', auth, async (req, res) => {
   try {
     const { authors } = req.body;
@@ -220,12 +254,10 @@ router.post('/:id/resolve-coauthors', auth, async (req, res) => {
     const paper = await Research.findById(req.params.id);
     if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
-    // Resolve all author names to user accounts or ghost profiles
     const links = await resolveAuthorLinks(authors, paper._id, paper.submittedBy);
     paper.coAuthorLinks = links;
     await paper.save();
 
-    // Notify linked users they were tagged as co-authors
     const notifications = links
       .filter(l => l.userId && l.userId.toString() !== paper.submittedBy.toString())
       .map(l => ({
@@ -316,7 +348,7 @@ router.get('/my-submissions', auth, async (req, res) => {
   try {
     const papers = await Research.find({ submittedBy: req.user._id })
       .sort({ createdAt: -1 })
-      .select('title abstract authors status views yearCompleted subjectArea category keywords createdAt');
+      .select('title abstract authors status views yearCompleted subjectArea category keywords createdAt similarityFlag similarityScore');
 
     res.json({ papers, count: papers.length });
   } catch {
@@ -423,7 +455,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// ── TRACK CITATION (increment counter when user copies) ──
+// ── TRACK CITATION ──
 router.post('/:id/track-citation', auth, async (req, res) => {
   try {
     const { style } = req.body;
@@ -528,6 +560,43 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           status: 'pending'
         });
 
+        // ── NEW: similarity-triggered auto-revision ──
+        // Compares the new submission against existing approved papers using the
+        // existing TF-IDF engine. If it looks like a near-duplicate, the paper is
+        // routed straight to "revision" instead of sitting in the normal admin queue.
+        try {
+          const existingApproved = await Research.find({ status: 'approved' })
+            .limit(200)
+            .select('title abstract keywords');
+
+          if (existingApproved.length > 0) {
+            const searchText = `${title} ${abstract} ${JSON.parse(keywords).join(' ')}`;
+            const scored = await calculateSimilarity(searchText, existingApproved);
+            const topScore = scored[0]?.score || 0;
+
+            if (topScore > SIMILARITY_THRESHOLD) {
+              research.status = 'revision';
+              research.similarityScore = topScore;
+              research.similarityFlag = true;
+              research.revisionNotes = 'Auto-flagged: high similarity to an existing approved paper. Please review and revise before resubmitting.';
+              await research.save();
+
+              await AuditLog.create({
+                user: req.user._id,
+                action: 'RESEARCH_AUTO_FLAGGED_SIMILAR',
+                resource: 'Research',
+                resourceId: research._id,
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent'),
+                details: { similarityScore: topScore, matchedTitle: scored[0]?.paper?.title }
+              });
+            }
+          }
+        } catch (simError) {
+          console.error('Similarity check error:', simError);
+          // Non-fatal — submission proceeds as normal "pending" if similarity check fails
+        }
+
         await AuditLog.create({
           user: req.user._id,
           action: isUploadedOnBehalf ? 'RESEARCH_SUBMITTED_ON_BEHALF' : 'RESEARCH_SUBMITTED',
@@ -541,11 +610,13 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
           }
         });
 
-        await notifyNewResearchSubmitted(research);
-
-        sendResearchSubmissionNotification(research, req.user)
-          .then(r => console.log('Admin emails:', r.success ? 'sent' : 'failed'))
-          .catch(e => console.error('Email error:', e.message));
+        // Only route to admin queue if it wasn't auto-flagged into revision
+        if (research.status === 'pending') {
+          await notifyNewResearchSubmitted(research);
+          sendResearchSubmissionNotification(research, req.user)
+            .then(r => console.log('Admin emails:', r.success ? 'sent' : 'failed'))
+            .catch(e => console.error('Email error:', e.message));
+        }
 
         res.status(201).json({ message: 'Research submitted', research });
       } catch (error) {
@@ -577,7 +648,6 @@ router.patch('/:id/status', auth, authorize('admin', 'ret'), async (req, res) =>
 
     await research.save();
 
-    // Re-resolve co-author links on approval (in case new users registered)
     if (status === 'approved' && research.authors?.length > 0) {
       const { resolveAuthorLinks } = await import('../controllers/authorProfileController.js');
       const links = await resolveAuthorLinks(research.authors, research._id, research.submittedBy);
