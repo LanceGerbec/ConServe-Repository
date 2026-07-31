@@ -34,6 +34,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'warning' });
   const [rendered, setRendered] = useState(false);
+  const [viewSession, setViewSession] = useState(null);
   
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -145,9 +146,9 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         body: JSON.stringify({
           researchId: researchId,
           violationType: type,
-          researchTitle: paperTitle || 'Unknown Paper',
+          sessionId: viewSession?.sessionId || null,
           severity: 'critical',
-          attemptCount: screenshotAttempts.current + 1
+          metadata: { paperTitle: paperTitle || 'Unknown Paper', attemptCount: screenshotAttempts.current + 1 }
         })
       });
     } catch (error) {
@@ -344,6 +345,29 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     return () => clearTimeout(sessionTimerRef.current);
   }, []);
 
+  // Establish a server-recorded session before protected viewing. The server
+  // returns an opaque ID which is included in later risk events and watermarks.
+  useEffect(() => {
+    const startSession = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const researchId = pdfUrl?.split('/').filter(Boolean).at(-2);
+        if (!token || !researchId) return;
+        const response = await fetch(`${API_BASE}/research/${researchId}/view-session`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setViewSession(data.session);
+        }
+      } catch (error) {
+        console.warn('Unable to start protected viewing session', error);
+      }
+    };
+    startSession();
+  }, [pdfUrl, API_BASE]);
+
   // ✅ Load PDF (NO CHANGES)
   useEffect(() => {
     const loadPDF = async () => {
@@ -426,7 +450,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const sid = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const sid = viewSession?.sessionId?.slice(0, 8).toUpperCase() || 'PENDING';
 
         const displayWidth = vp.width;
         const displayHeight = vp.height;
@@ -542,7 +566,7 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
     };
 
     renderPage();
-  }, [pdf, currentPage, user, userIP, totalPages, isMobile]);
+  }, [pdf, currentPage, user, userIP, totalPages, isMobile, viewSession]);
 
   // ✅ Prevent context menu, copy, etc (NO CHANGES)
   useEffect(() => {
