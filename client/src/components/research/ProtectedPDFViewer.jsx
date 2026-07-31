@@ -385,9 +385,10 @@ const ProtectedPDFViewer = ({ pdfUrl, paperTitle, onClose }) => {
         });
 
         if (!res.ok) {
-          if (res.status === 401) throw new Error('Session expired');
-          if (res.status === 404) throw new Error('PDF not found');
-          throw new Error(`Error ${res.status}`);
+          const payload = await res.json().catch(() => null);
+          if (res.status === 401) throw new Error(payload?.error || 'Session expired');
+          if (res.status === 404) throw new Error(payload?.error || 'PDF not found');
+          throw new Error(payload?.error || `Error ${res.status}`);
         }
 
         const blob = await res.blob();
