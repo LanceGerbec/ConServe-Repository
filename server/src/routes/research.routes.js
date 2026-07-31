@@ -14,66 +14,64 @@ import { sendResearchSubmissionNotification, sendResearchApprovedNotification, s
 import { resolveAuthorLinks } from '../controllers/authorProfileController.js';
 import Notification from '../models/Notification.js';
 import { calculateSimilarity } from '../utils/searchService.js';
+import { createViewSession, recordViewRiskEvent } from '../utils/viewRiskService.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ── NEW: threshold + window config for violation-triggered restriction ──
-const VIOLATION_LIMIT = 3;
-const VIOLATION_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
-const RESTRICTION_DURATION_MS = 60 * 60 * 1000;  // 1h lock
-
-// ── NEW: threshold for similarity-triggered auto-revision ──
-const SIMILARITY_THRESHOLD = 0.75;
-
-// ── VIOLATION LOGGING (must be before /:id) ──
-router.post('/log-violation', auth, async (req, res) => {
+// ── VIEW RISK SESSIONS AND TAMPER-EVIDENT EVENT LOG ──
+router.post('/:id/view-session', auth, async (req, res) => {
   try {
-    const { researchId, violationType, researchTitle, severity, attemptCount } = req.body;
-    if (!researchId) return res.status(400).json({ error: 'ResearchId required' });
-    if (!violationType) return res.status(400).json({ error: 'ViolationType required' });
-    const log = await AuditLog.create({
-      user: req.user._id,
-      action: 'PDF_PROTECTION_VIOLATION',
-      resource: 'Research',
-      resourceId: researchId,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      details: {
-        violationType,
-        researchTitle: researchTitle || 'Unknown Paper',
-        severity: severity || 'medium',
-        attemptCount: attemptCount || 1,
-        timestamp: new Date()
-      }
-    });
+    const paper = await Research.findById(req.params.id).select('_id status submittedBy');
+    if (!paper) return res.status(404).json({ error: 'Paper not found' });
 
-    // ── NEW: count recent violations and auto-restrict viewing access ──
-    const recentCount = await AuditLog.countDocuments({
-      user: req.user._id,
-      action: 'PDF_PROTECTION_VIOLATION',
-      timestamp: { $gte: new Date(Date.now() - VIOLATION_WINDOW_MS) }
-    });
-
-    let restricted = false;
-    if (recentCount >= VIOLATION_LIMIT) {
-      const until = new Date(Date.now() + RESTRICTION_DURATION_MS);
-      await User.findByIdAndUpdate(req.user._id, { viewingRestrictedUntil: until });
-      restricted = true;
-      await AuditLog.create({
-        user: req.user._id,
-        action: 'VIEWING_ACCESS_RESTRICTED',
-        resource: 'User',
-        resourceId: req.user._id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-        details: { recentViolationCount: recentCount, restrictedUntil: until }
-      });
+    const isAuthor = paper.submittedBy.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'ret';
+    if (paper.status !== 'approved' && !isAuthor && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
-    res.json({ success: true, message: 'Violation logged', logId: log._id, restricted });
+    const session = await createViewSession({
+      user: req.user,
+      researchId: paper._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    res.status(201).json({ session });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to log violation' });
+    res.status(500).json({ error: 'Failed to start protected viewing session' });
+  }
+});
+
+router.post('/log-violation', auth, async (req, res) => {
+  try {
+    const { researchId, sessionId, violationType, severity, metadata } = req.body;
+    if (!researchId || !violationType) {
+      return res.status(400).json({ error: 'researchId and violationType are required' });
+    }
+
+    const paper = await Research.findById(researchId).select('_id');
+    if (!paper) return res.status(404).json({ error: 'Research not found' });
+
+    const result = await recordViewRiskEvent({
+      user: req.user,
+      researchId: paper._id,
+      sessionId,
+      eventType: violationType,
+      severity,
+      metadata,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.json({
+      success: true,
+      riskScore: result.riskScore,
+      policy: result.policy,
+      integrityHash: result.log.details.integrity.eventHash
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to record viewing-risk event' });
   }
 });
 
